@@ -15,6 +15,7 @@ Before implementing any functionality, read the relevant documentation:
 - `docs/architecture/dependencies.md`
 - `docs/architecture/backend-structure.md`
 - `docs/development/git-workflow.md`
+- `docs/development/commit-conventions.md`
 - `CONTRIBUTING.md`
 
 ## Official stack
@@ -305,31 +306,35 @@ Direct commits to `main` are allowed only during the initial documentation, gove
 
 ## Commit policy
 
-Use scoped Conventional Commits in English.
+Use scoped Conventional Commits in English. For normal issue-driven work, the issue number is mandatory at the end.
 
 Required format:
 
 ```text
-<type>(<scope>): <description>
+<type>(<scope>): <description> (#<issue-number>)
 ```
-
-The scope is mandatory and should identify a stable module or engineering concern.
 
 Examples:
 
 ```text
-feat(inventory): add inventory item registration
-fix(inventory): prevent negative stock balance
-test(inventory): cover FEFO batch selection
-refactor(catalog): isolate item classification policy
-docs(git): define inventory release workflow
-chore(build): configure local postgres
-ci(backend): verify backend build
+feat(inventory): add inventory item registration (#18)
+fix(inventory): prevent negative stock balance (#21)
+test(inventory): cover FEFO batch selection (#21)
+refactor(catalog): isolate item classification policy (#18)
+docs(git): define inventory release workflow (#8)
+chore(build): configure local postgres (#12)
+ci(backend): verify backend build (#12)
 ```
+
+`ci(scope)` is valid. The scope can identify areas such as `backend`, `frontend`, or `github`.
+
+The issue suffix is a project convention layered on top of Conventional Commits. Release PR titles are exempt from a single issue suffix because a release aggregates multiple issues.
 
 Commits must be atomic by meaningful checkpoint.
 
 Do not create a commit for every trivial edit, but also do not accumulate thousands of unrelated modifications into one oversized commit. A commit should represent one coherent development checkpoint that can be understood and reviewed independently.
+
+See `docs/development/commit-conventions.md` for the complete rule set.
 
 ## Language policy
 
@@ -367,9 +372,10 @@ Before changing code:
 5. keep the change inside the linked issue scope
 6. implement the smallest complete solution
 7. create coherent checkpoint commits rather than trivial or oversized commits
-8. add or update tests
-9. add or update Javadoc and other technical documentation where the contract or behavior warrants it
-10. run the relevant build, lint, and test commands
-11. review `git diff` before finalizing
+8. include the owning issue number in issue-driven commit messages
+9. add or update tests
+10. add or update Javadoc and other technical documentation where the contract or behavior warrants it
+11. run the relevant build, lint, and test commands
+12. review `git diff` before finalizing
 
 If a structural decision is undocumented and may affect multiple parts of the system, do not assume silently. Propose or record an architectural decision first.
