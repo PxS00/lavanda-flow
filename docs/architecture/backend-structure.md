@@ -1,10 +1,10 @@
-# Estrutura do backend Spring
+# Spring Backend Structure
 
-O backend do Lavanda Flow segue **package by feature/domain** dentro de um **monólito modular** validado com Spring Modulith.
+The Lavanda Flow backend follows **package by feature/domain** inside a **modular monolith** validated with Spring Modulith.
 
-A estrutura não deve ser organizada globalmente apenas por camada técnica (`controller`, `service`, `repository`, `entity`). Cada módulo de negócio deve concentrar suas próprias regras, casos de uso e adapters.
+The structure must not be organized globally only by technical layer (`controller`, `service`, `repository`, `entity`). Each business module owns its rules, use cases, and adapters.
 
-## Estrutura inicial
+## Initial structure
 
 ```text
 backend/
@@ -53,9 +53,9 @@ backend/
                         └── suppliers/
 ```
 
-## Estrutura interna de um módulo
+## Internal module structure
 
-Exemplo para `inventory`:
+Example for `inventory`:
 
 ```text
 inventory/
@@ -94,35 +94,35 @@ inventory/
         └── mapper/
 ```
 
-Os nomes acima são referências estruturais. Não criar classes apenas para preencher a árvore. Cada artefato deve existir porque há um caso de uso ou uma necessidade técnica real.
+The names above are structural references. Do not create classes merely to fill the tree. Every artifact must exist because there is a use case or a concrete technical need.
 
 ## `domain`
 
-Responsável por regras e conceitos do negócio.
+Owns business rules and concepts.
 
-Pode conter:
+It may contain:
 
 - aggregates;
-- entities de domínio;
+- domain entities;
 - value objects;
-- enums de negócio;
+- business enums;
 - policies;
-- domain services quando uma regra não pertence naturalmente a uma única entidade;
-- interfaces de repository necessárias pelo domínio/aplicação;
-- exceções de negócio.
+- domain services when a rule does not naturally belong to a single entity;
+- repository interfaces required by the domain/application;
+- business exceptions.
 
-### Regras
+### Rules
 
-- não depender de controllers ou DTOs HTTP;
-- não conhecer detalhes de JSON;
-- evitar dependência direta de implementações técnicas;
-- regras como saldo negativo, FEFO e validade devem estar aqui ou em serviços de aplicação apropriados, não no controller.
+- do not depend on controllers or HTTP DTOs;
+- do not know JSON details;
+- avoid direct dependency on technical implementations;
+- rules such as negative stock prevention, FEFO, and expiration belong here or in appropriate application services, never in controllers.
 
 ## `application`
 
-Responsável por executar os casos de uso do módulo.
+Owns module use-case execution.
 
-Exemplos:
+Examples:
 
 ```text
 RegisterStockEntry
@@ -131,111 +131,111 @@ AdjustStock
 ListExpiringBatches
 ```
 
-### Responsabilidades
+### Responsibilities
 
-- orquestrar objetos de domínio;
-- controlar fronteiras transacionais;
-- acessar portas/repositories necessários;
-- publicar eventos de aplicação/domínio quando necessário;
-- retornar resultados apropriados ao adapter chamador.
+- orchestrate domain objects;
+- control transactional boundaries;
+- access required ports/repositories;
+- publish application/domain events when justified;
+- return results appropriate to the calling adapter.
 
-### Regras
+### Rules
 
-- não conter conhecimento de HTTP;
-- evitar regras de domínio complexas espalhadas por use cases;
-- um caso de uso deve representar uma intenção de negócio clara.
+- do not contain HTTP knowledge;
+- avoid spreading complex domain rules across use cases;
+- each use case should represent a clear business intention.
 
 ## `infrastructure`
 
-Implementa detalhes externos ao núcleo do módulo.
+Implements details external to the module core.
 
 ### `infrastructure/web`
 
-Contém:
+Contains:
 
 - REST controllers;
 - request DTOs;
 - response DTOs;
-- mapeamento entre HTTP e aplicação.
+- mapping between HTTP and application layers.
 
-Controller deve:
+A controller should:
 
-1. receber a requisição;
-2. validar o boundary;
-3. transformar em comando/query;
-4. chamar o caso de uso;
-5. devolver a resposta HTTP.
+1. receive the request;
+2. validate the boundary;
+3. transform it into a command/query;
+4. call the use case;
+5. return the HTTP response.
 
-Controller não deve calcular estoque, selecionar FEFO ou alterar entidades diretamente.
+Controllers must not calculate stock, select FEFO batches, or mutate entities directly.
 
 ### `infrastructure/persistence`
 
-Contém detalhes JPA/PostgreSQL.
+Contains JPA/PostgreSQL details.
 
-Pode conter:
+It may contain:
 
-- adapters de repository;
-- entidades JPA quando o domínio for mantido separado da persistência;
+- repository adapters;
+- JPA entities when the domain model is kept separate from persistence;
 - mappers;
-- specifications/queries técnicas.
+- technical specifications/queries.
 
-A decisão entre entidade de domínio separada da entidade JPA deve ser tomada pragmaticamente. Não duplicar modelos sem benefício claro, mas também não permitir que conveniências do ORM ditem as regras do domínio.
+The decision to separate domain entities from JPA entities should be pragmatic. Do not duplicate models without clear value, but do not let ORM convenience dictate domain rules either.
 
-## Módulo `catalog`
+## Module `catalog`
 
-Responsabilidades iniciais:
+Initial responsibilities:
 
 ```text
 catalog
-├── cadastro do item
-├── nome e descrição
-├── categoria
-├── unidade de medida
-├── estado ativo/inativo
-└── informações de classificação
+├── item registration
+├── name and description
+├── category
+├── unit of measure
+├── active/inactive state
+└── classification information
 ```
 
-Itens podem representar essência, insumo químico, base, embalagem ou outros materiais controlados.
+Items may represent fragrance essences, chemical inputs, bases, packaging, or other controlled materials.
 
-## Módulo `inventory`
+## Module `inventory`
 
-Responsabilidades iniciais:
+Initial responsibilities:
 
 ```text
 inventory
-├── lotes
-├── quantidade inicial
-├── saldo atual
-├── validade
-├── entradas
-├── saídas
-├── ajustes
-├── histórico de movimentações
+├── batches
+├── initial quantity
+├── current balance
+├── expiration
+├── entries
+├── withdrawals
+├── adjustments
+├── movement history
 ├── FEFO
-└── alertas de estoque/validade
+└── stock/expiration alerts
 ```
 
-`inventory` pode depender da API pública de `catalog`, mas não deve acessar classes internas do módulo diretamente.
+`inventory` may depend on the public API of `catalog`, but must not access internal module classes directly.
 
-## Módulo `suppliers`
+## Module `suppliers`
 
-Responsabilidades iniciais:
+Initial responsibilities:
 
 ```text
 suppliers
-├── cadastro
-├── identificação
-├── contato básico
-└── associação de origem dos lotes
+├── registration
+├── identification
+├── basic contact information
+└── batch origin association
 ```
 
-Não transformar o módulo em CRM na V1.
+Do not turn this module into a CRM in V1.
 
 ## `shared`
 
-Deve ser pequeno.
+Keep it small.
 
-Usos permitidos incluem infraestrutura realmente transversal:
+Allowed uses include truly cross-cutting infrastructure:
 
 ```text
 shared/
@@ -244,11 +244,11 @@ shared/
 └── security
 ```
 
-Não mover regras de negócio para `shared` apenas porque mais de um módulo as utiliza. Primeiro avaliar ownership e API entre módulos.
+Do not move business rules to `shared` simply because more than one module uses them. First evaluate ownership and public APIs between modules.
 
-## Módulos futuros
+## Future modules
 
-Quando aprovados no escopo:
+When approved in scope:
 
 ```text
 com.ceudelavanda.lavandaflow
@@ -263,27 +263,27 @@ com.ceudelavanda.lavandaflow
 
 ### `formulas`
 
-- fórmulas;
-- ingredientes;
-- versionamento de fórmula.
+- formulas;
+- ingredients;
+- formula versioning.
 
 ### `production`
 
-- ordem de produção;
-- lote produzido;
-- consumo automático de materiais;
-- geração de item/base produzida.
+- production order;
+- produced batch;
+- automatic material consumption;
+- produced item/base generation.
 
 ### `traceability`
 
-- navegação entre lote de matéria-prima, produção intermediária e produto final;
-- consultas de impacto de lote.
+- navigation between raw-material batch, intermediate production, and finished product;
+- batch impact queries.
 
-Esses módulos não devem ser criados fisicamente antes de entrarem no escopo aprovado.
+These modules must not be created physically before they enter the approved scope.
 
-## Dependências entre módulos
+## Dependencies between modules
 
-Direção inicial esperada:
+Expected initial direction:
 
 ```text
 suppliers ─────┐
@@ -291,27 +291,27 @@ suppliers ─────┐
 catalog ───► inventory
 ```
 
-A dependência deve ocorrer apenas através de APIs públicas do módulo.
+Dependencies must occur only through public module APIs.
 
-Evitar:
+Avoid:
 
 ```text
 inventory -> catalog.infrastructure.persistence.*
 ```
 
-Preferir:
+Prefer:
 
 ```text
 inventory -> catalog.<public API>
 ```
 
-Spring Modulith deverá ser utilizado para verificar fronteiras e ciclos entre módulos.
+Spring Modulith must verify boundaries and cycles between modules.
 
-## Eventos entre módulos
+## Events between modules
 
-Não introduzir eventos apenas para evitar chamadas Java simples.
+Do not introduce events merely to avoid simple Java calls.
 
-Usar eventos quando houver benefício real de desacoplamento, por exemplo futuramente:
+Use events when there is a real decoupling benefit, for example in the future:
 
 ```text
 ProductionCompleted
@@ -321,31 +321,84 @@ Inventory consumes materials
 Traceability records relationships
 ```
 
-Na V1, interações síncronas simples são aceitáveis quando preservam as fronteiras dos módulos.
+In V1, simple synchronous interactions are acceptable when they preserve module boundaries.
 
-## Transações
+## Transactions
 
-O boundary transacional deve, em regra, estar no caso de uso da camada `application`.
+As a rule, the transactional boundary belongs in the application use case.
 
-Uma movimentação de estoque deve persistir de forma atômica:
+A stock movement must persist atomically:
 
 ```text
-validar operação
+validate operation
       ↓
-atualizar saldo do lote
+update batch balance
       ↓
-registrar stock_movement
+record stock_movement
       ↓
 commit
 ```
 
-Se qualquer etapa falhar, toda a operação deve sofrer rollback.
+If any step fails, the complete operation must roll back.
 
-## Testes
+## Java code documentation
 
-A estrutura de testes deve espelhar os módulos de produção.
+Javadoc is the standard source-code documentation format for the Java backend.
 
-Exemplo:
+Use Javadoc where it documents a durable contract or non-obvious behavior, especially for:
+
+- public module APIs;
+- repository/domain ports consumed outside their implementation package;
+- domain types with important semantics or invariants;
+- application services and use cases with meaningful preconditions, side effects, transaction semantics, or exceptional behavior;
+- extension points intended for reuse;
+- configuration contracts exposed through typed properties when semantics are not self-evident.
+
+A useful Javadoc comment should explain **intent, contract, constraints, semantics, or rationale**. It should not merely translate the method name into prose.
+
+Example:
+
+```java
+/**
+ * Withdraws stock using FEFO allocation while preserving batch-level auditability.
+ *
+ * <p>The operation is atomic: batch balances and generated stock movements are committed
+ * together. If the requested quantity cannot be fulfilled, no partial withdrawal is persisted.
+ *
+ * @param command validated withdrawal request
+ * @return the movements generated by the withdrawal
+ * @throws InsufficientStockException when available eligible stock is lower than requested
+ */
+public StockWithdrawalResult withdraw(RegisterStockWithdrawalCommand command) {
+    // ...
+}
+```
+
+Guidelines:
+
+- use `@param`, `@return`, `@throws`, and `@since` when they add meaningful contract information;
+- keep Javadoc synchronized when behavior changes;
+- do not document trivial getters/setters or obvious private helpers;
+- avoid comments that explain syntax or restate the implementation;
+- prefer expressive names and types first, documentation second;
+- inline comments are reserved for non-obvious rationale, constraints, or implementation trade-offs.
+
+Documentation ownership by concern:
+
+```text
+Java contracts and code semantics -> Javadoc
+HTTP/API contracts                -> OpenAPI / Swagger
+Architecture decisions            -> ADRs
+Development and operations        -> docs/ and CONTRIBUTING.md
+```
+
+When the backend bootstrap exists, Maven should be able to generate Javadoc as part of project documentation/verification without introducing runtime dependencies.
+
+## Tests
+
+The test structure should mirror production modules.
+
+Example:
 
 ```text
 src/test/java/com/ceudelavanda/lavandaflow/
@@ -356,20 +409,20 @@ src/test/java/com/ceudelavanda/lavandaflow/
 └── suppliers/
 ```
 
-### Teste arquitetural mínimo
+### Minimum architecture test
 
-Deve existir teste que execute a verificação de módulos do Spring Modulith para detectar:
+There must be a test that runs Spring Modulith module verification to detect:
 
-- ciclos;
-- acesso indevido aos internals de outro módulo;
-- violações das dependências permitidas.
+- cycles;
+- improper access to another module's internals;
+- violations of allowed dependencies.
 
-## Convenções
+## Conventions
 
-- pacote base: `com.ceudelavanda.lavandaflow`;
-- nomes de classes e código em inglês;
-- documentação de negócio pode permanecer em português;
-- interfaces devem representar contratos reais, não abstrações especulativas;
-- evitar sufixo `Impl` quando um nome de adapter mais específico puder explicar seu papel;
-- não expor entidade JPA diretamente na API;
-- não criar camada `util` genérica para acumular responsabilidades indefinidas.
+- base package: `com.ceudelavanda.lavandaflow`;
+- class names and source code in English;
+- engineering documentation in English;
+- interfaces represent real contracts, not speculative abstractions;
+- avoid the `Impl` suffix when a more specific adapter name can express responsibility;
+- never expose JPA entities directly through the API;
+- do not create a generic `util` layer that accumulates undefined responsibilities.
