@@ -197,6 +197,24 @@ Do not add initially without justification:
 
 Use Spring BOM/parent dependency management whenever possible.
 
+### Java documentation
+
+Use Javadoc as the primary source-code documentation format for Java contracts.
+
+Document when it adds durable engineering value, especially:
+
+- public module APIs and reusable contracts
+- domain concepts whose semantics are not obvious from the type name
+- application services and use cases with important preconditions, side effects, or transactional behavior
+- extension points and interfaces consumed outside their implementation package
+- exceptional behavior and non-obvious invariants
+
+Use tags such as `@param`, `@return`, `@throws`, and `@since` only when they add useful contract information.
+
+Do not add boilerplate Javadoc to trivial getters, obvious private helpers, or code whose intent is already completely expressed by names and types. Documentation must explain intent, contract, constraints, or rationale rather than repeat the implementation.
+
+Use OpenAPI/Swagger for HTTP contracts, ADRs for architectural decisions, and repository documentation for operational/development workflows.
+
 ### Tests
 
 Every relevant business rule requires tests.
@@ -287,7 +305,15 @@ Direct commits to `main` are allowed only during the initial documentation, gove
 
 ## Commit policy
 
-Use Conventional Commits in English.
+Use scoped Conventional Commits in English.
+
+Required format:
+
+```text
+<type>(<scope>): <description>
+```
+
+The scope is mandatory and should identify a stable module or engineering concern.
 
 Examples:
 
@@ -296,9 +322,9 @@ feat(inventory): add inventory item registration
 fix(inventory): prevent negative stock balance
 test(inventory): cover FEFO batch selection
 refactor(catalog): isolate item classification policy
-docs: define inventory domain model
+docs(git): define inventory release workflow
 chore(build): configure local postgres
-ci: verify backend build
+ci(backend): verify backend build
 ```
 
 Commits must be atomic by meaningful checkpoint.
@@ -342,7 +368,8 @@ Before changing code:
 6. implement the smallest complete solution
 7. create coherent checkpoint commits rather than trivial or oversized commits
 8. add or update tests
-9. run the relevant build, lint, and test commands
-10. review `git diff` before finalizing
+9. add or update Javadoc and other technical documentation where the contract or behavior warrants it
+10. run the relevant build, lint, and test commands
+11. review `git diff` before finalizing
 
 If a structural decision is undocumented and may affect multiple parts of the system, do not assume silently. Propose or record an architectural decision first.
