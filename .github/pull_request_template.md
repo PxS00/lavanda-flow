@@ -24,7 +24,8 @@ Closes #
 
 ## Scope
 
-- [ ] PR title follows `<type>(<scope>): <description>`.
+- [ ] Feature/hotfix PR title follows `<type>(<scope>): <description> (#<issue-number>)`.
+- [ ] Release PR title follows `<type>(<scope>): <description>` and lists included issues in the body.
 - [ ] The change matches the linked issue and approved scope.
 - [ ] Module boundaries were preserved.
 - [ ] No dependency was added without technical justification.
