@@ -19,6 +19,62 @@ A regra é simples: adicionar dependências somente quando elas resolvem uma nec
 | `flyway-core` | migrations de schema |
 | `flyway-database-postgresql` | suporte específico do Flyway para PostgreSQL |
 | `postgresql` | driver JDBC do PostgreSQL |
+| `org.projectlombok:lombok` | redução de boilerplate em classes adequadas |
+| `org.springdoc:springdoc-openapi-starter-webmvc-ui` | geração OpenAPI 3 e Swagger UI |
+
+### Lombok
+
+Lombok está aprovado no projeto, mas deve ser usado de forma controlada.
+
+Uso recomendado:
+
+- `@Getter` e `@Setter` quando realmente necessários;
+- `@RequiredArgsConstructor` para injeção por construtor;
+- `@Builder` em DTOs/resultados quando melhorar legibilidade;
+- `@Slf4j` em classes que realmente precisam de logging.
+
+Evitar:
+
+- `@Data` em entidades JPA e agregados de domínio;
+- `@EqualsAndHashCode` automático em entidades JPA sem avaliar identidade e proxies;
+- `@ToString` automático sobre relacionamentos JPA;
+- setters indiscriminados em objetos que possuem invariantes de negócio.
+
+Lombok deve reduzir código repetitivo, não esconder regras de domínio.
+
+### OpenAPI / Swagger
+
+A API REST deverá publicar contrato OpenAPI e Swagger UI desde o início da implementação dos endpoints.
+
+Para Spring Boot 4.x deve ser utilizada uma versão compatível da linha `springdoc-openapi 3.x`.
+
+Dependência conceitual:
+
+```xml
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>${springdoc.version}</version>
+</dependency>
+```
+
+Endpoints padrão esperados em desenvolvimento:
+
+```text
+/v3/api-docs
+/v3/api-docs.yaml
+/swagger-ui.html
+```
+
+O OpenAPI deve descrever contratos, códigos de resposta e autenticação de forma consistente. Evitar excesso de annotations quando o contrato já puder ser inferido corretamente.
+
+### Desenvolvimento
+
+| Dependência | Finalidade |
+|---|---|
+| `spring-boot-devtools` | reinício automático e melhorias de experiência local; somente desenvolvimento |
+
+`spring-boot-devtools` não deve fazer parte de imagens ou runtime de produção.
 
 ### Testes
 
@@ -32,12 +88,12 @@ A regra é simples: adicionar dependências somente quando elas resolvem uma nec
 
 ### Dependências deliberadamente não adotadas no bootstrap
 
-- Lombok: preferimos código explícito enquanto o domínio ainda está sendo estabilizado.
 - MapStruct: será avaliado apenas se o volume de mapeamentos justificar a dependência.
 - Redis: não existe requisito de cache ou estado distribuído na V1.
 - Kafka/RabbitMQ: não existe requisito de mensageria externa na V1.
 - H2: não deve substituir PostgreSQL nos testes de integração.
-- Swagger/OpenAPI adicional: pode ser incluído quando os contratos HTTP começarem a ser implementados; não é necessário no bootstrap vazio.
+- Resilience4j: não existem integrações externas críticas que justifiquem circuit breaker na V1.
+- bibliotecas JWT específicas: a estratégia de autenticação será decidida antes de adicionar implementação concreta de token.
 
 ## Gerenciamento de versões Java
 
@@ -47,6 +103,7 @@ O backend usa:
 Java 25 LTS
 Spring Boot 4.1.x
 Spring Modulith 2.1.x
+springdoc-openapi 3.x
 ```
 
 As versões transitivas do ecossistema Spring devem ser gerenciadas preferencialmente pelos BOMs oficiais, evitando pinagem manual sem necessidade.
@@ -57,6 +114,7 @@ Exemplo conceitual de `pom.xml`:
 <properties>
     <java.version>25</java.version>
     <spring-modulith.version>2.1.0</spring-modulith.version>
+    <springdoc.version>3.x</springdoc.version>
 </properties>
 
 <dependencyManagement>
@@ -72,7 +130,22 @@ Exemplo conceitual de `pom.xml`:
 </dependencyManagement>
 ```
 
+Ao gerar o projeto, substituir `3.x` pela última versão estável compatível com Spring Boot 4.1.x, validando a matriz oficial do springdoc.
+
 Não copiar versões individuais de starters Spring Boot para cada dependência quando o parent/BOM já fizer esse gerenciamento.
+
+## Ferramentas de qualidade do backend
+
+Estas ferramentas são preferencialmente configuradas como plugins de build, não como dependências de runtime:
+
+| Ferramenta | Finalidade |
+|---|---|
+| Maven Wrapper | build reproduzível sem depender de Maven global |
+| JaCoCo | cobertura de testes |
+| Spotless | formatação consistente de Java e arquivos auxiliares |
+| Maven Enforcer | validar Java/Maven e regras de build |
+
+A adoção de SonarQube/SonarCloud pode ocorrer posteriormente se houver benefício real para CI e análise contínua.
 
 ## Frontend
 
@@ -130,6 +203,8 @@ ng add @angular/material
 - bibliotecas externas de forms: usar Reactive Forms.
 - bibliotecas externas de routing: usar Angular Router.
 - Tailwind: não será dependência inicial enquanto Angular Material for o design system principal.
+- bibliotecas de datas: `Date`, Intl e recursos Angular são suficientes até existir requisito mais complexo.
+- bibliotecas de gráficos: não existe dashboard analítico que justifique dependência adicional na V1.
 
 ## Política de atualização
 
