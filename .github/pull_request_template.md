@@ -1,44 +1,66 @@
-## Resumo
+## Summary
 
-Descreva objetivamente o que foi alterado e por quê.
+Describe what changed and why.
 
-## Tipo de mudança
+## Related issue
 
-- [ ] `feat` — nova funcionalidade
-- [ ] `fix` — correção
-- [ ] `refactor` — refatoração sem mudança funcional
-- [ ] `test` — testes
-- [ ] `docs` — documentação
-- [ ] `chore` — configuração, build ou manutenção
+Closes #
 
-## Escopo
+## Change type
 
-- [ ] A mudança está dentro do escopo aprovado da V1 ou possui documentação/issue que justifique a evolução.
-- [ ] As fronteiras entre módulos foram preservadas.
-- [ ] Não foram adicionadas dependências sem justificativa.
+- [ ] `feat` — new functionality
+- [ ] `fix` — bug fix
+- [ ] `refactor` — refactoring without functional change
+- [ ] `test` — tests
+- [ ] `docs` — documentation
+- [ ] `chore` — build, configuration, or maintenance
+- [ ] `ci` — CI/CD
 
-## Validação
+## Target branch
 
-Marque apenas o que se aplica:
+- [ ] Feature PR targeting `develop`
+- [ ] Release PR targeting `main`
+- [ ] Hotfix PR targeting `main`
+
+## Scope
+
+- [ ] The change matches the linked issue and approved scope.
+- [ ] Module boundaries were preserved.
+- [ ] No dependency was added without technical justification.
+- [ ] No unrelated changes are hidden in this PR.
+
+## Validation
+
+Check only what applies:
 
 - [ ] `./mvnw verify`
-- [ ] testes de integração relevantes
+- [ ] relevant integration tests
 - [ ] `ng lint`
 - [ ] `ng test`
 - [ ] `ng build`
-- [ ] validação manual
-- [ ] documentação atualizada
+- [ ] manual validation
+- [ ] documentation updated
 
-## Banco de dados
+## Database
 
-- [ ] Não há alteração de schema.
-- [ ] Há alteração de schema e foi criada migration Flyway compatível.
+- [ ] No schema change.
+- [ ] Schema changed and a compatible Flyway migration was added.
 
 ## API
 
-- [ ] Não há alteração de contrato HTTP.
-- [ ] O contrato OpenAPI/Swagger foi atualizado ou continua inferível corretamente.
+- [ ] No HTTP contract change.
+- [ ] OpenAPI/Swagger contract was updated or remains correctly inferred.
 
-## Evidências / observações
+## Release impact
 
-Inclua logs, screenshots, decisões ou riscos relevantes quando necessário.
+For release PRs, summarize included issues, migrations, API changes, risks, and operational notes.
+
+## Evidence / notes
+
+Include relevant logs, screenshots, decisions, trade-offs, or known risks when useful.
+
+## Merge policy
+
+- Feature PRs into `develop`: **squash merge**.
+- Release PRs from `release/vX.Y.Z` into `main`: **regular merge commit**.
+- Hotfixes follow the documented policy in `docs/development/git-workflow.md`.
