@@ -1,6 +1,6 @@
 # Contributing to Lavanda Flow
 
-Lavanda Flow uses issue-driven development, Conventional Commits, atomic checkpoint commits, pull requests, and a controlled release flow.
+Lavanda Flow uses issue-driven development, scoped Conventional Commits, atomic checkpoint commits, pull requests, and a controlled release flow.
 
 Before contributing, read:
 
@@ -48,7 +48,13 @@ User-facing product text may be Portuguese.
 
 ## Commits
 
-Use Conventional Commits.
+Use Conventional Commits with a mandatory scope.
+
+Required format:
+
+```text
+<type>(<scope>): <description>
+```
 
 Examples:
 
@@ -56,12 +62,29 @@ Examples:
 feat(inventory): register stock entry
 fix(inventory): reject withdrawal above available balance
 test(inventory): cover expired batch selection
-docs: document release workflow
+docs(git): document release workflow
 chore(build): configure Maven Enforcer
-ci: verify backend build
+ci(backend): verify backend build
 ```
 
+Choose a stable scope that identifies the affected module or engineering concern. Avoid scopes that are so granular that they merely repeat a class or file name.
+
 Commits should be atomic by meaningful checkpoint. Do not create a commit for every trivial edit, and do not accumulate a large feature into one oversized commit containing unrelated work.
+
+## Code documentation
+
+Code should be documented at the appropriate boundary rather than filled with redundant comments.
+
+For Java:
+
+- use Javadoc for public APIs, reusable contracts, domain concepts, application services, extension points, and non-obvious behavior;
+- document important invariants, side effects, exceptional conditions, and semantics that are not obvious from names and types;
+- use `@param`, `@return`, `@throws`, and `@since` when they add meaningful contract information;
+- avoid Javadoc that merely restates a method or field name;
+- avoid comments that explain syntax instead of intent;
+- keep documentation synchronized with behavior when code changes.
+
+HTTP contracts are documented through OpenAPI/Swagger. Architectural decisions belong in ADRs. Repository and operational behavior belongs in project documentation.
 
 ## Pull requests
 
@@ -72,7 +95,7 @@ A PR should:
 - link the issue;
 - remain within the issue scope;
 - include tests for relevant behavior;
-- update documentation when necessary;
+- update code and project documentation when necessary;
 - contain no secrets;
 - avoid unrelated changes;
 - pass the applicable CI checks.
