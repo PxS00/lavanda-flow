@@ -37,7 +37,10 @@ Antes de implementar qualquer funcionalidade, consulte:
 - Spring Security;
 - Spring Data JPA;
 - Flyway;
-- PostgreSQL JDBC Driver.
+- PostgreSQL JDBC Driver;
+- Lombok;
+- springdoc-openapi / Swagger UI;
+- Spring Boot Actuator.
 
 ### Dados e infraestrutura
 
@@ -124,7 +127,10 @@ Não criar módulos futuros (`formulas`, `production`, `traceability`) antes de 
 - validar entradas;
 - manter contratos REST consistentes;
 - utilizar `/api/v1` como prefixo inicial;
-- controllers devem ser finos.
+- controllers devem ser finos;
+- publicar OpenAPI e Swagger UI para os contratos HTTP;
+- documentar códigos de resposta, autenticação e erros relevantes;
+- evitar annotations OpenAPI redundantes quando o contrato já for inferido corretamente.
 
 ### Domínio
 
@@ -148,13 +154,22 @@ Não criar módulos futuros (`formulas`, `production`, `traceability`) antes de 
 
 O bootstrap deve partir do conjunto aprovado em `docs/architecture/dependencies.md`.
 
+Lombok está aprovado, com uso controlado:
+
+- preferir `@RequiredArgsConstructor` para injeção por construtor;
+- `@Getter`, `@Setter`, `@Builder` e `@Slf4j` apenas quando agregarem clareza;
+- evitar `@Data` em entidades JPA e agregados de domínio;
+- não gerar `equals/hashCode/toString` indiscriminadamente em entidades JPA;
+- Lombok não deve enfraquecer encapsulamento nem esconder invariantes.
+
 Não adicionar inicialmente sem justificativa:
 
-- Lombok;
 - MapStruct;
 - Redis;
 - Kafka/RabbitMQ;
-- H2.
+- H2;
+- Resilience4j;
+- bibliotecas adicionais de estado/cache/mensageria.
 
 Dependências Spring devem usar gerenciamento de versões por BOM/parent sempre que possível.
 
