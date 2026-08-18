@@ -6,6 +6,8 @@ This document defines the Git workflow, branch strategy, commit policy, pull req
 
 Once functional development starts, `main` is treated as the production branch and must not receive normal feature work directly.
 
+Commit formatting details are defined in `docs/development/commit-conventions.md`.
+
 ## Branch model
 
 ```text
@@ -76,6 +78,7 @@ Rules:
 - every feature branch must reference an existing issue;
 - branch from `develop`;
 - keep the branch focused on the issue scope;
+- checkpoint commits normally reference the same owning issue at the end of the commit message;
 - open a pull request to `develop` when the work is ready for integration;
 - merge into `develop` with squash merge.
 
@@ -129,7 +132,7 @@ When required, use:
 hotfix/<issue-number>/<short-description>
 ```
 
-A hotfix starts from `main`, receives focused validation, and reaches `main` through a pull request. The resulting fix must then be synchronized back into `develop` so the branches do not diverge.
+A hotfix starts from `main`, receives focused validation, and reaches `main` through a pull request. Hotfix commits and the hotfix PR title must reference the owning issue. The resulting fix must then be synchronized back into `develop` so the branches do not diverge.
 
 Hotfixes must not be used to bypass the normal release process for ordinary development.
 
@@ -149,26 +152,34 @@ Requirements:
 - documentation is updated when behavior, architecture, configuration, or contracts change;
 - no unrelated refactoring or dependency changes are hidden in the PR;
 - squash merge is used;
-- PR title must follow scoped Conventional Commits because it becomes the squash commit message.
+- PR title must follow the issue-linked scoped Conventional Commit format because it becomes the squash commit message.
 
 Required title format:
 
 ```text
-<type>(<scope>): <description>
+<type>(<scope>): <description> (#<issue-number>)
 ```
 
 Examples:
 
 ```text
-feat(inventory): add inventory item registration
-fix(api): return validation errors consistently
-chore(build): configure Maven plugins
+feat(inventory): add inventory item registration (#18)
+fix(api): return validation errors consistently (#31)
+ci(backend): add backend verification workflow (#12)
 ```
 
 ### Release PR
 
 ```text
 release/vX.Y.Z -> main
+```
+
+A release PR may omit a single issue suffix because it aggregates multiple issues.
+
+Recommended title format:
+
+```text
+chore(release): prepare v0.1.0
 ```
 
 The release PR must summarize:
@@ -187,25 +198,27 @@ A release PR is not a place for new feature development.
 
 Lavanda Flow follows **Conventional Commits** with commit messages written in English.
 
-The scope is mandatory.
+For issue-driven work, the scope and issue reference are mandatory.
 
 Required format:
 
 ```text
-<type>(<scope>): <description>
+<type>(<scope>): <description> (#<issue-number>)
 ```
 
 Examples:
 
 ```text
-feat(inventory): add stock withdrawal use case
-fix(inventory): prevent negative batch balance
-test(inventory): cover FEFO selection edge cases
-refactor(catalog): isolate item classification policy
-docs(git): define release branch workflow
-chore(build): configure Maven Enforcer
-ci(backend): add backend verification workflow
+feat(inventory): add stock withdrawal use case (#27)
+fix(inventory): prevent negative batch balance (#27)
+test(inventory): cover FEFO selection edge cases (#27)
+refactor(catalog): isolate item classification policy (#18)
+docs(git): define release branch workflow (#8)
+chore(build): configure Maven Enforcer (#12)
+ci(backend): add backend verification workflow (#12)
 ```
+
+`ci(scope)` is valid. Examples include `ci(backend)`, `ci(frontend)`, and `ci(github)`.
 
 Prefer stable, meaningful scopes such as:
 
@@ -221,11 +234,15 @@ database
 observability
 build
 ci
+github
 git
 docs
+release
 ```
 
 Do not use file names or individual class names as scopes unless there is a strong reason.
+
+The `(#<issue-number>)` suffix is a Lavanda Flow convention layered on top of Conventional Commits. It is required for normal issue-driven commits and feature/hotfix PR titles. Release PRs are the primary exception because they aggregate multiple issues.
 
 ### Atomic commits by checkpoint
 
@@ -330,9 +347,9 @@ Issue
   ↓
 features/<issue>/<description>
   ↓
-checkpoint commits
+checkpoint commits (#issue)
   ↓
-Feature PR
+Feature PR (#issue)
   ↓ squash
  develop
   ↓
