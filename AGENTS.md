@@ -292,7 +292,7 @@ Once issue-driven development starts:
 - `main` is production-only
 - `develop` is the integration branch for the next release
 - normal work starts from a GitHub issue
-- feature branches use `features/<issue-number>/<short-description>`
+- feature branches use `feature/<issue-number>/<short-description>`
 - feature branches start from `develop`
 - feature PRs target `develop`
 - feature PRs use squash merge

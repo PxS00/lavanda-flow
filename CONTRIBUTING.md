@@ -19,7 +19,7 @@ Before contributing, read:
 3. Create a branch using:
 
 ```text
-features/<issue-number>/<short-description>
+feature/<issue-number>/<short-description>
 ```
 
 4. Implement the issue using coherent checkpoint commits.
