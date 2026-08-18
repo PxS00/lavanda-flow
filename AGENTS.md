@@ -40,7 +40,10 @@ Antes de implementar qualquer funcionalidade, consulte:
 - PostgreSQL JDBC Driver;
 - Lombok;
 - springdoc-openapi / Swagger UI;
-- Spring Boot Actuator.
+- Spring Boot Actuator;
+- Spring Boot DevTools;
+- Spring Configuration Processor;
+- Spring Boot Docker Compose Support.
 
 ### Dados e infraestrutura
 
@@ -161,6 +164,14 @@ Lombok está aprovado, com uso controlado:
 - evitar `@Data` em entidades JPA e agregados de domínio;
 - não gerar `equals/hashCode/toString` indiscriminadamente em entidades JPA;
 - Lombok não deve enfraquecer encapsulamento nem esconder invariantes.
+
+Configuração e ambiente local:
+
+- preferir `@ConfigurationProperties` para grupos de configuração tipados;
+- manter `spring-boot-configuration-processor` habilitado para metadata e autocomplete;
+- usar `spring-boot-docker-compose` apenas para facilitar o ambiente local;
+- não depender de Docker Compose Support para comportamento de produção;
+- DevTools deve permanecer restrito ao desenvolvimento.
 
 Não adicionar inicialmente sem justificativa:
 
