@@ -8,12 +8,14 @@ on:
       - ".github/**"
       - "AGENTS.md"
       - "README.md"
+      - "CONTRIBUTING.md"
   pull_request:
     paths:
       - "**/*.md"
       - ".github/**"
       - "AGENTS.md"
       - "README.md"
+      - "CONTRIBUTING.md"
 
 permissions:
   contents: read
@@ -56,6 +58,7 @@ jobs:
           required=(
             "README.md"
             "AGENTS.md"
+            "CONTRIBUTING.md"
             "docs/product/scope-v1.md"
             "docs/domain/domain-model.md"
             "docs/architecture/architecture.md"
@@ -63,6 +66,7 @@ jobs:
             "docs/architecture/dependencies.md"
             "docs/architecture/backend-structure.md"
             "docs/architecture/decisions/README.md"
+            "docs/development/git-workflow.md"
           )
 
           for file in "${required[@]}"; do
