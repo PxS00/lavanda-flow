@@ -7,6 +7,7 @@ Before contributing, read:
 - `AGENTS.md`
 - `docs/product/scope-v1.md`
 - `docs/development/git-workflow.md`
+- `docs/development/commit-conventions.md`
 - `docs/architecture/architecture.md`
 - `docs/architecture/backend-structure.md`
 - `docs/architecture/dependencies.md`
@@ -48,28 +49,34 @@ User-facing product text may be Portuguese.
 
 ## Commits
 
-Use Conventional Commits with a mandatory scope.
+Use Conventional Commits with a mandatory scope and, for issue-driven work, the related issue number at the end.
 
 Required format:
 
 ```text
-<type>(<scope>): <description>
+<type>(<scope>): <description> (#<issue-number>)
 ```
 
 Examples:
 
 ```text
-feat(inventory): register stock entry
-fix(inventory): reject withdrawal above available balance
-test(inventory): cover expired batch selection
-docs(git): document release workflow
-chore(build): configure Maven Enforcer
-ci(backend): verify backend build
+feat(inventory): register stock entry (#18)
+fix(inventory): reject withdrawal above available balance (#21)
+test(inventory): cover expired batch selection (#21)
+docs(git): document release workflow (#8)
+chore(build): configure Maven Enforcer (#12)
+ci(backend): verify backend build (#12)
 ```
+
+`ci(scope)` is valid. For example, `ci(backend)`, `ci(frontend)`, and `ci(github)` identify the CI area being changed.
 
 Choose a stable scope that identifies the affected module or engineering concern. Avoid scopes that are so granular that they merely repeat a class or file name.
 
 Commits should be atomic by meaningful checkpoint. Do not create a commit for every trivial edit, and do not accumulate a large feature into one oversized commit containing unrelated work.
+
+The issue suffix is a Lavanda Flow convention on top of Conventional Commits. Release PRs are exempt from a single issue suffix because they aggregate multiple issues.
+
+See `docs/development/commit-conventions.md` for the complete commit policy.
 
 ## Code documentation
 
@@ -90,10 +97,22 @@ HTTP contracts are documented through OpenAPI/Swagger. Architectural decisions b
 
 Feature PRs target `develop` and are squash merged.
 
-Because the PR title becomes the squash commit message, PR titles must follow scoped Conventional Commits:
+Because the PR title becomes the squash commit message, feature and hotfix PR titles must use:
 
 ```text
-<type>(<scope>): <description>
+<type>(<scope>): <description> (#<issue-number>)
+```
+
+Example:
+
+```text
+feat(catalog): add inventory item registration (#18)
+```
+
+Release PRs use scoped Conventional Commit titles without a single issue suffix, for example:
+
+```text
+chore(release): prepare v0.1.0
 ```
 
 A PR should:
