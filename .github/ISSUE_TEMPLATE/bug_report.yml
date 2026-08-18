@@ -1,0 +1,67 @@
+name: Bug report
+description: Reporte um comportamento incorreto ou regressão.
+title: "fix: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de abrir, verifique se o problema já não possui issue existente.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: Descreva o comportamento observado.
+      placeholder: O que aconteceu?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento esperado
+      description: Descreva o comportamento correto.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Como reproduzir
+      description: Informe passos mínimos e determinísticos quando possível.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Backend
+        - Frontend
+        - Banco de dados
+        - Infraestrutura / CI
+        - Documentação
+        - Outro
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidências
+      description: Logs, screenshots, payloads ou informações adicionais sem dados sensíveis.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: Verifiquei issues existentes.
+          required: true
+        - label: Não incluí secrets, senhas ou dados sensíveis.
+          required: true
