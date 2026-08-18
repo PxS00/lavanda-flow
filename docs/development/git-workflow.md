@@ -146,7 +146,7 @@ Requirements:
 - no unrelated refactoring or dependency changes are hidden in the PR;
 - squash merge is used.
 
-The squash commit should follow Conventional Commits and summarize the complete issue outcome.
+The squash commit must follow the scoped Conventional Commit format and summarize the complete issue outcome.
 
 Example:
 
@@ -174,7 +174,15 @@ A release PR is not a place for new feature development.
 
 ## Commit policy
 
-Lavanda Flow follows **Conventional Commits** with commit messages written in English.
+Lavanda Flow follows **Conventional Commits** with commit messages written in English and an explicit scope.
+
+Required format:
+
+```text
+<type>(<scope>): <description>
+```
+
+The scope is mandatory for normal project commits. It should identify the affected domain, module, application area, or engineering concern.
 
 Examples:
 
@@ -183,10 +191,46 @@ feat(inventory): add stock withdrawal use case
 fix(inventory): prevent negative batch balance
 test(inventory): cover FEFO selection edge cases
 refactor(catalog): isolate item classification policy
-docs: define release branch workflow
+docs(git): define release branch workflow
 chore(build): configure Maven Enforcer
-ci: add backend verification workflow
+ci(backend): add backend verification workflow
 ```
+
+Recommended types include:
+
+```text
+feat
+fix
+refactor
+test
+docs
+chore
+ci
+build
+perf
+style
+revert
+```
+
+Recommended scopes should remain stable and meaningful. Examples include:
+
+```text
+inventory
+catalog
+suppliers
+backend
+frontend
+api
+security
+database
+observability
+build
+ci
+git
+docs
+```
+
+Do not invent overly granular scopes for individual classes or files. Prefer the smallest stable project area that clearly identifies the change.
 
 ### Atomic commits by checkpoint
 
