@@ -1,0 +1,61 @@
+name: Feature request
+description: Proponha uma funcionalidade ou melhoria de produto.
+title: "feat: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema / necessidade
+      description: Qual problema real esta funcionalidade resolve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+      description: Descreva a solução esperada sem prescrever implementação desnecessariamente.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aceite
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área principal
+      options:
+        - Catálogo
+        - Estoque
+        - Fornecedores
+        - Frontend / UX
+        - Segurança
+        - Infraestrutura / observabilidade
+        - Outro
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Escopo
+      options:
+        - V1 já aprovada
+        - Evolução futura
+        - Precisa de decisão de produto/arquitetura
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Observações técnicas
+      description: Trade-offs, dependências ou riscos conhecidos, se houver.
