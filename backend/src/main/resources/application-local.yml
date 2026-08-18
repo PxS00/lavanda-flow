@@ -2,7 +2,8 @@ spring:
   docker:
     compose:
       enabled: true
-      lifecycle-management: start-and-stop
+      file: ../compose.yaml
+      lifecycle-management: start-only
 
   jpa:
     hibernate:
