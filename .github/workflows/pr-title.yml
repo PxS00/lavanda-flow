@@ -1,0 +1,29 @@
+name: Pull Request Title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-title:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate scoped Conventional Commit title
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+
+          pattern='^(feat|fix|refactor|test|docs|chore|ci|build|perf|style|revert)\([a-z0-9][a-z0-9-]*\): .+'
+
+          if [[ ! "$PR_TITLE" =~ $pattern ]]; then
+            echo "Invalid pull request title: $PR_TITLE"
+            echo "Expected format: <type>(<scope>): <description>"
+            echo "Example: feat(inventory): add stock withdrawal"
+            exit 1
+          fi

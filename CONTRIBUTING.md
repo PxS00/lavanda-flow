@@ -90,6 +90,12 @@ HTTP contracts are documented through OpenAPI/Swagger. Architectural decisions b
 
 Feature PRs target `develop` and are squash merged.
 
+Because the PR title becomes the squash commit message, PR titles must follow scoped Conventional Commits:
+
+```text
+<type>(<scope>): <description>
+```
+
 A PR should:
 
 - link the issue;
@@ -101,6 +107,26 @@ A PR should:
 - pass the applicable CI checks.
 
 Release PRs target `main` from `release/vX.Y.Z` and follow the release requirements documented in `docs/development/git-workflow.md`.
+
+## Branch protection
+
+Once issue-driven development begins, `main` and `develop` must be protected according to `docs/development/git-workflow.md`.
+
+At minimum:
+
+- pull requests are required;
+- applicable CI checks are required;
+- force pushes are disabled;
+- `main` cannot be deleted;
+- normal feature work does not target `main` directly.
+
+## Code ownership
+
+Repository ownership rules are defined in `.github/CODEOWNERS`.
+
+## Security
+
+Do not report secrets or exploitable vulnerabilities in public issues. Follow `SECURITY.md` for responsible reporting.
 
 ## Architecture
 

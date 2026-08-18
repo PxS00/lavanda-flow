@@ -24,6 +24,7 @@ Closes #
 
 ## Scope
 
+- [ ] PR title follows `<type>(<scope>): <description>`.
 - [ ] The change matches the linked issue and approved scope.
 - [ ] Module boundaries were preserved.
 - [ ] No dependency was added without technical justification.
@@ -50,6 +51,11 @@ Check only what applies:
 
 - [ ] No HTTP contract change.
 - [ ] OpenAPI/Swagger contract was updated or remains correctly inferred.
+
+## Documentation
+
+- [ ] Public Java contracts and non-obvious behavior have appropriate Javadoc where applicable.
+- [ ] Architecture or operational documentation was updated when required.
 
 ## Release impact
 

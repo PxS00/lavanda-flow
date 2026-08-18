@@ -35,6 +35,8 @@ Rules:
 - changes normally reach `main` only through a release pull request;
 - every merge to `main` must represent a release-ready state;
 - CI checks required for the current project stage must pass before merge;
+- force-push and branch deletion must be disabled through branch protection;
+- pull requests are required for normal changes;
 - release tags use Semantic Versioning, for example `v0.1.0`, `v0.2.0`, and `v1.0.0`.
 
 ### `develop`
@@ -47,7 +49,9 @@ Rules:
 - feature pull requests target `develop`;
 - completed feature pull requests are merged using **squash merge**;
 - `develop` must remain buildable and testable;
-- unfinished or knowingly broken work must not be merged into `develop`.
+- unfinished or knowingly broken work must not be merged into `develop`;
+- force-push must be disabled through branch protection;
+- pull requests and required CI checks are mandatory once project CI exists.
 
 ### Feature branches
 
@@ -144,14 +148,21 @@ Requirements:
 - tests and validation appropriate to the change are complete;
 - documentation is updated when behavior, architecture, configuration, or contracts change;
 - no unrelated refactoring or dependency changes are hidden in the PR;
-- squash merge is used.
+- squash merge is used;
+- PR title must follow scoped Conventional Commits because it becomes the squash commit message.
 
-The squash commit must follow the scoped Conventional Commit format and summarize the complete issue outcome.
+Required title format:
 
-Example:
+```text
+<type>(<scope>): <description>
+```
+
+Examples:
 
 ```text
 feat(inventory): add inventory item registration
+fix(api): return validation errors consistently
+chore(build): configure Maven plugins
 ```
 
 ### Release PR
@@ -174,15 +185,15 @@ A release PR is not a place for new feature development.
 
 ## Commit policy
 
-Lavanda Flow follows **Conventional Commits** with commit messages written in English and an explicit scope.
+Lavanda Flow follows **Conventional Commits** with commit messages written in English.
+
+The scope is mandatory.
 
 Required format:
 
 ```text
 <type>(<scope>): <description>
 ```
-
-The scope is mandatory for normal project commits. It should identify the affected domain, module, application area, or engineering concern.
 
 Examples:
 
@@ -196,23 +207,7 @@ chore(build): configure Maven Enforcer
 ci(backend): add backend verification workflow
 ```
 
-Recommended types include:
-
-```text
-feat
-fix
-refactor
-test
-docs
-chore
-ci
-build
-perf
-style
-revert
-```
-
-Recommended scopes should remain stable and meaningful. Examples include:
+Prefer stable, meaningful scopes such as:
 
 ```text
 inventory
@@ -230,7 +225,7 @@ git
 docs
 ```
 
-Do not invent overly granular scopes for individual classes or files. Prefer the smallest stable project area that clearly identifies the change.
+Do not use file names or individual class names as scopes unless there is a strong reason.
 
 ### Atomic commits by checkpoint
 
@@ -273,6 +268,34 @@ For example, avoid combining all of these unless they are inseparable for one ch
 - dependency upgrades;
 - documentation cleanup;
 - CI refactoring.
+
+## Branch protection policy
+
+Once issue-driven development starts, configure GitHub branch protection so repository settings enforce the documented flow.
+
+### `main`
+
+Expected protection:
+
+- require a pull request before merging;
+- require status checks applicable to the release;
+- block force pushes;
+- block branch deletion;
+- do not use normal feature branches as PR sources;
+- normal integration path is `release/* -> main`;
+- emergency path is `hotfix/* -> main`.
+
+### `develop`
+
+Expected protection:
+
+- require a pull request before merging;
+- require backend/frontend CI checks once available;
+- block force pushes;
+- keep the branch buildable;
+- normal integration path is `features/* -> develop`.
+
+Branch protection is a repository setting, while this document is the source of truth for the intended policy.
 
 ## Language policy
 
