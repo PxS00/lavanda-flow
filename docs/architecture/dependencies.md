@@ -73,8 +73,30 @@ O OpenAPI deve descrever contratos, códigos de resposta e autenticação de for
 | Dependência | Finalidade |
 |---|---|
 | `spring-boot-devtools` | reinício automático e melhorias de experiência local; somente desenvolvimento |
+| `spring-boot-configuration-processor` | geração de metadata para `@ConfigurationProperties`, autocomplete e documentação de chaves de configuração |
+| `spring-boot-docker-compose` | integração do Spring Boot com Docker Compose no ambiente local e criação automática de service connections quando suportado |
 
-`spring-boot-devtools` não deve fazer parte de imagens ou runtime de produção.
+Regras:
+
+- `spring-boot-devtools` não deve fazer parte de imagens ou runtime de produção;
+- `spring-boot-configuration-processor` deve ser usado quando houver propriedades customizadas tipadas, preferencialmente com `@ConfigurationProperties` em vez de espalhar `@Value` pelo código;
+- `spring-boot-docker-compose` é recurso de desenvolvimento local; o deploy não deve depender do ciclo de vida automático do Compose fornecido pelo Spring Boot.
+
+Exemplos conceituais:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-configuration-processor</artifactId>
+    <optional>true</optional>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-docker-compose</artifactId>
+    <optional>true</optional>
+</dependency>
+```
 
 ### Testes
 
