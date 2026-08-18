@@ -25,7 +25,8 @@ Antes de implementar qualquer funcionalidade, consulte:
 - Reactive Forms;
 - Signals;
 - Angular Material/CDK;
-- Vitest.
+- Vitest + jsdom;
+- angular-eslint + ESLint flat config.
 
 ### Backend
 
@@ -41,6 +42,7 @@ Antes de implementar qualquer funcionalidade, consulte:
 - Lombok;
 - springdoc-openapi / Swagger UI;
 - Spring Boot Actuator;
+- Micrometer Prometheus Registry;
 - Spring Boot DevTools;
 - Spring Configuration Processor;
 - Spring Boot Docker Compose Support.
@@ -59,7 +61,8 @@ Antes de implementar qualquer funcionalidade, consulte:
 - Spring Boot Test;
 - Spring Security Test;
 - Spring Modulith Test;
-- Testcontainers com PostgreSQL.
+- Testcontainers com PostgreSQL;
+- Vitest no frontend.
 
 A lista aprovada e as dependências deliberadamente evitadas no bootstrap estão em `docs/architecture/dependencies.md`.
 
@@ -173,6 +176,13 @@ Configuração e ambiente local:
 - não depender de Docker Compose Support para comportamento de produção;
 - DevTools deve permanecer restrito ao desenvolvimento.
 
+Observabilidade inicial:
+
+- usar Spring Boot Actuator para health e métricas;
+- manter `micrometer-registry-prometheus` como registry aprovado;
+- expor somente management endpoints necessários;
+- não adicionar tracing distribuído/OpenTelemetry sem requisito concreto.
+
 Não adicionar inicialmente sem justificativa:
 
 - MapStruct;
@@ -180,6 +190,7 @@ Não adicionar inicialmente sem justificativa:
 - Kafka/RabbitMQ;
 - H2;
 - Resilience4j;
+- OpenTelemetry/tracing distribuído;
 - bibliotecas adicionais de estado/cache/mensageria.
 
 Dependências Spring devem usar gerenciamento de versões por BOM/parent sempre que possível.
@@ -206,11 +217,15 @@ Usar Testcontainers para integração com PostgreSQL.
 - priorizar mobile-first;
 - componentes devem ser pequenos e orientados à responsabilidade;
 - lógica de acesso HTTP deve ficar fora de componentes de apresentação;
-- usar Reactive Forms para formulários com regras relevantes;
+- usar `HttpClient` do Angular, não Axios;
+- usar Reactive Forms como padrão da V1;
 - usar Signals para estado local/derivado quando apropriado;
 - usar RxJS quando houver fluxo assíncrono/composição que justifique;
 - tratar estados de loading, erro e vazio;
 - Angular Material é o design system inicial;
+- configurar `angular-eslint` e ESLint com flat config;
+- `ng lint`, `ng test` e `ng build` devem ser validações padrão do frontend;
+- não usar `@angular/animations` em código novo; preferir CSS e `animate.enter` / `animate.leave` quando necessário;
 - evitar adicionar bibliotecas quando Angular já fornece solução adequada.
 
 Não adicionar inicialmente sem necessidade concreta:
@@ -219,7 +234,8 @@ Não adicionar inicialmente sem necessidade concreta:
 - Axios;
 - bibliotecas externas de forms;
 - bibliotecas externas de routing;
-- Tailwind em paralelo ao Angular Material.
+- Tailwind em paralelo ao Angular Material;
+- `@angular/animations` para novas implementações.
 
 PWA é evolução prevista, não requisito do bootstrap inicial.
 
@@ -281,7 +297,7 @@ Antes de alterar código:
 4. preserve as invariantes de estoque;
 5. implemente a menor mudança completa possível;
 6. adicione ou atualize testes;
-7. execute validações relevantes;
+7. execute build, lint e testes relevantes;
 8. revise `git diff` antes de finalizar.
 
 Se uma decisão estrutural não estiver documentada e puder afetar várias partes do sistema, não presuma silenciosamente. Registre ou proponha uma decisão arquitetural primeiro.
