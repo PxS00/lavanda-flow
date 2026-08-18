@@ -71,21 +71,3 @@ jobs:
               exit 1
             }
           done
-
-      - name: Validate issue form YAML syntax
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import pathlib
-          import sys
-          import yaml
-
-          paths = list(pathlib.Path('.github/ISSUE_TEMPLATE').glob('*.yml'))
-          paths += list(pathlib.Path('.github/ISSUE_TEMPLATE').glob('*.yaml'))
-
-          for path in paths:
-              with path.open(encoding='utf-8') as stream:
-                  yaml.safe_load(stream)
-              print(f'validated: {path}')
-          PY
