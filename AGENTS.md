@@ -1,94 +1,96 @@
 # AGENTS.md
 
-## Projeto
+## Project
 
-Lavanda Flow é um sistema de estoque e produção para a Céu de Lavanda.
+Lavanda Flow is an inventory and production management system for Céu de Lavanda.
 
-A V1 é focada em estoque geral, lotes, movimentações, validade, fornecedores e alertas. Fórmulas, produção automatizada, custos e rastreabilidade completa são evoluções posteriores.
+V1 focuses on general inventory, batches, stock movements, expiration dates, suppliers, and alerts. Formulas, automated production, cost calculation, and complete traceability are later evolutions.
 
-Antes de implementar qualquer funcionalidade, consulte:
+Before implementing any functionality, read the relevant documentation:
 
-- `docs/product/scope-v1.md`;
-- `docs/domain/domain-model.md`;
-- `docs/architecture/architecture.md`;
-- `docs/architecture/data-model.md`;
-- `docs/architecture/dependencies.md`;
-- `docs/architecture/backend-structure.md`.
+- `docs/product/scope-v1.md`
+- `docs/domain/domain-model.md`
+- `docs/architecture/architecture.md`
+- `docs/architecture/data-model.md`
+- `docs/architecture/dependencies.md`
+- `docs/architecture/backend-structure.md`
+- `docs/development/git-workflow.md`
+- `CONTRIBUTING.md`
 
-## Stack oficial
+## Official stack
 
 ### Frontend
 
-- Angular 22;
-- TypeScript;
-- Angular Router;
-- Reactive Forms;
-- Signals;
-- Angular Material/CDK;
-- Vitest + jsdom;
-- angular-eslint + ESLint flat config.
+- Angular 22
+- TypeScript
+- Angular Router
+- Reactive Forms
+- Signals
+- Angular Material / CDK
+- Vitest + jsdom
+- angular-eslint + ESLint flat config
 
 ### Backend
 
-- Java 25 LTS;
-- Spring Boot 4.1;
-- Spring Modulith;
-- Spring Web;
-- Spring Validation;
-- Spring Security;
-- Spring Data JPA;
-- Flyway;
-- PostgreSQL JDBC Driver;
-- Lombok;
-- springdoc-openapi / Swagger UI;
-- Spring Boot Actuator;
-- Micrometer Prometheus Registry;
-- Spring Boot DevTools;
-- Spring Configuration Processor;
-- Spring Boot Docker Compose Support.
+- Java 25 LTS
+- Spring Boot 4.1
+- Spring Modulith
+- Spring Web
+- Spring Validation
+- Spring Security
+- Spring Data JPA
+- Flyway
+- PostgreSQL JDBC Driver
+- Lombok
+- springdoc-openapi / Swagger UI
+- Spring Boot Actuator
+- Micrometer Prometheus Registry
+- Spring Boot DevTools
+- Spring Configuration Processor
+- Spring Boot Docker Compose Support
 
-### Dados e infraestrutura
+### Data and infrastructure
 
-- PostgreSQL;
-- Docker;
-- Docker Compose;
-- GitHub Actions.
+- PostgreSQL
+- Docker
+- Docker Compose
+- GitHub Actions
 
-### Testes
+### Testing
 
-- JUnit 5;
-- Mockito;
-- Spring Boot Test;
-- Spring Security Test;
-- Spring Modulith Test;
-- Testcontainers com PostgreSQL;
-- Vitest no frontend.
+- JUnit 5
+- Mockito
+- Spring Boot Test
+- Spring Security Test
+- Spring Modulith Test
+- Testcontainers with PostgreSQL
+- Vitest on the frontend
 
-A lista aprovada e as dependências deliberadamente evitadas no bootstrap estão em `docs/architecture/dependencies.md`.
+The approved dependency list and deliberately excluded bootstrap dependencies are documented in `docs/architecture/dependencies.md`.
 
-## Princípios arquiteturais
+## Architecture principles
 
-- modular monolith;
-- package by feature/domain;
-- módulos com fronteiras explícitas;
-- regras de negócio fora de controllers;
-- detalhes de infraestrutura não devem dominar o modelo de domínio;
-- evitar microsserviços sem necessidade concreta;
-- evitar abstrações especulativas.
+- modular monolith
+- package by feature/domain
+- explicit module boundaries
+- business rules outside controllers
+- infrastructure details must not dominate the domain model
+- avoid microservices without a concrete need
+- avoid speculative abstractions
 
 ## Backend
 
-### Organização
+### Organization
 
-A referência completa está em `docs/architecture/backend-structure.md`.
+The complete reference is in `docs/architecture/backend-structure.md`.
 
-Pacote base:
+Base package:
 
 ```text
 com.ceudelavanda.lavandaflow
 ```
 
-Estrutura principal:
+Primary structure:
 
 ```text
 com.ceudelavanda.lavandaflow
@@ -107,7 +109,7 @@ com.ceudelavanda.lavandaflow
 └── shared/
 ```
 
-Evitar estrutura global baseada exclusivamente em:
+Do not use a global technical-layer structure such as:
 
 ```text
 controller/
@@ -116,188 +118,231 @@ repository/
 entity/
 ```
 
-Não criar módulos futuros (`formulas`, `production`, `traceability`) antes de entrarem no escopo aprovado.
+Do not create future modules (`formulas`, `production`, `traceability`) before they enter the approved scope.
 
-### Dependências entre módulos
+### Module dependencies
 
-- acessar outros módulos apenas por APIs públicas;
-- nunca importar internals de `infrastructure` de outro módulo;
-- evitar ciclos;
-- usar Spring Modulith para validar fronteiras;
-- eventos devem ter motivação de negócio/arquitetura, não serem adicionados por padrão.
+- access other modules only through public APIs
+- never import another module's infrastructure internals
+- avoid cycles
+- use Spring Modulith to verify boundaries
+- introduce events only when there is a business or architectural reason
 
 ### API
 
-- utilizar DTOs nos boundaries HTTP;
-- nunca expor entidades JPA diretamente;
-- validar entradas;
-- manter contratos REST consistentes;
-- utilizar `/api/v1` como prefixo inicial;
-- controllers devem ser finos;
-- publicar OpenAPI e Swagger UI para os contratos HTTP;
-- documentar códigos de resposta, autenticação e erros relevantes;
-- evitar annotations OpenAPI redundantes quando o contrato já for inferido corretamente.
+- use DTOs at HTTP boundaries
+- never expose JPA entities directly
+- validate inputs
+- keep REST contracts consistent
+- use `/api/v1` as the initial API prefix
+- keep controllers thin
+- publish OpenAPI and Swagger UI contracts
+- document relevant response codes, authentication, and errors
+- avoid redundant OpenAPI annotations when the contract is already inferred correctly
 
-### Domínio
+### Domain
 
-- quantidades usam `BigDecimal`;
-- nunca usar `double` ou `float` para estoque;
-- movimentações de estoque devem ser auditáveis;
-- não permitir saldo negativo;
-- correções devem gerar movimentos de ajuste, não alteração destrutiva do histórico;
-- respeitar FEFO quando aplicável;
-- operações de saldo devem ser transacionais.
+- physical quantities use `BigDecimal`
+- never use `double` or `float` for inventory quantities
+- stock movements must be auditable
+- negative stock is forbidden
+- corrections create adjustment movements instead of destructive history edits
+- use FEFO when applicable
+- balance-changing operations must be transactional
 
-### Persistência
+### Persistence
 
-- PostgreSQL é a fonte de verdade;
-- alterações de schema devem usar Flyway;
-- não depender de `ddl-auto` para evolução de schema;
-- constraints importantes devem existir também no banco;
-- não usar H2 como substituto principal de PostgreSQL em testes de integração.
+- PostgreSQL is the source of truth
+- schema evolution uses Flyway
+- do not rely on `ddl-auto` for controlled schema evolution
+- important invariants should also be enforced with database constraints when appropriate
+- do not use H2 as the primary PostgreSQL substitute in integration tests
 
-### Dependências backend
+### Backend dependencies
 
-O bootstrap deve partir do conjunto aprovado em `docs/architecture/dependencies.md`.
+Bootstrap from the approved set in `docs/architecture/dependencies.md`.
 
-Lombok está aprovado, com uso controlado:
+Lombok is approved with controlled usage:
 
-- preferir `@RequiredArgsConstructor` para injeção por construtor;
-- `@Getter`, `@Setter`, `@Builder` e `@Slf4j` apenas quando agregarem clareza;
-- evitar `@Data` em entidades JPA e agregados de domínio;
-- não gerar `equals/hashCode/toString` indiscriminadamente em entidades JPA;
-- Lombok não deve enfraquecer encapsulamento nem esconder invariantes.
+- prefer `@RequiredArgsConstructor` for constructor injection
+- use `@Getter`, `@Setter`, `@Builder`, and `@Slf4j` only when they improve clarity
+- avoid `@Data` on JPA entities and domain aggregates
+- do not generate `equals/hashCode/toString` indiscriminately on JPA entities
+- Lombok must not weaken encapsulation or hide invariants
 
-Configuração e ambiente local:
+Configuration and local development:
 
-- preferir `@ConfigurationProperties` para grupos de configuração tipados;
-- manter `spring-boot-configuration-processor` habilitado para metadata e autocomplete;
-- usar `spring-boot-docker-compose` apenas para facilitar o ambiente local;
-- não depender de Docker Compose Support para comportamento de produção;
-- DevTools deve permanecer restrito ao desenvolvimento.
+- prefer `@ConfigurationProperties` for typed configuration groups
+- keep `spring-boot-configuration-processor` enabled for metadata and autocomplete
+- use `spring-boot-docker-compose` only to improve local development
+- production behavior must not depend on Spring Boot Docker Compose lifecycle support
+- DevTools is development-only
 
-Observabilidade inicial:
+Initial observability:
 
-- usar Spring Boot Actuator para health e métricas;
-- manter `micrometer-registry-prometheus` como registry aprovado;
-- expor somente management endpoints necessários;
-- não adicionar tracing distribuído/OpenTelemetry sem requisito concreto.
+- use Spring Boot Actuator for health and metrics
+- keep `micrometer-registry-prometheus` as the approved metrics registry
+- expose only required management endpoints
+- do not add distributed tracing/OpenTelemetry without a concrete requirement
 
-Não adicionar inicialmente sem justificativa:
+Do not add initially without justification:
 
-- MapStruct;
-- Redis;
-- Kafka/RabbitMQ;
-- H2;
-- Resilience4j;
-- OpenTelemetry/tracing distribuído;
-- bibliotecas adicionais de estado/cache/mensageria.
+- MapStruct
+- Redis
+- Kafka / RabbitMQ
+- H2
+- Resilience4j
+- OpenTelemetry / distributed tracing
+- additional state, cache, or messaging libraries
 
-Dependências Spring devem usar gerenciamento de versões por BOM/parent sempre que possível.
+Use Spring BOM/parent dependency management whenever possible.
 
-### Testes
+### Tests
 
-Toda regra de negócio relevante deve possuir teste.
+Every relevant business rule requires tests.
 
-Prioridades:
+Prioritize:
 
-- saldo;
-- FEFO;
-- validade;
-- concorrência de movimentações;
-- validações de quantidade;
-- contratos principais da API;
-- fronteiras do Spring Modulith.
+- stock balance
+- FEFO
+- expiration rules
+- concurrent stock movements
+- quantity validation
+- primary API contracts
+- Spring Modulith boundaries
 
-Usar Testcontainers para integração com PostgreSQL.
+Use Testcontainers with PostgreSQL for integration tests.
 
 ## Frontend
 
-- Angular deve permanecer desacoplado do backend por contrato REST;
-- priorizar mobile-first;
-- componentes devem ser pequenos e orientados à responsabilidade;
-- lógica de acesso HTTP deve ficar fora de componentes de apresentação;
-- usar `HttpClient` do Angular, não Axios;
-- usar Reactive Forms como padrão da V1;
-- usar Signals para estado local/derivado quando apropriado;
-- usar RxJS quando houver fluxo assíncrono/composição que justifique;
-- tratar estados de loading, erro e vazio;
-- Angular Material é o design system inicial;
-- configurar `angular-eslint` e ESLint com flat config;
-- `ng lint`, `ng test` e `ng build` devem ser validações padrão do frontend;
-- não usar `@angular/animations` em código novo; preferir CSS e `animate.enter` / `animate.leave` quando necessário;
-- evitar adicionar bibliotecas quando Angular já fornece solução adequada.
+- keep Angular decoupled from the backend through REST contracts
+- prioritize mobile-first UX
+- keep components small and responsibility-oriented
+- keep HTTP access logic outside presentation components
+- use Angular `HttpClient`, not Axios
+- use Reactive Forms as the V1 default
+- use Signals for local and derived state when appropriate
+- use RxJS when asynchronous composition justifies it
+- handle loading, error, and empty states explicitly
+- Angular Material is the initial design system
+- configure `angular-eslint` with ESLint flat config
+- standard frontend validation is `ng lint`, `ng test`, and `ng build`
+- do not use `@angular/animations` for new code; prefer CSS and `animate.enter` / `animate.leave` when needed
+- avoid libraries that duplicate Angular capabilities
 
-Não adicionar inicialmente sem necessidade concreta:
+Do not add initially without a concrete need:
 
-- NgRx;
-- Axios;
-- bibliotecas externas de forms;
-- bibliotecas externas de routing;
-- Tailwind em paralelo ao Angular Material;
-- `@angular/animations` para novas implementações.
+- NgRx
+- Axios
+- external form libraries
+- external routing libraries
+- Tailwind alongside Angular Material
+- `@angular/animations` for new implementations
 
-PWA é evolução prevista, não requisito do bootstrap inicial.
+PWA support is planned but is not part of the initial bootstrap requirement.
 
-## Segurança
+## Security
 
-- nunca versionar secrets;
-- nunca armazenar senha em texto puro;
-- validar payloads no backend;
-- configurar CORS explicitamente;
-- não registrar credenciais ou dados sensíveis em logs;
-- aplicar princípio do menor privilégio.
+- never commit secrets
+- never store plaintext passwords
+- validate backend payloads
+- configure CORS explicitly
+- do not log credentials or sensitive data
+- follow the principle of least privilege
 
-## Qualidade
+## Quality
 
-Priorizar:
+Prioritize:
 
-- Clean Code;
-- SOLID quando aplicável;
-- nomes explícitos;
-- métodos pequenos;
-- baixa duplicação;
-- regras de negócio testáveis;
-- simplicidade sobre padrões desnecessários.
+- Clean Code
+- SOLID when applicable
+- explicit names
+- small methods
+- low duplication
+- testable business rules
+- simplicity over unnecessary patterns
 
-Não introduzir design patterns apenas para aumentar abstração.
+Do not introduce design patterns only to increase abstraction.
 
-## Git
+## Git workflow
 
-Utilizar Conventional Commits.
+The authoritative policy is `docs/development/git-workflow.md`.
 
-Exemplos:
+Once issue-driven development starts:
+
+- `main` is production-only
+- `develop` is the integration branch for the next release
+- normal work starts from a GitHub issue
+- feature branches use `features/<issue-number>/<short-description>`
+- feature branches start from `develop`
+- feature PRs target `develop`
+- feature PRs use squash merge
+- releases use `release/vX.Y.Z`
+- release branches start from `develop`
+- release PRs target `main`
+- release PRs use a regular merge commit
+- emergency production fixes use `hotfix/<issue-number>/<short-description>` and must be synchronized back into `develop`
+
+Direct commits to `main` are allowed only during the initial documentation, governance, and bootstrap phase. This exception ends when issue-driven functional development begins and `develop` is established.
+
+## Commit policy
+
+Use Conventional Commits in English.
+
+Examples:
 
 ```text
-feat: add inventory item registration
-fix: prevent negative stock balance
+feat(inventory): add inventory item registration
+fix(inventory): prevent negative stock balance
+test(inventory): cover FEFO batch selection
+refactor(catalog): isolate item classification policy
 docs: define inventory domain model
-test: cover FEFO batch selection
-refactor: isolate stock movement policy
-chore: configure local postgres
+chore(build): configure local postgres
+ci: verify backend build
 ```
 
-Durante a fase inicial de documentação e configuração, alterações diretas na `main` podem ocorrer de forma intencional.
+Commits must be atomic by meaningful checkpoint.
 
-Quando o desenvolvimento funcional começar, preferir branches curtas, pull requests e squash merge.
+Do not create a commit for every trivial edit, but also do not accumulate thousands of unrelated modifications into one oversized commit. A commit should represent one coherent development checkpoint that can be understood and reviewed independently.
 
-## Escopo
+## Language policy
 
-Não implementar funcionalidades fora da V1 apenas porque a arquitetura prevê sua existência futura.
+Engineering artifacts are written in English:
 
-Antes de adicionar fórmula, produção, custos ou rastreabilidade completa, o escopo correspondente deve ser aprovado e documentado.
+- branch names
+- commit messages
+- issue titles and bodies
+- pull request titles and descriptions
+- source code identifiers
+- code comments when necessary
+- architecture and development documentation
+- ADRs
+- API documentation
+- CI/CD and operational documentation
 
-## Regra para agentes
+User-facing application content may remain in Portuguese.
 
-Antes de alterar código:
+Existing Portuguese documentation should be migrated to English as it is revised and preferably before functional development becomes substantial.
 
-1. leia documentação relevante;
-2. identifique o módulo responsável;
-3. confirme se a dependência necessária já está aprovada;
-4. preserve as invariantes de estoque;
-5. implemente a menor mudança completa possível;
-6. adicione ou atualize testes;
-7. execute build, lint e testes relevantes;
-8. revise `git diff` antes de finalizar.
+## Scope
 
-Se uma decisão estrutural não estiver documentada e puder afetar várias partes do sistema, não presuma silenciosamente. Registre ou proponha uma decisão arquitetural primeiro.
+Do not implement functionality outside V1 only because the architecture anticipates it.
+
+Before adding formulas, production, costs, or complete traceability, the corresponding scope must be approved and documented.
+
+## Rules for agents
+
+Before changing code:
+
+1. read the relevant documentation
+2. identify the responsible module
+3. confirm that required dependencies are approved
+4. preserve inventory invariants
+5. keep the change inside the linked issue scope
+6. implement the smallest complete solution
+7. create coherent checkpoint commits rather than trivial or oversized commits
+8. add or update tests
+9. run the relevant build, lint, and test commands
+10. review `git diff` before finalizing
+
+If a structural decision is undocumented and may affect multiple parts of the system, do not assume silently. Propose or record an architectural decision first.
