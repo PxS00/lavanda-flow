@@ -1,0 +1,18 @@
+spring:
+  docker:
+    compose:
+      enabled: true
+      lifecycle-management: start-and-stop
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    com.ceudelavanda.lavandaflow: DEBUG
+    org.hibernate.SQL: DEBUG

@@ -11,7 +11,7 @@ Commit formatting details are defined in `docs/development/commit-conventions.md
 ## Branch model
 
 ```text
-features/<issue-number>/<short-description>
+feature/<issue-number>/<short-description>
                 │
                 │ Pull Request + squash merge
                 ▼
@@ -60,15 +60,15 @@ Rules:
 Functional work must use:
 
 ```text
-features/<issue-number>/<short-description>
+feature/<issue-number>/<short-description>
 ```
 
 Examples:
 
 ```text
-features/12/bootstrap-spring-backend
-features/18/register-inventory-item
-features/27/implement-fefo-selection
+feature/12/bootstrap-spring-backend
+feature/18/register-inventory-item
+feature/27/implement-fefo-selection
 ```
 
 Rules:
@@ -141,7 +141,7 @@ Hotfixes must not be used to bypass the normal release process for ordinary deve
 ### Feature PR
 
 ```text
-features/<issue>/<description> -> develop
+feature/<issue>/<description> -> develop
 ```
 
 Requirements:
@@ -310,7 +310,7 @@ Expected protection:
 - require backend/frontend CI checks once available;
 - block force pushes;
 - keep the branch buildable;
-- normal integration path is `features/* -> develop`.
+- normal integration path is `feature/* -> develop`.
 
 Branch protection is a repository setting, while this document is the source of truth for the intended policy.
 
@@ -345,7 +345,7 @@ Expected flow:
 ```text
 Issue
   ↓
-features/<issue>/<description>
+feature/<issue>/<description>
   ↓
 checkpoint commits (#issue)
   ↓

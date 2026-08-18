@@ -187,6 +187,7 @@ Estas ferramentas são preferencialmente configuradas como plugins de build, nã
 | JaCoCo | cobertura de testes |
 | Spotless | formatação consistente de Java e arquivos auxiliares |
 | Maven Enforcer | validar Java/Maven e regras de build |
+| CycloneDX | geração de Software Bill of Materials (SBOM) para inventário de dependências e visibilidade da supply-chain de software |
 
 A adoção de SonarQube/SonarCloud pode ocorrer posteriormente se houver benefício real para CI e análise contínua.
 
