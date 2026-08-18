@@ -1,0 +1,91 @@
+name: Repository Quality
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - ".github/**"
+      - "AGENTS.md"
+      - "README.md"
+  pull_request:
+    paths:
+      - "**/*.md"
+      - ".github/**"
+      - "AGENTS.md"
+      - "README.md"
+
+permissions:
+  contents: read
+
+jobs:
+  repository-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check trailing whitespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find . -type f \
+            \( -name '*.md' -o -name '*.yml' -o -name '*.yaml' \) \
+            -not -path './.git/*' -print)
+
+          if ((${#files[@]} == 0)); then
+            exit 0
+          fi
+
+          failed=0
+          for file in "${files[@]}"; do
+            if grep -nE '[[:blank:]]+$' "$file"; then
+              echo "Trailing whitespace found in $file"
+              failed=1
+            fi
+          done
+
+          exit "$failed"
+
+      - name: Check required repository documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            "README.md"
+            "AGENTS.md"
+            "docs/product/scope-v1.md"
+            "docs/domain/domain-model.md"
+            "docs/architecture/architecture.md"
+            "docs/architecture/data-model.md"
+            "docs/architecture/dependencies.md"
+            "docs/architecture/backend-structure.md"
+            "docs/architecture/decisions/README.md"
+          )
+
+          for file in "${required[@]}"; do
+            test -f "$file" || {
+              echo "Required file not found: $file"
+              exit 1
+            }
+          done
+
+      - name: Validate issue form YAML syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          import sys
+          import yaml
+
+          paths = list(pathlib.Path('.github/ISSUE_TEMPLATE').glob('*.yml'))
+          paths += list(pathlib.Path('.github/ISSUE_TEMPLATE').glob('*.yaml'))
+
+          for path in paths:
+              with path.open(encoding='utf-8') as stream:
+                  yaml.safe_load(stream)
+              print(f'validated: {path}')
+          PY
