@@ -1,27 +1,27 @@
 name: Feature request
-description: Proponha uma funcionalidade ou melhoria de produto.
+description: Propose a product feature or improvement.
 title: "feat: "
 body:
   - type: textarea
     id: problem
     attributes:
-      label: Problema / necessidade
-      description: Qual problema real esta funcionalidade resolve?
+      label: Problem / need
+      description: What real problem does this feature solve?
     validations:
       required: true
 
   - type: textarea
     id: proposal
     attributes:
-      label: Proposta
-      description: Descreva a solução esperada sem prescrever implementação desnecessariamente.
+      label: Proposal
+      description: Describe the expected solution without prescribing unnecessary implementation details.
     validations:
       required: true
 
   - type: textarea
     id: acceptance
     attributes:
-      label: Critérios de aceite
+      label: Acceptance criteria
       placeholder: |
         - [ ] ...
         - [ ] ...
@@ -31,31 +31,31 @@ body:
   - type: dropdown
     id: area
     attributes:
-      label: Área principal
+      label: Primary area
       options:
-        - Catálogo
-        - Estoque
-        - Fornecedores
+        - Catalog
+        - Inventory
+        - Suppliers
         - Frontend / UX
-        - Segurança
-        - Infraestrutura / observabilidade
-        - Outro
+        - Security
+        - Infrastructure / observability
+        - Other
     validations:
       required: true
 
   - type: dropdown
     id: scope
     attributes:
-      label: Escopo
+      label: Scope
       options:
-        - V1 já aprovada
-        - Evolução futura
-        - Precisa de decisão de produto/arquitetura
+        - Approved V1 scope
+        - Future evolution
+        - Requires product / architecture decision
     validations:
       required: true
 
   - type: textarea
     id: notes
     attributes:
-      label: Observações técnicas
-      description: Trade-offs, dependências ou riscos conhecidos, se houver.
+      label: Technical notes
+      description: Add known trade-offs, dependencies, risks, or relevant ADRs when applicable.
