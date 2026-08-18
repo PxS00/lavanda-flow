@@ -14,13 +14,31 @@ A regra é simples: adicionar dependências somente quando elas resolvem uma nec
 | `spring-boot-starter-validation` | validação declarativa de DTOs e comandos |
 | `spring-boot-starter-data-jpa` | persistência relacional com JPA/Hibernate |
 | `spring-boot-starter-security` | autenticação, autorização e proteção da API |
-| `spring-boot-starter-actuator` | health checks e endpoints operacionais |
+| `spring-boot-starter-actuator` | health checks, métricas e endpoints operacionais |
+| `io.micrometer:micrometer-registry-prometheus` | exposição de métricas Micrometer no formato Prometheus |
 | `spring-modulith-starter-core` | modelagem e verificação do monólito modular |
 | `flyway-core` | migrations de schema |
 | `flyway-database-postgresql` | suporte específico do Flyway para PostgreSQL |
 | `postgresql` | driver JDBC do PostgreSQL |
 | `org.projectlombok:lombok` | redução de boilerplate em classes adequadas |
 | `org.springdoc:springdoc-openapi-starter-webmvc-ui` | geração OpenAPI 3 e Swagger UI |
+
+### Observabilidade
+
+A V1 adota observabilidade simples e operacionalmente útil:
+
+- logs via SLF4J/Logback fornecidos pelo Spring Boot;
+- health checks e métricas via Actuator;
+- instrumentação Micrometer fornecida pelo ecossistema Spring Boot;
+- exportação de métricas via `micrometer-registry-prometheus`.
+
+Endpoint esperado em desenvolvimento, quando explicitamente exposto pela configuração de management endpoints:
+
+```text
+/actuator/prometheus
+```
+
+Tracing distribuído, OpenTelemetry, Jaeger e Grafana Tempo não fazem parte do bootstrap inicial. Podem ser adicionados caso o sistema passe a possuir integrações ou fluxos distribuídos que justifiquem esse custo operacional.
 
 ### Lombok
 
@@ -82,22 +100,6 @@ Regras:
 - `spring-boot-configuration-processor` deve ser usado quando houver propriedades customizadas tipadas, preferencialmente com `@ConfigurationProperties` em vez de espalhar `@Value` pelo código;
 - `spring-boot-docker-compose` é recurso de desenvolvimento local; o deploy não deve depender do ciclo de vida automático do Compose fornecido pelo Spring Boot.
 
-Exemplos conceituais:
-
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-configuration-processor</artifactId>
-    <optional>true</optional>
-</dependency>
-
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-docker-compose</artifactId>
-    <optional>true</optional>
-</dependency>
-```
-
 ### Testes
 
 | Dependência | Finalidade |
@@ -116,6 +118,7 @@ Exemplos conceituais:
 - H2: não deve substituir PostgreSQL nos testes de integração.
 - Resilience4j: não existem integrações externas críticas que justifiquem circuit breaker na V1.
 - bibliotecas JWT específicas: a estratégia de autenticação será decidida antes de adicionar implementação concreta de token.
+- OpenTelemetry/tracing distribuído: não existe arquitetura distribuída na V1.
 
 ## Gerenciamento de versões Java
 
@@ -128,7 +131,7 @@ Spring Modulith 2.1.x
 springdoc-openapi 3.x
 ```
 
-As versões transitivas do ecossistema Spring devem ser gerenciadas preferencialmente pelos BOMs oficiais, evitando pinagem manual sem necessidade.
+As versões transitivas do ecossistema Spring e Micrometer devem ser gerenciadas preferencialmente pelos BOMs oficiais do Spring Boot, evitando pinagem manual sem necessidade.
 
 Exemplo conceitual de `pom.xml`:
 
@@ -138,23 +141,11 @@ Exemplo conceitual de `pom.xml`:
     <spring-modulith.version>2.1.0</spring-modulith.version>
     <springdoc.version>3.x</springdoc.version>
 </properties>
-
-<dependencyManagement>
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.modulith</groupId>
-            <artifactId>spring-modulith-bom</artifactId>
-            <version>${spring-modulith.version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-    </dependencies>
-</dependencyManagement>
 ```
 
-Ao gerar o projeto, substituir `3.x` pela última versão estável compatível com Spring Boot 4.1.x, validando a matriz oficial do springdoc.
+Ao gerar o projeto, substituir `3.x` pela versão estável compatível com Spring Boot 4.1.x.
 
-Não copiar versões individuais de starters Spring Boot para cada dependência quando o parent/BOM já fizer esse gerenciamento.
+Não copiar versões individuais de starters Spring Boot, Micrometer ou dependências gerenciadas quando o parent/BOM já fizer esse gerenciamento.
 
 ## Ferramentas de qualidade do backend
 
@@ -171,32 +162,60 @@ A adoção de SonarQube/SonarCloud pode ocorrer posteriormente se houver benefí
 
 ## Frontend
 
-O frontend será criado pelo Angular CLI e deve permanecer próximo do ecossistema oficial Angular.
+O frontend será criado pelo Angular CLI 22 e deve permanecer próximo do ecossistema oficial Angular.
 
 ### Runtime principal
 
 | Pacote | Finalidade |
 |---|---|
-| `@angular/core` | núcleo do framework |
-| `@angular/common` | recursos comuns e cliente HTTP |
-| `@angular/router` | navegação SPA e guards |
-| `@angular/forms` | Reactive Forms |
+| `@angular/core` | núcleo do framework, DI e Signals |
+| `@angular/common` | recursos comuns; `HttpClient` é utilizado via `@angular/common/http` |
+| `@angular/router` | navegação SPA, lazy loading e guards |
+| `@angular/forms` | Reactive Forms; Signal Forms não serão adotados inicialmente |
 | `@angular/platform-browser` | bootstrap da aplicação no navegador |
-| `rxjs` | composição de fluxos assíncronos onde necessário |
-| `@angular/material` | componentes de UI consistentes para aplicação administrativa |
-| `@angular/cdk` | primitives e infraestrutura usada pelo Material |
+| `rxjs` | composição de fluxos assíncronos quando necessário |
+| `@angular/material` | design system e componentes da aplicação administrativa |
+| `@angular/cdk` | primitives e infraestrutura utilizada pelo Angular Material |
 
-Angular Signals devem ser usados para estado local e derivado quando fizer sentido. RxJS permanece apropriado para fluxos assíncronos, principalmente HTTP e composição de eventos.
+Regras:
 
-### Desenvolvimento e testes
+- Signals são parte do Angular e não exigem pacote adicional;
+- `HttpClient` deve ser usado em vez de Axios ou outro cliente HTTP paralelo;
+- Reactive Forms permanecem como abordagem padrão para formulários da V1;
+- RxJS deve ser usado quando houver composição assíncrona real, sem transformar todo estado local em Observable por padrão;
+- Angular Material será instalado pelo schematic oficial, mantendo versões compatíveis com Angular 22.
 
-| Pacote | Finalidade |
+### Desenvolvimento, lint e testes
+
+| Pacote/Ferramenta | Finalidade |
 |---|---|
 | `@angular/cli` | geração, build, serve e manutenção do workspace |
 | `@angular/compiler-cli` | compilação Angular |
-| `typescript` | linguagem do frontend |
-| `vitest` | runner padrão de testes unitários em novos projetos Angular |
-| `jsdom` | simulação de DOM para testes executados em Node.js |
+| `typescript` | linguagem do frontend; versão compatível gerenciada pelo Angular CLI |
+| `vitest` | runner padrão de testes unitários em novos projetos Angular CLI |
+| `jsdom` | emulação de DOM usada pelo setup padrão de testes em Node.js |
+| `angular-eslint` / `@angular-eslint/*` | lint de TypeScript e templates Angular com ESLint |
+| `eslint` | motor de lint, usando flat config |
+
+O Angular CLI atual já prepara novos projetos para Vitest e `jsdom`; não adicionar runners paralelos sem necessidade.
+
+O lint deverá ser configurado com:
+
+```bash
+ng add angular-eslint
+```
+
+Angular ESLint deve acompanhar o major do Angular CLI e usar configuração flat (`eslint.config.js`).
+
+### Angular Material
+
+Instalação:
+
+```bash
+ng add @angular/material
+```
+
+Não adotar `@angular/animations` em código novo. A API legada de animations está deprecated; novas animações devem preferir CSS e os mecanismos `animate.enter` / `animate.leave` suportados pelo Angular.
 
 ### Dependências futuras opcionais
 
@@ -208,30 +227,24 @@ Não é requisito para o primeiro bootstrap, mas é evolução prevista:
 ng add @angular/pwa
 ```
 
-Isso adicionará o suporte de service worker e manifest da aplicação.
-
-#### Angular Material
-
-A instalação deverá ser feita pelo schematic oficial:
-
-```bash
-ng add @angular/material
-```
+Isso adicionará service worker e manifest quando o modo instalável/offline realmente entrar no escopo.
 
 ### Bibliotecas que não devem ser adicionadas inicialmente
 
 - NgRx: Signals e serviços são suficientes para o estado esperado na V1; avaliar somente diante de complexidade real.
-- Axios: usar o cliente HTTP do Angular.
+- Axios: usar `HttpClient` do Angular.
 - bibliotecas externas de forms: usar Reactive Forms.
 - bibliotecas externas de routing: usar Angular Router.
 - Tailwind: não será dependência inicial enquanto Angular Material for o design system principal.
-- bibliotecas de datas: `Date`, Intl e recursos Angular são suficientes até existir requisito mais complexo.
+- `@angular/animations`: deprecated para código novo.
+- bibliotecas de datas: `Date`, `Intl` e recursos Angular são suficientes até existir requisito mais complexo.
 - bibliotecas de gráficos: não existe dashboard analítico que justifique dependência adicional na V1.
 
 ## Política de atualização
 
 - manter versões compatíveis com Angular 22 e Spring Boot 4.1;
+- manter `angular-eslint` no mesmo major do Angular CLI;
 - evitar `latest` em arquivos de automação e imagens de produção;
-- atualizações devem passar por build e testes;
+- atualizações devem passar por build, lint e testes;
 - dependências de segurança devem receber prioridade;
 - uma nova biblioteca relevante deve ter justificativa técnica clara.
