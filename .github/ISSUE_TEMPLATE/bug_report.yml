@@ -1,34 +1,34 @@
 name: Bug report
-description: Reporte um comportamento incorreto ou regressão.
+description: Report incorrect behavior or a regression.
 title: "fix: "
 body:
   - type: markdown
     attributes:
       value: |
-        Antes de abrir, verifique se o problema já não possui issue existente.
+        Before opening a new issue, check whether the problem is already reported.
 
   - type: textarea
     id: problem
     attributes:
-      label: Problema
-      description: Descreva o comportamento observado.
-      placeholder: O que aconteceu?
+      label: Problem
+      description: Describe the observed behavior.
+      placeholder: What happened?
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: Comportamento esperado
-      description: Descreva o comportamento correto.
+      label: Expected behavior
+      description: Describe the correct behavior.
     validations:
       required: true
 
   - type: textarea
     id: reproduce
     attributes:
-      label: Como reproduzir
-      description: Informe passos mínimos e determinísticos quando possível.
+      label: Steps to reproduce
+      description: Provide minimal and deterministic steps whenever possible.
       placeholder: |
         1. ...
         2. ...
@@ -39,29 +39,29 @@ body:
   - type: dropdown
     id: area
     attributes:
-      label: Área
+      label: Area
       options:
         - Backend
         - Frontend
-        - Banco de dados
-        - Infraestrutura / CI
-        - Documentação
-        - Outro
+        - Database
+        - Infrastructure / CI
+        - Documentation
+        - Other
     validations:
       required: true
 
   - type: textarea
     id: evidence
     attributes:
-      label: Evidências
-      description: Logs, screenshots, payloads ou informações adicionais sem dados sensíveis.
+      label: Evidence
+      description: Add logs, screenshots, payloads, or other useful information without sensitive data.
 
   - type: checkboxes
     id: checks
     attributes:
       label: Checklist
       options:
-        - label: Verifiquei issues existentes.
+        - label: I checked existing issues.
           required: true
-        - label: Não incluí secrets, senhas ou dados sensíveis.
+        - label: I did not include secrets, passwords, or sensitive data.
           required: true
