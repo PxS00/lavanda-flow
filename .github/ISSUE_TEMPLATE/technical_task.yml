@@ -1,27 +1,27 @@
 name: Technical task
-description: Registre uma tarefa técnica, de arquitetura, build, testes ou infraestrutura.
+description: Track architecture, build, testing, infrastructure, or maintenance work.
 title: "chore: "
 body:
   - type: textarea
     id: objective
     attributes:
-      label: Objetivo
-      description: Descreva a mudança técnica necessária e o resultado esperado.
+      label: Objective
+      description: Describe the technical change and expected outcome.
     validations:
       required: true
 
   - type: textarea
     id: context
     attributes:
-      label: Contexto
-      description: Explique por que a tarefa é necessária agora.
+      label: Context
+      description: Explain why this task is necessary now.
     validations:
       required: true
 
   - type: textarea
     id: acceptance
     attributes:
-      label: Critérios de aceite
+      label: Acceptance criteria
       placeholder: |
         - [ ] ...
         - [ ] ...
@@ -31,21 +31,21 @@ body:
   - type: dropdown
     id: area
     attributes:
-      label: Área
+      label: Area
       options:
         - Backend
         - Frontend
-        - Banco de dados
-        - Arquitetura
+        - Database
+        - Architecture
         - CI/CD
-        - Observabilidade
-        - Segurança
-        - Documentação
+        - Observability
+        - Security
+        - Documentation
     validations:
       required: true
 
   - type: textarea
     id: references
     attributes:
-      label: Referências
-      description: ADRs, documentação, issues relacionadas ou decisões relevantes.
+      label: References
+      description: Add ADRs, documentation, related issues, or relevant decisions.
