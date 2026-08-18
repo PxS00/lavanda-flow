@@ -11,36 +11,51 @@ Antes de implementar qualquer funcionalidade, consulte:
 - `docs/product/scope-v1.md`;
 - `docs/domain/domain-model.md`;
 - `docs/architecture/architecture.md`;
-- `docs/architecture/data-model.md`.
+- `docs/architecture/data-model.md`;
+- `docs/architecture/dependencies.md`;
+- `docs/architecture/backend-structure.md`.
 
 ## Stack oficial
 
 ### Frontend
 
-- Angular 22
-- TypeScript
+- Angular 22;
+- TypeScript;
+- Angular Router;
+- Reactive Forms;
+- Signals;
+- Angular Material/CDK;
+- Vitest.
 
 ### Backend
 
-- Java 25 LTS
-- Spring Boot 4.1
-- Spring Modulith
-- Spring Security
-- Spring Data JPA
-- Flyway
+- Java 25 LTS;
+- Spring Boot 4.1;
+- Spring Modulith;
+- Spring Web;
+- Spring Validation;
+- Spring Security;
+- Spring Data JPA;
+- Flyway;
+- PostgreSQL JDBC Driver.
 
 ### Dados e infraestrutura
 
-- PostgreSQL
-- Docker
-- Docker Compose
-- GitHub Actions
+- PostgreSQL;
+- Docker;
+- Docker Compose;
+- GitHub Actions.
 
 ### Testes
 
-- JUnit 5
-- Mockito
-- Testcontainers
+- JUnit 5;
+- Mockito;
+- Spring Boot Test;
+- Spring Security Test;
+- Spring Modulith Test;
+- Testcontainers com PostgreSQL.
+
+A lista aprovada e as dependências deliberadamente evitadas no bootstrap estão em `docs/architecture/dependencies.md`.
 
 ## Princípios arquiteturais
 
@@ -56,13 +71,31 @@ Antes de implementar qualquer funcionalidade, consulte:
 
 ### Organização
 
-Preferir:
+A referência completa está em `docs/architecture/backend-structure.md`.
+
+Pacote base:
 
 ```text
-feature/
-├── domain/
-├── application/
-└── infrastructure/
+com.ceudelavanda.lavandaflow
+```
+
+Estrutura principal:
+
+```text
+com.ceudelavanda.lavandaflow
+├── catalog/
+│   ├── domain/
+│   ├── application/
+│   └── infrastructure/
+├── inventory/
+│   ├── domain/
+│   ├── application/
+│   └── infrastructure/
+├── suppliers/
+│   ├── domain/
+│   ├── application/
+│   └── infrastructure/
+└── shared/
 ```
 
 Evitar estrutura global baseada exclusivamente em:
@@ -73,6 +106,16 @@ service/
 repository/
 entity/
 ```
+
+Não criar módulos futuros (`formulas`, `production`, `traceability`) antes de entrarem no escopo aprovado.
+
+### Dependências entre módulos
+
+- acessar outros módulos apenas por APIs públicas;
+- nunca importar internals de `infrastructure` de outro módulo;
+- evitar ciclos;
+- usar Spring Modulith para validar fronteiras;
+- eventos devem ter motivação de negócio/arquitetura, não serem adicionados por padrão.
 
 ### API
 
@@ -101,6 +144,20 @@ entity/
 - constraints importantes devem existir também no banco;
 - não usar H2 como substituto principal de PostgreSQL em testes de integração.
 
+### Dependências backend
+
+O bootstrap deve partir do conjunto aprovado em `docs/architecture/dependencies.md`.
+
+Não adicionar inicialmente sem justificativa:
+
+- Lombok;
+- MapStruct;
+- Redis;
+- Kafka/RabbitMQ;
+- H2.
+
+Dependências Spring devem usar gerenciamento de versões por BOM/parent sempre que possível.
+
 ### Testes
 
 Toda regra de negócio relevante deve possuir teste.
@@ -112,7 +169,8 @@ Prioridades:
 - validade;
 - concorrência de movimentações;
 - validações de quantidade;
-- contratos principais da API.
+- contratos principais da API;
+- fronteiras do Spring Modulith.
 
 Usar Testcontainers para integração com PostgreSQL.
 
@@ -123,8 +181,21 @@ Usar Testcontainers para integração com PostgreSQL.
 - componentes devem ser pequenos e orientados à responsabilidade;
 - lógica de acesso HTTP deve ficar fora de componentes de apresentação;
 - usar Reactive Forms para formulários com regras relevantes;
+- usar Signals para estado local/derivado quando apropriado;
+- usar RxJS quando houver fluxo assíncrono/composição que justifique;
 - tratar estados de loading, erro e vazio;
+- Angular Material é o design system inicial;
 - evitar adicionar bibliotecas quando Angular já fornece solução adequada.
+
+Não adicionar inicialmente sem necessidade concreta:
+
+- NgRx;
+- Axios;
+- bibliotecas externas de forms;
+- bibliotecas externas de routing;
+- Tailwind em paralelo ao Angular Material.
+
+PWA é evolução prevista, não requisito do bootstrap inicial.
 
 ## Segurança
 
@@ -180,10 +251,11 @@ Antes de alterar código:
 
 1. leia documentação relevante;
 2. identifique o módulo responsável;
-3. preserve as invariantes de estoque;
-4. implemente a menor mudança completa possível;
-5. adicione ou atualize testes;
-6. execute validações relevantes;
-7. revise `git diff` antes de finalizar.
+3. confirme se a dependência necessária já está aprovada;
+4. preserve as invariantes de estoque;
+5. implemente a menor mudança completa possível;
+6. adicione ou atualize testes;
+7. execute validações relevantes;
+8. revise `git diff` antes de finalizar.
 
 Se uma decisão estrutural não estiver documentada e puder afetar várias partes do sistema, não presuma silenciosamente. Registre ou proponha uma decisão arquitetural primeiro.
