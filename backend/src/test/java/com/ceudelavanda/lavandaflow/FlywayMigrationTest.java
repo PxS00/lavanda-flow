@@ -17,11 +17,11 @@ class FlywayMigrationTest {
     private Flyway flyway;
 
     @Test
-    void appliesFoundationBaselineMigration() {
+    void appliesFoundationMigrations() {
         var currentMigration = flyway.info().current();
 
         assertNotNull(currentMigration);
         assertNotNull(currentMigration.getVersion());
-        assertEquals("1", currentMigration.getVersion().getVersion());
+        assertEquals("2", currentMigration.getVersion().getVersion());
     }
 }
