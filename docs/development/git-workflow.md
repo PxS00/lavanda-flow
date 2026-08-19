@@ -290,6 +290,8 @@ For example, avoid combining all of these unless they are inseparable for one ch
 
 Once issue-driven development starts, configure GitHub branch protection so repository settings enforce the documented flow.
 
+The concrete GitHub ruleset configuration, required status-check contexts, review policy, merge-method restrictions, and required-check execution strategy are documented in [`docs/development/branch-protection.md`](branch-protection.md).
+
 ### `main`
 
 Expected protection:

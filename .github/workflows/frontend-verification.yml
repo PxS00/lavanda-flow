@@ -6,13 +6,8 @@ on:
     paths:
       - "frontend/**"
       - ".tool-versions"
-      - ".github/workflows/frontend-verification.yml"
   pull_request:
     branches: [develop, main]
-    paths:
-      - "frontend/**"
-      - ".tool-versions"
-      - ".github/workflows/frontend-verification.yml"
 
 permissions:
   contents: read
@@ -35,14 +30,44 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect frontend changes
+        id: changes
+        if: github.event_name == 'pull_request'
+        shell: bash
+        working-directory: .
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet "$BASE_SHA...$HEAD_SHA" -- \
+            frontend \
+            .tool-versions; then
+            echo "required=false" >> "$GITHUB_OUTPUT"
+            echo "No frontend-related changes detected."
+          else
+            echo "required=true" >> "$GITHUB_OUTPUT"
+            echo "Frontend-related changes detected."
+          fi
+
+      - name: No frontend verification required
+        if: github.event_name == 'pull_request' && steps.changes.outputs.required != 'true'
+        working-directory: .
+        run: echo "Angular verification is not required for this pull request."
 
       - name: Set up pnpm
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 10.32.0
           run_install: false
 
       - name: Set up Node.js 24
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "24.19.0"
@@ -50,13 +75,17 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Lint
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required == 'true'
         run: pnpm lint
 
       - name: Test
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required == 'true'
         run: pnpm exec ng test --watch=false
 
       - name: Build
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required == 'true'
         run: pnpm build
