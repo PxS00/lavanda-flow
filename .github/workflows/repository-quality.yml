@@ -66,6 +66,7 @@ jobs:
             "docs/architecture/decisions/README.md"
             "docs/development/git-workflow.md"
             "docs/development/commit-conventions.md"
+            "docs/development/branch-protection.md"
           )
 
           for file in "${required[@]}"; do
