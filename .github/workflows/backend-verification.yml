@@ -1,0 +1,77 @@
+name: Backend Verification
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "backend/**"
+      - "compose.yaml"
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-verification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Maven verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect backend changes
+        id: changes
+        if: github.event_name == 'pull_request'
+        shell: bash
+        working-directory: .
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet "$BASE_SHA...$HEAD_SHA" -- \
+            backend \
+            compose.yaml; then
+            echo "required=false" >> "$GITHUB_OUTPUT"
+            echo "No backend-related changes detected."
+          else
+            echo "required=true" >> "$GITHUB_OUTPUT"
+            echo "Backend-related changes detected."
+          fi
+
+      - name: No backend verification required
+        if: github.event_name == 'pull_request' && steps.changes.outputs.required != 'true'
+        working-directory: .
+        run: echo "Maven verification is not required for this pull request."
+
+      - name: Set up Java 25
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Ensure Maven Wrapper is executable
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required == 'true'
+        run: chmod +x mvnw
+
+      - name: Verify backend
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required == 'true'
+        run: ./mvnw --batch-mode --no-transfer-progress verify

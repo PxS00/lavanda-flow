@@ -11,13 +11,7 @@ on:
       - "CONTRIBUTING.md"
       - "SECURITY.md"
   pull_request:
-    paths:
-      - "**/*.md"
-      - ".github/**"
-      - "AGENTS.md"
-      - "README.md"
-      - "CONTRIBUTING.md"
-      - "SECURITY.md"
+    branches: [develop, main]
 
 permissions:
   contents: read
@@ -72,6 +66,7 @@ jobs:
             "docs/architecture/decisions/README.md"
             "docs/development/git-workflow.md"
             "docs/development/commit-conventions.md"
+            "docs/development/branch-protection.md"
           )
 
           for file in "${required[@]}"; do

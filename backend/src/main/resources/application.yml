@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: lavanda-flow
+
+  profiles:
+    default: local
+
+  jpa:
+    open-in-view: false
+
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+  endpoint:
+    health:
+      show-details: when-authorized

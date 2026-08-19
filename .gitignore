@@ -1,0 +1,45 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Java / Maven
+backend/target/
+*.class
+*.log
+
+# Node / Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+*.tsbuildinfo
+
+# Test and coverage output
+coverage/
+reports/
+
+# IDEs and editors
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Runtime and temporary files
+*.pid
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+logs/
+
+# Local database/runtime data
+postgres-data/
