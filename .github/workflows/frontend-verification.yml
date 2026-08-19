@@ -6,7 +6,6 @@ on:
     paths:
       - "frontend/**"
       - ".tool-versions"
-      - ".github/workflows/frontend-verification.yml"
   pull_request:
     branches: [develop, main]
 
@@ -47,8 +46,7 @@ jobs:
 
           if git diff --quiet "$BASE_SHA...$HEAD_SHA" -- \
             frontend \
-            .tool-versions \
-            .github/workflows/frontend-verification.yml; then
+            .tool-versions; then
             echo "required=false" >> "$GITHUB_OUTPUT"
             echo "No frontend-related changes detected."
           else

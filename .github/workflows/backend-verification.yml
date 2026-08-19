@@ -6,7 +6,6 @@ on:
     paths:
       - "backend/**"
       - "compose.yaml"
-      - ".github/workflows/backend-verification.yml"
   pull_request:
     branches: [develop, main]
 
@@ -47,8 +46,7 @@ jobs:
 
           if git diff --quiet "$BASE_SHA...$HEAD_SHA" -- \
             backend \
-            compose.yaml \
-            .github/workflows/backend-verification.yml; then
+            compose.yaml; then
             echo "required=false" >> "$GITHUB_OUTPUT"
             echo "No backend-related changes detected."
           else
