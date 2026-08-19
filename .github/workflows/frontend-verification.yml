@@ -1,0 +1,62 @@
+name: Frontend Verification
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "frontend/**"
+      - ".tool-versions"
+      - ".github/workflows/frontend-verification.yml"
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - "frontend/**"
+      - ".tool-versions"
+      - ".github/workflows/frontend-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-verification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Angular verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      CI: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.0
+          run_install: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm exec ng test --watch=false
+
+      - name: Build
+        run: pnpm build
