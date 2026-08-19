@@ -11,13 +11,7 @@ on:
       - "CONTRIBUTING.md"
       - "SECURITY.md"
   pull_request:
-    paths:
-      - "**/*.md"
-      - ".github/**"
-      - "AGENTS.md"
-      - "README.md"
-      - "CONTRIBUTING.md"
-      - "SECURITY.md"
+    branches: [develop, main]
 
 permissions:
   contents: read
