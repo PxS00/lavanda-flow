@@ -13,6 +13,13 @@ spring:
       hibernate:
         format_sql: true
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
 logging:
   level:
     com.ceudelavanda.lavandaflow: DEBUG
