@@ -1,0 +1,5 @@
+-- Lavanda Flow schema baseline.
+--
+-- The Foundation release intentionally creates no domain tables here. This migration
+-- establishes Flyway-managed schema history before Inventory Core introduces the first
+-- business tables through subsequent versioned migrations.
