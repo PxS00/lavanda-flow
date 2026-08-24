@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.catalog.infrastructure.persistence;
 
+import com.ceudelavanda.lavandaflow.TestcontainersConfiguration;
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItemRepository;
@@ -7,20 +8,12 @@ import com.ceudelavanda.lavandaflow.catalog.domain.UnitOfMeasure;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.springframework.context.annotation.Import;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Import(TestcontainersConfiguration.class)
 @SpringBootTest
-@Testcontainers
 class JpaInventoryItemRepositoryTest {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer postgres =
-        new PostgreSQLContainer("postgres:17-alpine");
 
     @Autowired
     private InventoryItemRepository repository;

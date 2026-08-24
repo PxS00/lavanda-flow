@@ -1,25 +1,18 @@
 package com.ceudelavanda.lavandaflow.suppliers.infrastructure.persistence;
 
+import com.ceudelavanda.lavandaflow.TestcontainersConfiguration;
 import com.ceudelavanda.lavandaflow.suppliers.domain.Supplier;
 import com.ceudelavanda.lavandaflow.suppliers.domain.SupplierRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.springframework.context.annotation.Import;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Import(TestcontainersConfiguration.class)
 @SpringBootTest
-@Testcontainers
 class JpaSupplierRepositoryTest {
-
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer postgres =
-        new PostgreSQLContainer("postgres:17-alpine");
 
     @Autowired
     private SupplierRepository repository;
