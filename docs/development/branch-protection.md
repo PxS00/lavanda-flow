@@ -4,7 +4,7 @@
 
 This document records the GitHub branch-protection configuration that enforces the workflow defined in `docs/development/git-workflow.md`.
 
-The Git workflow document remains the source of truth for branch purpose, release flow, hotfix flow, and merge strategy. This document records the repository settings and required CI contexts that implement that policy.
+The Git workflow document remains the source of truth for branch purpose, issue-branch prefixes, release flow, hotfix flow, and merge strategy. This document records the repository settings and required CI contexts that implement that policy.
 
 ## Protected branches
 
@@ -60,13 +60,19 @@ Push triggers may continue using path filters because required merge gates are e
 - block branch deletion;
 - do not configure normal-development bypass actors.
 
-Normal integration is:
+Normal issue-driven integration uses one of the approved type-specific prefixes:
 
 ```text
-feature/<issue-number>/<short-description> -> develop
+feature/<issue-number>/<short-description>  -> develop
+fix/<issue-number>/<short-description>      -> develop
+refactor/<issue-number>/<short-description> -> develop
+test/<issue-number>/<short-description>     -> develop
+docs/<issue-number>/<short-description>     -> develop
+chore/<issue-number>/<short-description>    -> develop
+ci/<issue-number>/<short-description>       -> develop
 ```
 
-Feature pull requests are squash merged so the PR title becomes the integration commit message.
+Issue pull requests are squash merged so the PR title becomes the integration commit message.
 
 ## `main` ruleset
 
@@ -92,6 +98,8 @@ release/vX.Y.Z -> main
 ```
 
 Emergency production fixes use the documented `hotfix/<issue-number>/<short-description> -> main` pull-request flow and must be synchronized back into `develop`.
+
+Normal `fix/` branches are not production hotfixes: they start from `develop` and target `develop` like other issue branches.
 
 ## Repository merge methods
 
