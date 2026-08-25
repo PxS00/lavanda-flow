@@ -97,38 +97,6 @@ class BatchTest {
     }
 
     @Test
-    void shouldRejectNegativeCurrentQuantityWhenChangingBalance() {
-        var batch = Batch.create(
-            INVENTORY_ITEM_ID,
-            null,
-            null,
-            BigDecimal.ONE,
-            RECEIVED_AT,
-            null
-        );
-
-        assertThatThrownBy(() -> batch.changeCurrentQuantity(new BigDecimal("-0.001")))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("currentQuantity must not be negative");
-    }
-
-    @Test
-    void shouldAllowCurrentQuantityGreaterThanInitialQuantityForFutureAdjustments() {
-        var batch = Batch.create(
-            INVENTORY_ITEM_ID,
-            null,
-            null,
-            BigDecimal.ONE,
-            RECEIVED_AT,
-            null
-        );
-
-        batch.changeCurrentQuantity(new BigDecimal("2.000"));
-
-        assertThat(batch.getCurrentQuantity()).isEqualByComparingTo("2.000");
-    }
-
-    @Test
     void shouldRejectNullReceivedAt() {
         assertThatThrownBy(() -> Batch.create(
             INVENTORY_ITEM_ID,
@@ -141,4 +109,72 @@ class BatchTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("receivedAt must not be null");
     }
+
+    @Test
+    void shouldIncreaseCurrentQuantityWhenAddingPositiveQuantity() {
+        var batch = new Batch(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            null,
+            "LOT-001",
+            new BigDecimal("100"),
+            new BigDecimal("100"),
+            LocalDate.now(),
+            null
+        );
+
+        batch.addQuantity(new BigDecimal("50"));
+
+        assertThat(batch.getCurrentQuantity())
+            .isEqualByComparingTo("150");
+    }
+
+    @Test
+    void shouldRejectZeroQuantity() {
+        var batch = Batch.create(
+            INVENTORY_ITEM_ID,
+            null,
+            null,
+            BigDecimal.ONE,
+            RECEIVED_AT,
+            null
+        );
+
+        assertThatThrownBy(() -> batch.addQuantity(BigDecimal.ZERO))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("quantity must be greater than zero");
+    }
+
+    @Test
+    void shouldRejectNegativeQuantity() {
+        var batch = Batch.create(
+            INVENTORY_ITEM_ID,
+            null,
+            null,
+            BigDecimal.ONE,
+            RECEIVED_AT,
+            null
+        );
+
+        assertThatThrownBy(() -> batch.addQuantity(new BigDecimal("-0.001")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("quantity must be greater than zero");
+    }
+
+    @Test
+    void shouldRejectNullQuantity() {
+        var batch = Batch.create(
+            INVENTORY_ITEM_ID,
+            null,
+            null,
+            BigDecimal.ONE,
+            RECEIVED_AT,
+            null
+        );
+
+        assertThatThrownBy(() -> batch.addQuantity(null))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("quantity must be greater than zero");
+    }
+
 }

@@ -24,12 +24,12 @@ class StockMovementTest {
             OCCURRED_AT
         );
 
-        assertThat(movement.getId()).isNotNull();
-        assertThat(movement.getBatchId()).isEqualTo(BATCH_ID);
-        assertThat(movement.getType()).isEqualTo(MovementType.ENTRY);
-        assertThat(movement.getQuantity()).isEqualByComparingTo("1500.500");
-        assertThat(movement.getReason()).isEqualTo("Initial receipt");
-        assertThat(movement.getOccurredAt()).isEqualTo(OCCURRED_AT);
+        assertThat(movement.id()).isNotNull();
+        assertThat(movement.batchId()).isEqualTo(BATCH_ID);
+        assertThat(movement.type()).isEqualTo(MovementType.ENTRY);
+        assertThat(movement.quantity()).isEqualByComparingTo("1500.500");
+        assertThat(movement.reason()).isEqualTo("Initial receipt");
+        assertThat(movement.occurredAt()).isEqualTo(OCCURRED_AT);
     }
 
     @Test
@@ -42,7 +42,7 @@ class StockMovementTest {
             OCCURRED_AT
         );
 
-        assertThat(movement.getReason()).isNull();
+        assertThat(movement.reason()).isNull();
     }
 
     @Test
@@ -110,6 +110,37 @@ class StockMovementTest {
             OCCURRED_AT
         );
 
-        assertThat(movement.getId()).isEqualTo(id);
+        assertThat(movement.id()).isEqualTo(id);
     }
+
+    @Test
+    void shouldRejectReasonLongerThanMaximumLength() {
+        var reason = "a".repeat(256);
+
+        assertThatThrownBy(() -> StockMovement.create(
+            UUID.randomUUID(),
+            MovementType.ENTRY,
+            BigDecimal.ONE,
+            reason,
+            Instant.parse("2026-08-25T15:00:00Z")
+        ))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("reason must not exceed 255 characters");
+    }
+
+    @Test
+    void shouldAcceptReasonAtMaximumLength() {
+        var reason = "a".repeat(255);
+
+        var movement = StockMovement.create(
+            UUID.randomUUID(),
+            MovementType.ENTRY,
+            BigDecimal.ONE,
+            reason,
+            Instant.parse("2026-08-25T15:00:00Z")
+        );
+
+        assertThat(movement.reason()).isEqualTo(reason);
+    }
+
 }

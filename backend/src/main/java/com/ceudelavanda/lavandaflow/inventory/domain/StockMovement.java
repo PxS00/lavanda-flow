@@ -1,7 +1,5 @@
 package com.ceudelavanda.lavandaflow.inventory.domain;
 
-import lombok.Getter;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
@@ -12,15 +10,16 @@ import java.util.UUID;
  * <p>The movement type defines whether the quantity increases or decreases
  * stock. Quantities are always positive to avoid encoding direction twice.</p>
  */
-@Getter
-public class StockMovement {
+public record StockMovement(
+    UUID id,
+    UUID batchId,
+    MovementType type,
+    BigDecimal quantity,
+    String reason,
+    Instant occurredAt
+) {
 
-    private final UUID id;
-    private final UUID batchId;
-    private final MovementType type;
-    private final BigDecimal quantity;
-    private final String reason;
-    private final Instant occurredAt;
+    private static final int MAX_REASON_LENGTH = 255;
 
     public StockMovement(
         UUID id,
@@ -34,7 +33,7 @@ public class StockMovement {
         this.batchId = requireNonNull(batchId, "batchId");
         this.type = requireNonNull(type, "type");
         this.quantity = requirePositive(quantity);
-        this.reason = normalizeOptional(reason);
+        this.reason = validateReason(normalizeOptional(reason));
         this.occurredAt = requireNonNull(occurredAt, "occurredAt");
     }
 
@@ -73,6 +72,16 @@ public class StockMovement {
 
         var normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static String validateReason(String value) {
+        if (value != null && value.length() > MAX_REASON_LENGTH) {
+            throw new IllegalArgumentException(
+                "reason must not exceed " + MAX_REASON_LENGTH + " characters"
+            );
+        }
+
+        return value;
     }
 
     private static <T> T requireNonNull(T value, String field) {
