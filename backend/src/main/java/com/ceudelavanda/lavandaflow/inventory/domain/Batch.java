@@ -80,7 +80,7 @@ public class Batch {
         this.currentQuantity = this.currentQuantity.add(validatedQuantity);
     }
 
-    private static BigDecimal requirePositive(BigDecimal value, String field){
+    private static BigDecimal requirePositive(BigDecimal value, String field) {
         if (value == null || value.signum() <= 0) {
             throw new IllegalArgumentException(field + " must be greater than zero");
         }

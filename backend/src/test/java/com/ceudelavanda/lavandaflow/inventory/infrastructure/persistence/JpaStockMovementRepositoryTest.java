@@ -5,11 +5,7 @@ import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItemRepository;
 import com.ceudelavanda.lavandaflow.catalog.domain.UnitOfMeasure;
-import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
-import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
-import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
-import com.ceudelavanda.lavandaflow.inventory.domain.StockMovement;
-import com.ceudelavanda.lavandaflow.inventory.domain.StockMovementRepository;
+import com.ceudelavanda.lavandaflow.inventory.domain.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -58,8 +54,8 @@ class JpaStockMovementRepositoryTest {
         var history = movementRepository.findByBatchIdOrderByOccurredAtAsc(batch.getId());
 
         assertThat(history)
-            .extracting(StockMovement::getId)
-            .containsExactly(earlierMovement.getId(), laterMovement.getId());
+            .extracting(StockMovement::id)
+            .containsExactly(earlierMovement.id(), laterMovement.id());
     }
 
     private Batch createBatch() {

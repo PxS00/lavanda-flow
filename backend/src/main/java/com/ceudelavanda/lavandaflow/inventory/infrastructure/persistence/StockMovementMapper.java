@@ -9,12 +9,12 @@ final class StockMovementMapper {
 
     static StockMovementJpaEntity toEntity(StockMovement movement) {
         return new StockMovementJpaEntity(
-            movement.getId(),
-            movement.getBatchId(),
-            movement.getType(),
-            movement.getQuantity(),
-            movement.getReason(),
-            movement.getOccurredAt()
+            movement.id(),
+            movement.batchId(),
+            movement.type(),
+            movement.quantity(),
+            movement.reason(),
+            movement.occurredAt()
         );
     }
 

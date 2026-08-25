@@ -56,13 +56,13 @@ public class RegisterStockEntry {
         stockMovementRepository.save(movement);
 
         return new StockMovementResult(
-            movement.getId(),
+            movement.id(),
             batch.getId(),
-            movement.getType(),
-            movement.getQuantity(),
+            movement.type(),
+            movement.quantity(),
             batch.getCurrentQuantity(),
-            movement.getReason(),
-            movement.getOccurredAt()
+            movement.reason(),
+            movement.occurredAt()
         );
     }
 }

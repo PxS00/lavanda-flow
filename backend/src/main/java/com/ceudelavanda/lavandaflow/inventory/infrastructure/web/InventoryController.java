@@ -4,7 +4,10 @@ import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockEntryRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockEntryResponse;
+import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
@@ -29,15 +32,24 @@ public class InventoryController {
     @ApiResponses({
         @ApiResponse(
             responseCode = "201",
-            description = "Stock entry registered successfully"
+            description = "Stock entry registered successfully",
+            content = @Content(
+                schema = @Schema(implementation = RegisterStockEntryResponse.class)
+            )
         ),
         @ApiResponse(
             responseCode = "400",
-            description = "Invalid request data"
+            description = "Invalid request data",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
         ),
         @ApiResponse(
             responseCode = "404",
-            description = "Batch not found"
+            description = "Batch not found",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
         )
     })
     @PostMapping("/batches/{batchId}/entries")
