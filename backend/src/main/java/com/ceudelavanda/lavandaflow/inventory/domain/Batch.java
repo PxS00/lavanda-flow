@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.domain;
 
+import com.ceudelavanda.lavandaflow.inventory.domain.exception.InsufficientStockException;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -78,6 +79,23 @@ public class Batch {
     public void addQuantity(BigDecimal quantity) {
         var validatedQuantity = requirePositive(quantity, "quantity");
         this.currentQuantity = this.currentQuantity.add(validatedQuantity);
+    }
+
+    /**
+     * Removes a positive quantity from the current batch balance.
+     *
+     * @param quantity quantity to remove
+     * @throws IllegalArgumentException if the quantity is null or not positive
+     * @throws InsufficientStockException if the quantity exceeds the available balance
+     */
+    public void removeQuantity(BigDecimal quantity) {
+        var validatedQuantity = requirePositive(quantity, "quantity");
+
+        if (currentQuantity.compareTo(validatedQuantity) < 0) {
+            throw new InsufficientStockException(id, validatedQuantity, currentQuantity);
+        }
+
+        this.currentQuantity = this.currentQuantity.subtract(validatedQuantity);
     }
 
     private static BigDecimal requirePositive(BigDecimal value, String field) {
