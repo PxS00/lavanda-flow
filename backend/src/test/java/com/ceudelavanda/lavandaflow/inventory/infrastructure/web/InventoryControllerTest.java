@@ -1,13 +1,16 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
+import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockAdjustment;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockWithdrawal;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockAdjustmentCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.result.StockMovementResult;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.BatchNotFoundException;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InsufficientStockException;
+import com.ceudelavanda.lavandaflow.inventory.domain.exception.InvalidStockAdjustmentException;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +42,9 @@ class InventoryControllerTest {
 
     @MockitoBean
     private RegisterStockEntry registerStockEntry;
+
+    @MockitoBean
+    private RegisterStockAdjustment registerStockAdjustment;
 
     @MockitoBean
     private RegisterStockWithdrawal registerStockWithdrawal;
@@ -439,5 +445,272 @@ class InventoryControllerTest {
                 .value("/api/v1/inventory/batches/" + batchId + "/withdrawals"))
             .andExpect(jsonPath("$.timestamp").exists())
             .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    void shouldRegisterPositiveStockAdjustment() throws Exception {
+        var batchId = UUID.randomUUID();
+        var movementId = UUID.randomUUID();
+        var occurredAt = Instant.parse("2026-08-25T16:00:00Z");
+
+        var result = new StockMovementResult(
+            movementId,
+            batchId,
+            MovementType.ADJUSTMENT_IN,
+            new BigDecimal("25"),
+            new BigDecimal("125"),
+            "Physical count correction",
+            occurredAt
+        );
+
+        when(registerStockAdjustment.execute(any(RegisterStockAdjustmentCommand.class)))
+            .thenReturn(result);
+
+        mockMvc.perform(post("/api/v1/inventory/batches/{batchId}/adjustments", batchId)
+                .contentType("application/json")
+                .with(csrf())
+                .content("""
+                    {
+                      "quantity": 25,
+                      "reason": "Physical count correction"
+                    }
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.movementId").value(movementId.toString()))
+            .andExpect(jsonPath("$.batchId").value(batchId.toString()))
+            .andExpect(jsonPath("$.type").value("ADJUSTMENT_IN"))
+            .andExpect(jsonPath("$.quantity").value(25))
+            .andExpect(jsonPath("$.resultingBalance").value(125))
+            .andExpect(jsonPath("$.reason").value("Physical count correction"))
+            .andExpect(jsonPath("$.occurredAt").value("2026-08-25T16:00:00Z"));
+
+        var captor = org.mockito.ArgumentCaptor
+            .forClass(RegisterStockAdjustmentCommand.class);
+
+        verify(registerStockAdjustment).execute(captor.capture());
+
+        var command = captor.getValue();
+
+        assertThat(command.batchId()).isEqualTo(batchId);
+        assertThat(command.quantity()).isEqualByComparingTo("25");
+        assertThat(command.reason()).isEqualTo("Physical count correction");
+    }
+
+    @Test
+    void shouldRegisterNegativeStockAdjustmentWithPositiveMovementQuantity() throws Exception {
+        var batchId = UUID.randomUUID();
+        var movementId = UUID.randomUUID();
+        var occurredAt = Instant.parse("2026-08-25T16:00:00Z");
+
+        var result = new StockMovementResult(
+            movementId,
+            batchId,
+            MovementType.ADJUSTMENT_OUT,
+            new BigDecimal("25"),
+            new BigDecimal("75"),
+            "Physical count correction",
+            occurredAt
+        );
+
+        when(registerStockAdjustment.execute(any(RegisterStockAdjustmentCommand.class)))
+            .thenReturn(result);
+
+        mockMvc.perform(post("/api/v1/inventory/batches/{batchId}/adjustments", batchId)
+                .contentType("application/json")
+                .with(csrf())
+                .content("""
+                    {
+                      "quantity": -25,
+                      "reason": "Physical count correction"
+                    }
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.movementId").value(movementId.toString()))
+            .andExpect(jsonPath("$.batchId").value(batchId.toString()))
+            .andExpect(jsonPath("$.type").value("ADJUSTMENT_OUT"))
+            .andExpect(jsonPath("$.quantity").value(25))
+            .andExpect(jsonPath("$.resultingBalance").value(75))
+            .andExpect(jsonPath("$.reason").value("Physical count correction"))
+            .andExpect(jsonPath("$.occurredAt").value("2026-08-25T16:00:00Z"));
+
+        var captor = org.mockito.ArgumentCaptor
+            .forClass(RegisterStockAdjustmentCommand.class);
+
+        verify(registerStockAdjustment).execute(captor.capture());
+
+        assertThat(captor.getValue().quantity()).isEqualByComparingTo("-25");
+    }
+
+    @Test
+    void shouldRejectMissingQuantityForStockAdjustment() throws Exception {
+        assertInvalidAdjustmentRequest(
+            """
+                {
+                  "reason": "Physical count correction"
+                }
+                """,
+            "quantity"
+        );
+    }
+
+    @Test
+    void shouldRejectMissingReasonForStockAdjustment() throws Exception {
+        assertInvalidAdjustmentRequest(
+            """
+                {
+                  "quantity": 25
+                }
+                """,
+            "reason"
+        );
+    }
+
+    @Test
+    void shouldRejectBlankReasonForStockAdjustment() throws Exception {
+        assertInvalidAdjustmentRequest(
+            """
+                {
+                  "quantity": 25,
+                  "reason": ""
+                }
+                """,
+            "reason"
+        );
+    }
+
+    @Test
+    void shouldRejectWhitespaceOnlyReasonForStockAdjustment() throws Exception {
+        assertInvalidAdjustmentRequest(
+            """
+                {
+                  "quantity": 25,
+                  "reason": "   "
+                }
+                """,
+            "reason"
+        );
+    }
+
+    @Test
+    void shouldRejectReasonLongerThanMaximumLengthForStockAdjustment() throws Exception {
+        var reason = "a".repeat(256);
+
+        assertInvalidAdjustmentRequest(
+            """
+                {
+                  "quantity": 25,
+                  "reason": "%s"
+                }
+                """.formatted(reason),
+            "reason"
+        );
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenStockAdjustmentIsZero() throws Exception {
+        var batchId = UUID.randomUUID();
+
+        when(registerStockAdjustment.execute(any(RegisterStockAdjustmentCommand.class)))
+            .thenThrow(new InvalidStockAdjustmentException());
+
+        mockMvc.perform(post("/api/v1/inventory/batches/{batchId}/adjustments", batchId)
+                .contentType("application/json")
+                .with(csrf())
+                .content("""
+                    {
+                      "quantity": 0,
+                      "reason": "Physical count correction"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.error").value("Bad Request"))
+            .andExpect(jsonPath("$.code").value("INVALID_STOCK_ADJUSTMENT"))
+            .andExpect(jsonPath("$.message").value("Stock adjustment must not be zero"))
+            .andExpect(jsonPath("$.path")
+                .value("/api/v1/inventory/batches/" + batchId + "/adjustments"))
+            .andExpect(jsonPath("$.timestamp").exists())
+            .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenAdjustmentBatchDoesNotExist() throws Exception {
+        var batchId = UUID.randomUUID();
+
+        when(registerStockAdjustment.execute(any(RegisterStockAdjustmentCommand.class)))
+            .thenThrow(new BatchNotFoundException(batchId));
+
+        mockMvc.perform(post("/api/v1/inventory/batches/{batchId}/adjustments", batchId)
+                .contentType("application/json")
+                .with(csrf())
+                .content("""
+                    {
+                      "quantity": 25,
+                      "reason": "Physical count correction"
+                    }
+                    """))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.status").value(404))
+            .andExpect(jsonPath("$.error").value("Not Found"))
+            .andExpect(jsonPath("$.code").value("BATCH_NOT_FOUND"))
+            .andExpect(jsonPath("$.message")
+                .value("Batch not found: " + batchId))
+            .andExpect(jsonPath("$.path")
+                .value("/api/v1/inventory/batches/" + batchId + "/adjustments"))
+            .andExpect(jsonPath("$.timestamp").exists())
+            .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    void shouldReturnUnprocessableContentWhenAdjustmentExceedsStock() throws Exception {
+        var batchId = UUID.randomUUID();
+
+        when(registerStockAdjustment.execute(any(RegisterStockAdjustmentCommand.class)))
+            .thenThrow(new InsufficientStockException(
+                batchId,
+                new BigDecimal("150"),
+                new BigDecimal("100")
+            ));
+
+        mockMvc.perform(post("/api/v1/inventory/batches/{batchId}/adjustments", batchId)
+                .contentType("application/json")
+                .with(csrf())
+                .content("""
+                    {
+                      "quantity": -150,
+                      "reason": "Physical count correction"
+                    }
+                    """))
+            .andExpect(status().isUnprocessableContent())
+            .andExpect(jsonPath("$.status").value(422))
+            .andExpect(jsonPath("$.error").value("Unprocessable Content"))
+            .andExpect(jsonPath("$.code").value("INSUFFICIENT_STOCK"))
+            .andExpect(jsonPath("$.message")
+                .value("Insufficient stock for batch " + batchId))
+            .andExpect(jsonPath("$.path")
+                .value("/api/v1/inventory/batches/" + batchId + "/adjustments"))
+            .andExpect(jsonPath("$.timestamp").exists())
+            .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    private void assertInvalidAdjustmentRequest(String requestBody, String field) throws Exception {
+        var batchId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/v1/inventory/batches/{batchId}/adjustments", batchId)
+                .contentType("application/json")
+                .with(csrf())
+                .content(requestBody))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.error").value("Bad Request"))
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.message").value("Request validation failed"))
+            .andExpect(jsonPath("$.path")
+                .value("/api/v1/inventory/batches/" + batchId + "/adjustments"))
+            .andExpect(jsonPath("$.details." + field).exists())
+            .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(registerStockAdjustment, never())
+            .execute(any(RegisterStockAdjustmentCommand.class));
     }
 }
