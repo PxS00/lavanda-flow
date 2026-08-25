@@ -21,6 +21,7 @@ public class StockMovement {
     private final BigDecimal quantity;
     private final String reason;
     private final Instant occurredAt;
+    private static final int MAX_REASON_LENGTH = 255;
 
     public StockMovement(
         UUID id,
@@ -34,7 +35,7 @@ public class StockMovement {
         this.batchId = requireNonNull(batchId, "batchId");
         this.type = requireNonNull(type, "type");
         this.quantity = requirePositive(quantity);
-        this.reason = normalizeOptional(reason);
+        this.reason = validateReason(normalizeOptional(reason));
         this.occurredAt = requireNonNull(occurredAt, "occurredAt");
     }
 
@@ -73,6 +74,16 @@ public class StockMovement {
 
         var normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static String validateReason(String value) {
+        if (value != null && value.length() > MAX_REASON_LENGTH) {
+            throw new IllegalArgumentException(
+                "reason must not exceed " + MAX_REASON_LENGTH + " characters"
+            );
+        }
+
+        return value;
     }
 
     private static <T> T requireNonNull(T value, String field) {

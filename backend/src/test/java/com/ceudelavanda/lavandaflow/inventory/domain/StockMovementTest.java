@@ -112,4 +112,35 @@ class StockMovementTest {
 
         assertThat(movement.getId()).isEqualTo(id);
     }
+
+    @Test
+    void shouldRejectReasonLongerThanMaximumLength() {
+        var reason = "a".repeat(256);
+
+        assertThatThrownBy(() -> StockMovement.create(
+            UUID.randomUUID(),
+            MovementType.ENTRY,
+            BigDecimal.ONE,
+            reason,
+            Instant.parse("2026-08-25T15:00:00Z")
+        ))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("reason must not exceed 255 characters");
+    }
+
+    @Test
+    void shouldAcceptReasonAtMaximumLength() {
+        var reason = "a".repeat(255);
+
+        var movement = StockMovement.create(
+            UUID.randomUUID(),
+            MovementType.ENTRY,
+            BigDecimal.ONE,
+            reason,
+            Instant.parse("2026-08-25T15:00:00Z")
+        );
+
+        assertThat(movement.getReason()).isEqualTo(reason);
+    }
+
 }

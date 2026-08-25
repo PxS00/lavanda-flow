@@ -39,7 +39,7 @@ public class Batch {
         this.inventoryItemId = requireNonNull(inventoryItemId, "inventoryItemId");
         this.supplierId = supplierId;
         this.lotCode = normalizeOptional(lotCode);
-        this.initialQuantity = requirePositive(initialQuantity);
+        this.initialQuantity = requirePositive(initialQuantity, "initialQuantity");
         this.currentQuantity = requireNonNegative(currentQuantity);
         this.receivedAt = requireNonNull(receivedAt, "receivedAt");
         this.expiresAt = expiresAt;
@@ -70,22 +70,20 @@ public class Batch {
     }
 
     /**
-     * Updates the materialized balance after a stock operation.
+     * Adds a positive quantity to the current batch balance.
      *
-     * <p>Stock movements will own the audit trail in a later inventory use
-     * case. This aggregate enforces the balance invariant independently.</p>
-     *
-     * @throws IllegalArgumentException if the resulting balance is negative
+     * @param quantity quantity to add
+     * @throws IllegalArgumentException if the quantity is null or not positive
      */
-    public void changeCurrentQuantity(BigDecimal currentQuantity) {
-        this.currentQuantity = requireNonNegative(currentQuantity);
+    public void addQuantity(BigDecimal quantity) {
+        var validatedQuantity = requirePositive(quantity, "quantity");
+        this.currentQuantity = this.currentQuantity.add(validatedQuantity);
     }
 
-    private static BigDecimal requirePositive(BigDecimal value) {
+    private static BigDecimal requirePositive(BigDecimal value, String field){
         if (value == null || value.signum() <= 0) {
-            throw new IllegalArgumentException("initialQuantity must be greater than zero");
+            throw new IllegalArgumentException(field + " must be greater than zero");
         }
-
         return value;
     }
 
@@ -113,4 +111,5 @@ public class Batch {
 
         return value;
     }
+
 }
