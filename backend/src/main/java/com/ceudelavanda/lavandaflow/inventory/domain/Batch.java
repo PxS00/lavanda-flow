@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.inventory.domain;
 
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InsufficientStockException;
+import com.ceudelavanda.lavandaflow.inventory.domain.exception.InvalidStockAdjustmentException;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -96,6 +97,32 @@ public class Batch {
         }
 
         this.currentQuantity = this.currentQuantity.subtract(validatedQuantity);
+    }
+
+    /**
+     * Applies a signed adjustment to the current batch balance.
+     *
+     * <p>Positive values increase the balance and negative values decrease it.
+     * The adjustment must not reduce the balance below zero.</p>
+     *
+     * @param adjustment signed quantity to apply
+     * @throws IllegalArgumentException if the adjustment is null
+     * @throws InvalidStockAdjustmentException if the adjustment is zero
+     * @throws InsufficientStockException if a negative adjustment exceeds the available balance
+     */
+    public void adjustQuantity(BigDecimal adjustment) {
+        var validatedAdjustment = requireNonNull(adjustment, "adjustment");
+
+        if (validatedAdjustment.signum() == 0) {
+            throw new InvalidStockAdjustmentException();
+        }
+
+        if (validatedAdjustment.signum() > 0) {
+            addQuantity(validatedAdjustment);
+            return;
+        }
+
+        removeQuantity(validatedAdjustment.abs());
     }
 
     private static BigDecimal requirePositive(BigDecimal value, String field) {
