@@ -3,15 +3,19 @@ package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockAdjustment;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockWithdrawal;
+import com.ceudelavanda.lavandaflow.inventory.application.RegisterFefoWithdrawal;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockAdjustmentCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockWithdrawalCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterFefoWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockEntryRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockAdjustmentRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockWithdrawalRequest;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterFefoWithdrawalRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockEntryResponse;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockAdjustmentResponse;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockWithdrawalResponse;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterFefoWithdrawalResponse;
 import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -34,6 +38,7 @@ public class InventoryController {
     private final RegisterStockEntry registerStockEntry;
     private final RegisterStockAdjustment registerStockAdjustment;
     private final RegisterStockWithdrawal registerStockWithdrawal;
+    private final RegisterFefoWithdrawal registerFefoWithdrawal;
 
     @Operation(
         summary = "Register stock entry",
@@ -130,6 +135,58 @@ public class InventoryController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(response);
+    }
+
+    @Operation(
+        summary = "Register automatic FEFO stock withdrawal",
+        description = "Automatically allocates a withdrawal across eligible batches using FEFO. "
+            + "Batches expiring today are considered expired. Multiple batches may be consumed, "
+            + "and no partial withdrawal is committed when eligible stock is insufficient."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "201",
+            description = "FEFO stock withdrawal registered successfully",
+            content = @Content(
+                schema = @Schema(implementation = RegisterFefoWithdrawalResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Invalid request data",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Inventory item not found",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "422",
+            description = "Inventory item is inactive or eligible stock is insufficient",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
+        )
+    })
+    @PostMapping("/items/{inventoryItemId}/withdrawals")
+    public ResponseEntity<RegisterFefoWithdrawalResponse> registerFefoWithdrawal(
+        @PathVariable UUID inventoryItemId,
+        @Valid @RequestBody RegisterFefoWithdrawalRequest request
+    ) {
+        var command = new RegisterFefoWithdrawalCommand(
+            inventoryItemId,
+            request.quantity(),
+            request.reason()
+        );
+
+        var result = registerFefoWithdrawal.execute(command);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(RegisterFefoWithdrawalResponse.from(result));
     }
 
     @Operation(
