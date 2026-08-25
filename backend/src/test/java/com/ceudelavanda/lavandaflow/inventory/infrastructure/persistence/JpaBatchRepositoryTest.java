@@ -13,11 +13,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -31,6 +34,9 @@ class JpaBatchRepositoryTest {
 
     @Autowired
     private SupplierRepository supplierRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void shouldSaveAndFindBatch() {
@@ -102,5 +108,80 @@ class JpaBatchRepositoryTest {
                 assertThat(found.getLotCode()).isNull();
                 assertThat(found.getExpiresAt()).isNull();
             });
+    }
+
+    @Test
+    void shouldAllowZeroCurrentQuantityAtDatabaseLevel() {
+        var inventoryItem = inventoryItemRepository.save(InventoryItem.create(
+            "Bottle 200ml",
+            null,
+            Category.BOTTLE,
+            UnitOfMeasure.UNIT
+        ));
+        var batch = Batch.create(
+            inventoryItem.getId(),
+            null,
+            "B-2026-01",
+            new BigDecimal("100.000"),
+            LocalDate.of(2026, 8, 24),
+            null
+        );
+
+        batchRepository.save(batch);
+
+        var updatedRows = jdbcTemplate.update(
+            "UPDATE inventory_batch SET current_quantity = ? WHERE id = ?",
+            BigDecimal.ZERO,
+            batch.getId()
+        );
+
+        assertThat(updatedRows).isOne();
+
+        var persistedBatch = batchRepository.findById(batch.getId());
+
+        assertThat(persistedBatch)
+            .isPresent()
+            .get()
+            .satisfies(found ->
+                assertThat(found.getCurrentQuantity())
+                    .isEqualByComparingTo(BigDecimal.ZERO)
+            );
+    }
+
+    @Test
+    void shouldRejectNegativeCurrentQuantityAtDatabaseLevel() {
+        var inventoryItem = inventoryItemRepository.save(InventoryItem.create(
+            "Bottle 200ml",
+            null,
+            Category.BOTTLE,
+            UnitOfMeasure.UNIT
+        ));
+        var batch = Batch.create(
+            inventoryItem.getId(),
+            null,
+            "B-2026-02",
+            new BigDecimal("100.000"),
+            LocalDate.of(2026, 8, 24),
+            null
+        );
+
+        batchRepository.save(batch);
+
+        assertThatThrownBy(() -> jdbcTemplate.update(
+            "UPDATE inventory_batch SET current_quantity = ? WHERE id = ?",
+            new BigDecimal("-0.001"),
+            batch.getId()
+        ))
+            .isInstanceOf(DataIntegrityViolationException.class);
+
+        var persistedBatch = batchRepository.findById(batch.getId());
+
+        assertThat(persistedBatch)
+            .isPresent()
+            .get()
+            .satisfies(found ->
+                assertThat(found.getCurrentQuantity())
+                    .isEqualByComparingTo("100.000")
+            );
     }
 }
