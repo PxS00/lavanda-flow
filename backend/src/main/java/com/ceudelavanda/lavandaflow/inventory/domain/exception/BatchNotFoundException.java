@@ -1,8 +1,8 @@
 package com.ceudelavanda.lavandaflow.inventory.domain.exception;
 
 import com.ceudelavanda.lavandaflow.shared.error.DomainException;
+import com.ceudelavanda.lavandaflow.shared.error.ErrorType;
 import lombok.Getter;
-import org.springframework.http.HttpStatus;
 
 import java.util.UUID;
 
@@ -15,7 +15,7 @@ public final class BatchNotFoundException extends DomainException {
         super(
             "BATCH_NOT_FOUND",
             "Batch not found: " + batchId,
-            HttpStatus.NOT_FOUND
+            ErrorType.NOT_FOUND
         );
         this.batchId = batchId;
     }

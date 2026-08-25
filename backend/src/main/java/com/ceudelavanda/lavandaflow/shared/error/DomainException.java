@@ -1,21 +1,20 @@
 package com.ceudelavanda.lavandaflow.shared.error;
 
 import lombok.Getter;
-import org.springframework.http.HttpStatus;
 
 @Getter
 public abstract class DomainException extends RuntimeException {
 
     private final String code;
-    private final HttpStatus status;
+    private final ErrorType errorType;
 
     protected DomainException(
         String code,
         String message,
-        HttpStatus status
+        ErrorType errorType
     ) {
         super(message);
         this.code = code;
-        this.status = status;
+        this.errorType = errorType;
     }
 }
