@@ -1,12 +1,16 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
+import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockAdjustment;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockWithdrawal;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockAdjustmentCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockEntryRequest;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockAdjustmentRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockWithdrawalRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockEntryResponse;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockAdjustmentResponse;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockWithdrawalResponse;
 import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +32,7 @@ import java.util.UUID;
 public class InventoryController {
 
     private final RegisterStockEntry registerStockEntry;
+    private final RegisterStockAdjustment registerStockAdjustment;
     private final RegisterStockWithdrawal registerStockWithdrawal;
 
     @Operation(
@@ -122,6 +127,58 @@ public class InventoryController {
 
         var result = registerStockWithdrawal.execute(command);
         var response = RegisterStockWithdrawalResponse.from(result);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(response);
+    }
+
+    @Operation(
+        summary = "Register stock adjustment",
+        description = "Applies a signed adjustment to the selected batch and records the corresponding stock movement."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "201",
+            description = "Stock adjustment registered successfully",
+            content = @Content(
+                schema = @Schema(implementation = RegisterStockAdjustmentResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Invalid request data or zero adjustment",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Batch not found",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "422",
+            description = "Insufficient stock",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
+        )
+    })
+    @PostMapping("/batches/{batchId}/adjustments")
+    public ResponseEntity<RegisterStockAdjustmentResponse> registerStockAdjustment(
+        @PathVariable UUID batchId,
+        @Valid @RequestBody RegisterStockAdjustmentRequest request
+    ) {
+        var command = new RegisterStockAdjustmentCommand(
+            batchId,
+            request.quantity(),
+            request.reason()
+        );
+
+        var result = registerStockAdjustment.execute(command);
+        var response = RegisterStockAdjustmentResponse.from(result);
 
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(response);

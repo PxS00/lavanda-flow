@@ -1,6 +1,8 @@
 package com.ceudelavanda.lavandaflow.inventory.domain;
 
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InsufficientStockException;
+import com.ceudelavanda.lavandaflow.inventory.domain.exception.InvalidStockAdjustmentException;
+import com.ceudelavanda.lavandaflow.shared.error.ErrorType;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -239,6 +241,74 @@ class BatchTest {
         batch.removeQuantity(new BigDecimal("100"));
 
         assertThat(batch.getCurrentQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void shouldIncreaseCurrentQuantityWhenAdjustingByPositiveDecimalQuantity() {
+        var batch = batchWithBalance("100.125");
+
+        batch.adjustQuantity(new BigDecimal("25.375"));
+
+        assertThat(batch.getCurrentQuantity()).isEqualByComparingTo("125.500");
+    }
+
+    @Test
+    void shouldDecreaseCurrentQuantityWhenAdjustingByNegativeQuantity() {
+        var batch = batchWithBalance("100");
+
+        batch.adjustQuantity(new BigDecimal("-25"));
+
+        assertThat(batch.getCurrentQuantity()).isEqualByComparingTo("75");
+    }
+
+    @Test
+    void shouldAllowNegativeAdjustmentEqualToAvailableBalance() {
+        var batch = batchWithBalance("100");
+
+        batch.adjustQuantity(new BigDecimal("-100"));
+
+        assertThat(batch.getCurrentQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void shouldRejectNullStockAdjustment() {
+        var batch = batchWithBalance("100");
+
+        assertThatThrownBy(() -> batch.adjustQuantity(null))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("adjustment must not be null");
+    }
+
+    @Test
+    void shouldRejectZeroStockAdjustment() {
+        var batch = batchWithBalance("100");
+
+        assertThatThrownBy(() -> batch.adjustQuantity(BigDecimal.ZERO))
+            .isInstanceOf(InvalidStockAdjustmentException.class)
+            .satisfies(exception -> {
+                var invalidAdjustment = (InvalidStockAdjustmentException) exception;
+                assertThat(invalidAdjustment.getCode())
+                    .isEqualTo("INVALID_STOCK_ADJUSTMENT");
+                assertThat(invalidAdjustment.getErrorType())
+                    .isEqualTo(ErrorType.VALIDATION);
+            });
+    }
+
+    @Test
+    void shouldRejectExcessiveNegativeAdjustmentWithoutMutatingBalance() {
+        var batch = batchWithBalance("100");
+
+        assertThatThrownBy(() -> batch.adjustQuantity(new BigDecimal("-100.001")))
+            .isInstanceOf(InsufficientStockException.class)
+            .satisfies(exception -> {
+                var insufficientStock = (InsufficientStockException) exception;
+                assertThat(insufficientStock.getRequestedQuantity())
+                    .isEqualByComparingTo("100.001");
+                assertThat(insufficientStock.getAvailableQuantity())
+                    .isEqualByComparingTo("100");
+            });
+
+        assertThat(batch.getCurrentQuantity()).isEqualByComparingTo("100");
     }
 
     private static Batch batchWithBalance(String balance) {
