@@ -1,9 +1,13 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
+import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockWithdrawal;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockEntryRequest;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockWithdrawalRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockEntryResponse;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockWithdrawalResponse;
 import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -24,6 +28,7 @@ import java.util.UUID;
 public class InventoryController {
 
     private final RegisterStockEntry registerStockEntry;
+    private final RegisterStockWithdrawal registerStockWithdrawal;
 
     @Operation(
         summary = "Register stock entry",
@@ -65,6 +70,58 @@ public class InventoryController {
 
         var result = registerStockEntry.execute(command);
         var response = RegisterStockEntryResponse.from(result);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(response);
+    }
+
+    @Operation(
+        summary = "Register stock withdrawal",
+        description = "Removes a positive quantity from the selected batch and records the corresponding stock movement."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "201",
+            description = "Stock withdrawal registered successfully",
+            content = @Content(
+                schema = @Schema(implementation = RegisterStockWithdrawalResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Invalid request data",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "Batch not found",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "422",
+            description = "Insufficient stock",
+            content = @Content(
+                schema = @Schema(implementation = ApiErrorResponse.class)
+            )
+        )
+    })
+    @PostMapping("/batches/{batchId}/withdrawals")
+    public ResponseEntity<RegisterStockWithdrawalResponse> registerStockWithdrawal(
+        @PathVariable UUID batchId,
+        @Valid @RequestBody RegisterStockWithdrawalRequest request
+    ) {
+        var command = new RegisterStockWithdrawalCommand(
+            batchId,
+            request.quantity(),
+            request.reason()
+        );
+
+        var result = registerStockWithdrawal.execute(command);
+        var response = RegisterStockWithdrawalResponse.from(result);
 
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(response);

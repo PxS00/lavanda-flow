@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.domain;
 
+import com.ceudelavanda.lavandaflow.inventory.domain.exception.InsufficientStockException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -175,6 +176,82 @@ class BatchTest {
         assertThatThrownBy(() -> batch.addQuantity(null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("quantity must be greater than zero");
+    }
+
+    @Test
+    void shouldDecreaseCurrentQuantityWhenRemovingPositiveQuantity() {
+        var batch = batchWithBalance("100");
+
+        batch.removeQuantity(new BigDecimal("40"));
+
+        assertThat(batch.getCurrentQuantity()).isEqualByComparingTo("60");
+    }
+
+    @Test
+    void shouldRejectNullQuantityWhenRemoving() {
+        var batch = batchWithBalance("100");
+
+        assertThatThrownBy(() -> batch.removeQuantity(null))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("quantity must be greater than zero");
+    }
+
+    @Test
+    void shouldRejectZeroQuantityWhenRemoving() {
+        var batch = batchWithBalance("100");
+
+        assertThatThrownBy(() -> batch.removeQuantity(BigDecimal.ZERO))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("quantity must be greater than zero");
+    }
+
+    @Test
+    void shouldRejectNegativeQuantityWhenRemoving() {
+        var batch = batchWithBalance("100");
+
+        assertThatThrownBy(() -> batch.removeQuantity(new BigDecimal("-0.001")))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("quantity must be greater than zero");
+    }
+
+    @Test
+    void shouldRejectWithdrawalGreaterThanAvailableBalanceWithoutMutatingBalance() {
+        var batch = batchWithBalance("100");
+
+        assertThatThrownBy(() -> batch.removeQuantity(new BigDecimal("100.001")))
+            .isInstanceOf(InsufficientStockException.class)
+            .satisfies(exception -> {
+                var insufficientStock = (InsufficientStockException) exception;
+                assertThat(insufficientStock.getBatchId()).isEqualTo(batch.getId());
+                assertThat(insufficientStock.getRequestedQuantity())
+                    .isEqualByComparingTo("100.001");
+                assertThat(insufficientStock.getAvailableQuantity())
+                    .isEqualByComparingTo("100");
+            });
+
+        assertThat(batch.getCurrentQuantity()).isEqualByComparingTo("100");
+    }
+
+    @Test
+    void shouldAllowWithdrawingExactlyTheAvailableBalance() {
+        var batch = batchWithBalance("100");
+
+        batch.removeQuantity(new BigDecimal("100"));
+
+        assertThat(batch.getCurrentQuantity()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    private static Batch batchWithBalance(String balance) {
+        return new Batch(
+            UUID.randomUUID(),
+            INVENTORY_ITEM_ID,
+            null,
+            "LOT-001",
+            new BigDecimal(balance),
+            new BigDecimal(balance),
+            RECEIVED_AT,
+            null
+        );
     }
 
 }
