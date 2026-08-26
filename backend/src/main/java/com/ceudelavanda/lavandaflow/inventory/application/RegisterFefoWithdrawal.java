@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
@@ -35,6 +36,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RegisterFefoWithdrawal {
 
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+
     private final InventoryItemLookup inventoryItemLookup;
     private final BatchRepository batchRepository;
     private final StockMovementRepository stockMovementRepository;
@@ -43,6 +46,9 @@ public class RegisterFefoWithdrawal {
 
     /**
      * Registers an automatic FEFO withdrawal for one active inventory item.
+     *
+     * <p>Expiration eligibility uses the business date in {@code America/Sao_Paulo},
+     * while immutable movement timestamps remain UTC-compatible {@link Instant}s.</p>
      *
      * @throws InventoryItemNotFoundException if the item does not exist
      * @throws InactiveInventoryItemException if the item is inactive
@@ -59,11 +65,12 @@ public class RegisterFefoWithdrawal {
         }
 
         var batches = batchRepository.findByInventoryItemId(command.inventoryItemId());
+        var businessDate = LocalDate.now(clock.withZone(BUSINESS_ZONE));
         var allocationPlan = fefoAllocationPolicy.allocate(
             command.inventoryItemId(),
             batches,
             command.quantity(),
-            LocalDate.now(clock)
+            businessDate
         );
         var batchesById = new HashMap<UUID, com.ceudelavanda.lavandaflow.inventory.domain.Batch>();
         batches.forEach(batch -> batchesById.put(batch.getId(), batch));
