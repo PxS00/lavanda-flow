@@ -6,6 +6,8 @@ Describe what changed and why.
 
 Closes #
 
+For normal issue PRs targeting `develop`, keep the `Closes #<issue-number>` reference above. The repository closes linked issues automatically after a successful merge into `develop`.
+
 ## Change type
 
 - [ ] `feat` — new functionality
