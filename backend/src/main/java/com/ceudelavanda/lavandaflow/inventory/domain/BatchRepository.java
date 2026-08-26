@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.domain;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,4 +15,6 @@ public interface BatchRepository {
     Optional<Batch> findById(UUID id);
 
     List<Batch> findByInventoryItemId(UUID inventoryItemId);
+
+    List<Batch> findWithPositiveBalanceExpiringOnOrBefore(LocalDate expiresOnOrBefore);
 }

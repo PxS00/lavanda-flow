@@ -4,6 +4,8 @@ import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,6 +36,16 @@ class JpaBatchRepository implements BatchRepository {
     @Override
     public List<Batch> findByInventoryItemId(UUID inventoryItemId) {
         return repository.findByInventoryItemId(inventoryItemId).stream()
+            .map(BatchMapper::toDomain)
+            .toList();
+    }
+
+    @Override
+    public List<Batch> findWithPositiveBalanceExpiringOnOrBefore(LocalDate expiresOnOrBefore) {
+        return repository.findByExpiresAtLessThanEqualAndCurrentQuantityGreaterThan(
+                expiresOnOrBefore,
+                BigDecimal.ZERO
+            ).stream()
             .map(BatchMapper::toDomain)
             .toList();
     }
