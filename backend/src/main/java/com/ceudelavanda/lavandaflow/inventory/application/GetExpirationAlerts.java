@@ -15,6 +15,16 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 
+/**
+ * Retrieves positive-balance inventory batches that are expired or approaching expiration.
+ *
+ * <p>The query is evaluated against the application {@link Clock}. A batch is considered expired
+ * when its expiration date is on or before the evaluation date. A future batch is considered
+ * expiring soon when its expiration date is on or before the inclusive alert cutoff.</p>
+ *
+ * <p>Batches without an expiration date and zero-balance batches are excluded by the persistence
+ * query. This read model is informational and does not define stock-consumption eligibility.</p>
+ */
 @Service
 @RequiredArgsConstructor
 public class GetExpirationAlerts {
@@ -27,6 +37,12 @@ public class GetExpirationAlerts {
     private final BatchRepository batchRepository;
     private final Clock clock;
 
+    /**
+     * Executes the expiration-alert query for the requested future alert window.
+     *
+     * @param query resolved non-negative alert window in days
+     * @return immutable expiration-alert result evaluated for the application date
+     */
     @Transactional(readOnly = true)
     public ExpirationAlertsResult execute(GetExpirationAlertsQuery query) {
         var today = LocalDate.now(clock);
