@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
             exception.getCode(),
             exception.getMessage(),
             request.getRequestURI(),
-            null
+            exception.getDetails()
         );
 
         return ResponseEntity

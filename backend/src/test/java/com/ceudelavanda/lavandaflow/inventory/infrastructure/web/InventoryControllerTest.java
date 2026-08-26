@@ -1,16 +1,18 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
-import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
+import com.ceudelavanda.lavandaflow.inventory.application.RegisterFefoWithdrawal;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockAdjustment;
+import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockWithdrawal;
-import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterFefoWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockAdjustmentCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockWithdrawalCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalAllocationResult;
+import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.StockMovementResult;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
-import com.ceudelavanda.lavandaflow.inventory.domain.exception.BatchNotFoundException;
-import com.ceudelavanda.lavandaflow.inventory.domain.exception.InsufficientStockException;
-import com.ceudelavanda.lavandaflow.inventory.domain.exception.InvalidStockAdjustmentException;
+import com.ceudelavanda.lavandaflow.inventory.domain.exception.*;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +50,9 @@ class InventoryControllerTest {
 
     @MockitoBean
     private RegisterStockWithdrawal registerStockWithdrawal;
+
+    @MockitoBean
+    private RegisterFefoWithdrawal registerFefoWithdrawal;
 
     @Test
     void shouldRegisterStockEntry() throws Exception {
@@ -691,6 +696,148 @@ class InventoryControllerTest {
                 .value("/api/v1/inventory/batches/" + batchId + "/adjustments"))
             .andExpect(jsonPath("$.timestamp").exists())
             .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    void shouldReturn201ForFefoWithdrawal() throws Exception {
+        var itemId = UUID.randomUUID();
+        var firstBatchId = UUID.randomUUID();
+        var secondBatchId = UUID.randomUUID();
+        var firstMovementId = UUID.randomUUID();
+        var secondMovementId = UUID.randomUUID();
+        when(registerFefoWithdrawal.execute(any(RegisterFefoWithdrawalCommand.class)))
+            .thenReturn(new FefoWithdrawalResult(
+                itemId,
+                new BigDecimal("80.000"),
+                new BigDecimal("80.000"),
+                java.util.List.of(
+                    new FefoWithdrawalAllocationResult(firstBatchId, firstMovementId, new BigDecimal("15.000")),
+                    new FefoWithdrawalAllocationResult(secondBatchId, secondMovementId, new BigDecimal("65.000"))
+                )
+            ));
+
+        mockMvc.perform(fefoWithdrawal(itemId, """
+            {
+              "quantity": 80.000,
+              "reason": "Production"
+            }
+            """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.inventoryItemId").value(itemId.toString()))
+            .andExpect(jsonPath("$.requestedQuantity").value(80.000))
+            .andExpect(jsonPath("$.allocatedQuantity").value(80.000))
+            .andExpect(jsonPath("$.allocations[0].batchId").value(firstBatchId.toString()))
+            .andExpect(jsonPath("$.allocations[0].movementId").value(firstMovementId.toString()))
+            .andExpect(jsonPath("$.allocations[0].quantity").value(15.000))
+            .andExpect(jsonPath("$.allocations[1].batchId").value(secondBatchId.toString()))
+            .andExpect(jsonPath("$.allocations[1].movementId").value(secondMovementId.toString()))
+            .andExpect(jsonPath("$.allocations[1].quantity").value(65.000));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(RegisterFefoWithdrawalCommand.class);
+        verify(registerFefoWithdrawal).execute(captor.capture());
+        assertThat(captor.getValue().inventoryItemId()).isEqualTo(itemId);
+        assertThat(captor.getValue().quantity()).isEqualByComparingTo("80.000");
+        assertThat(captor.getValue().reason()).isEqualTo("Production");
+    }
+
+    @Test
+    void shouldReturn400WhenFefoQuantityIsMissing() throws Exception {
+        assertInvalidFefoRequest("{}", "quantity");
+    }
+
+    @Test
+    void shouldReturn400WhenFefoQuantityIsZero() throws Exception {
+        assertInvalidFefoRequest("{ \"quantity\": 0 }", "quantity");
+    }
+
+    @Test
+    void shouldReturn400WhenFefoQuantityIsNegative() throws Exception {
+        assertInvalidFefoRequest("{ \"quantity\": -1 }", "quantity");
+    }
+
+    @Test
+    void shouldReturn400WhenFefoReasonExceeds255Characters() throws Exception {
+        assertInvalidFefoRequest("""
+            {
+              "quantity": 1,
+              "reason": "%s"
+            }
+            """.formatted("a".repeat(256)), "reason");
+    }
+
+    @Test
+    void shouldAcceptMissingFefoReason() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(registerFefoWithdrawal.execute(any(RegisterFefoWithdrawalCommand.class)))
+            .thenReturn(new FefoWithdrawalResult(itemId, BigDecimal.ONE, BigDecimal.ONE, java.util.List.of()));
+
+        mockMvc.perform(fefoWithdrawal(itemId, "{ \"quantity\": 1 }"))
+            .andExpect(status().isCreated());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(RegisterFefoWithdrawalCommand.class);
+        verify(registerFefoWithdrawal).execute(captor.capture());
+        assertThat(captor.getValue().reason()).isNull();
+    }
+
+    @Test
+    void shouldReturn404WhenInventoryItemDoesNotExistForFefoWithdrawal() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(registerFefoWithdrawal.execute(any(RegisterFefoWithdrawalCommand.class)))
+            .thenThrow(new InventoryItemNotFoundException(itemId));
+
+        mockMvc.perform(fefoWithdrawal(itemId, "{ \"quantity\": 1 }"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("INVENTORY_ITEM_NOT_FOUND"));
+    }
+
+    @Test
+    void shouldReturn422WhenInventoryItemIsInactiveForFefoWithdrawal() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(registerFefoWithdrawal.execute(any(RegisterFefoWithdrawalCommand.class)))
+            .thenThrow(new InactiveInventoryItemException(itemId));
+
+        mockMvc.perform(fefoWithdrawal(itemId, "{ \"quantity\": 1 }"))
+            .andExpect(status().isUnprocessableContent())
+            .andExpect(jsonPath("$.code").value("INACTIVE_INVENTORY_ITEM"));
+    }
+
+    @Test
+    void shouldReturn422WithStructuredDetailsWhenEligibleStockIsInsufficient() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(registerFefoWithdrawal.execute(any(RegisterFefoWithdrawalCommand.class)))
+            .thenThrow(new InsufficientEligibleStockException(
+                itemId,
+                new BigDecimal("80.000"),
+                new BigDecimal("55.000")
+            ));
+
+        mockMvc.perform(fefoWithdrawal(itemId, "{ \"quantity\": 80.000 }"))
+            .andExpect(status().isUnprocessableContent())
+            .andExpect(jsonPath("$.code").value("INSUFFICIENT_ELIGIBLE_STOCK"))
+            .andExpect(jsonPath("$.details.inventoryItemId").value(itemId.toString()))
+            .andExpect(jsonPath("$.details.requestedQuantity").value("80.000"))
+            .andExpect(jsonPath("$.details.availableQuantity").value("55.000"));
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder fefoWithdrawal(
+        UUID inventoryItemId,
+        String requestBody
+    ) {
+        return post("/api/v1/inventory/items/{inventoryItemId}/withdrawals", inventoryItemId)
+            .contentType("application/json")
+            .with(csrf())
+            .content(requestBody);
+    }
+
+    private void assertInvalidFefoRequest(String requestBody, String field) throws Exception {
+        var itemId = UUID.randomUUID();
+
+        mockMvc.perform(fefoWithdrawal(itemId, requestBody))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.details." + field).exists());
+
+        verify(registerFefoWithdrawal, never()).execute(any(RegisterFefoWithdrawalCommand.class));
     }
 
     private void assertInvalidAdjustmentRequest(String requestBody, String field) throws Exception {

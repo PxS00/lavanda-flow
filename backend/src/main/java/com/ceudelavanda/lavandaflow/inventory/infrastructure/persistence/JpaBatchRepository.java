@@ -4,6 +4,7 @@ import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,5 +29,12 @@ class JpaBatchRepository implements BatchRepository {
     public Optional<Batch> findById(UUID id) {
         return repository.findById(id)
             .map(BatchMapper::toDomain);
+    }
+
+    @Override
+    public List<Batch> findByInventoryItemId(UUID inventoryItemId) {
+        return repository.findByInventoryItemId(inventoryItemId).stream()
+            .map(BatchMapper::toDomain)
+            .toList();
     }
 }

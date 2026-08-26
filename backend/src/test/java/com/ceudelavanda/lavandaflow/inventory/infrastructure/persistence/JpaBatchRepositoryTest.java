@@ -18,6 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -108,6 +109,55 @@ class JpaBatchRepositoryTest {
                 assertThat(found.getLotCode()).isNull();
                 assertThat(found.getExpiresAt()).isNull();
             });
+    }
+
+    @Test
+    void shouldFindAllBatchesForInventoryItemWithCompleteDomainValues() {
+        var requestedItem = inventoryItemRepository.save(InventoryItem.create(
+            "Requested essence",
+            null,
+            Category.ESSENCE,
+            UnitOfMeasure.MILLILITER
+        ));
+        var otherItem = inventoryItemRepository.save(InventoryItem.create(
+            "Other essence",
+            null,
+            Category.ESSENCE,
+            UnitOfMeasure.MILLILITER
+        ));
+        var firstBatch = batchRepository.save(Batch.create(
+            requestedItem.getId(), null, "REQUESTED-1", new BigDecimal("15.250"),
+            LocalDate.of(2026, 8, 20), LocalDate.of(2026, 9, 1)
+        ));
+        var secondBatch = batchRepository.save(Batch.create(
+            requestedItem.getId(), null, "REQUESTED-2", new BigDecimal("30.500"),
+            LocalDate.of(2026, 8, 21), LocalDate.of(2026, 9, 2)
+        ));
+        batchRepository.save(Batch.create(
+            otherItem.getId(), null, "OTHER-1", new BigDecimal("99.000"),
+            LocalDate.of(2026, 8, 22), LocalDate.of(2026, 9, 3)
+        ));
+
+        var batches = batchRepository.findByInventoryItemId(requestedItem.getId());
+
+        assertThat(batches).extracting(Batch::getId)
+            .containsExactlyInAnyOrder(firstBatch.getId(), secondBatch.getId());
+        assertThat(batches).allSatisfy(batch ->
+            assertThat(batch.getInventoryItemId()).isEqualTo(requestedItem.getId())
+        );
+        assertThat(batches).anySatisfy(batch -> {
+            assertThat(batch.getId()).isEqualTo(firstBatch.getId());
+            assertThat(batch.getLotCode()).isEqualTo("REQUESTED-1");
+            assertThat(batch.getInitialQuantity()).isEqualByComparingTo("15.250");
+            assertThat(batch.getCurrentQuantity()).isEqualByComparingTo("15.250");
+            assertThat(batch.getReceivedAt()).isEqualTo(LocalDate.of(2026, 8, 20));
+            assertThat(batch.getExpiresAt()).isEqualTo(LocalDate.of(2026, 9, 1));
+        });
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenInventoryItemHasNoBatches() {
+        assertThat(batchRepository.findByInventoryItemId(UUID.randomUUID())).isEmpty();
     }
 
     @Test
