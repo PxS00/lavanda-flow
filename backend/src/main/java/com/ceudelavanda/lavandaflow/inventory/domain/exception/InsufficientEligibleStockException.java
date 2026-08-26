@@ -5,6 +5,7 @@ import com.ceudelavanda.lavandaflow.shared.error.ErrorType;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -25,7 +26,12 @@ public final class InsufficientEligibleStockException extends DomainException {
         super(
             "INSUFFICIENT_ELIGIBLE_STOCK",
             "Insufficient eligible stock for inventory item " + inventoryItemId,
-            ErrorType.BUSINESS_RULE
+            ErrorType.BUSINESS_RULE,
+            Map.of(
+                "inventoryItemId", inventoryItemId.toString(),
+                "requestedQuantity", requestedQuantity.toPlainString(),
+                "availableQuantity", availableQuantity.toPlainString()
+            )
         );
         this.inventoryItemId = inventoryItemId;
         this.requestedQuantity = requestedQuantity;
