@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
+import com.ceudelavanda.lavandaflow.inventory.application.GetCurrentStock;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterFefoWithdrawal;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockAdjustment;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
@@ -8,6 +9,9 @@ import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterFefoWi
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockAdjustmentCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockWithdrawalCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.query.GetCurrentStockQuery;
+import com.ceudelavanda.lavandaflow.inventory.application.result.BatchStockResult;
+import com.ceudelavanda.lavandaflow.inventory.application.result.CurrentStockResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalAllocationResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.StockMovementResult;
@@ -24,12 +28,15 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,6 +50,9 @@ class InventoryControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private GetCurrentStock getCurrentStock;
+
+    @MockitoBean
     private RegisterStockEntry registerStockEntry;
 
     @MockitoBean
@@ -53,6 +63,82 @@ class InventoryControllerTest {
 
     @MockitoBean
     private RegisterFefoWithdrawal registerFefoWithdrawal;
+
+    @Test
+    void shouldReturnCurrentStock() throws Exception {
+        var itemId = UUID.randomUUID();
+        var batchId = UUID.randomUUID();
+        var supplierId = UUID.randomUUID();
+        var nullableBatchId = UUID.randomUUID();
+        when(getCurrentStock.execute(any(GetCurrentStockQuery.class))).thenReturn(new CurrentStockResult(
+            itemId,
+            true,
+            new BigDecimal("180.500000"),
+            List.of(
+                new BatchStockResult(
+                    batchId,
+                    supplierId,
+                    "ESS-LAV-042",
+                    new BigDecimal("30.500000"),
+                    LocalDate.of(2026, 6, 10),
+                    LocalDate.of(2026, 9, 15)
+                ),
+                new BatchStockResult(nullableBatchId, null, null, BigDecimal.ZERO, LocalDate.of(2026, 6, 11), null)
+            )
+        ));
+
+        mockMvc.perform(get("/api/v1/inventory/items/{inventoryItemId}/stock", itemId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.inventoryItemId").value(itemId.toString()))
+            .andExpect(jsonPath("$.active").value(true))
+            .andExpect(jsonPath("$.totalCurrentQuantity").value(180.500000))
+            .andExpect(jsonPath("$.batches[0].batchId").value(batchId.toString()))
+            .andExpect(jsonPath("$.batches[0].supplierId").value(supplierId.toString()))
+            .andExpect(jsonPath("$.batches[0].lotCode").value("ESS-LAV-042"))
+            .andExpect(jsonPath("$.batches[0].currentQuantity").value(30.500000))
+            .andExpect(jsonPath("$.batches[0].receivedAt").value("2026-06-10"))
+            .andExpect(jsonPath("$.batches[0].expiresAt").value("2026-09-15"))
+            .andExpect(jsonPath("$.batches[1].supplierId").doesNotExist())
+            .andExpect(jsonPath("$.batches[1].lotCode").doesNotExist())
+            .andExpect(jsonPath("$.batches[1].expiresAt").doesNotExist());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(GetCurrentStockQuery.class);
+        verify(getCurrentStock).execute(captor.capture());
+        assertThat(captor.getValue().inventoryItemId()).isEqualTo(itemId);
+        assertThat(captor.getValue().includeZeroBalance()).isFalse();
+    }
+
+    @Test
+    void shouldIncludeZeroBalanceWhenRequested() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(getCurrentStock.execute(any(GetCurrentStockQuery.class)))
+            .thenReturn(new CurrentStockResult(itemId, true, BigDecimal.ZERO, List.of()));
+
+        mockMvc.perform(get("/api/v1/inventory/items/{inventoryItemId}/stock", itemId)
+                .queryParam("includeZeroBalance", "true"))
+            .andExpect(status().isOk());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(GetCurrentStockQuery.class);
+        verify(getCurrentStock).execute(captor.capture());
+        assertThat(captor.getValue().includeZeroBalance()).isTrue();
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenInventoryItemDoesNotExistForCurrentStock() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(getCurrentStock.execute(any(GetCurrentStockQuery.class)))
+            .thenThrow(new InventoryItemNotFoundException(itemId));
+
+        mockMvc.perform(get("/api/v1/inventory/items/{inventoryItemId}/stock", itemId))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.status").value(404))
+            .andExpect(jsonPath("$.error").value("Not Found"))
+            .andExpect(jsonPath("$.code").value("INVENTORY_ITEM_NOT_FOUND"))
+            .andExpect(jsonPath("$.message").value("Inventory item not found: " + itemId))
+            .andExpect(jsonPath("$.path").value("/api/v1/inventory/items/" + itemId + "/stock"))
+            .andExpect(jsonPath("$.timestamp").exists())
+            .andExpect(jsonPath("$.details").doesNotExist());
+    }
 
     @Test
     void shouldRegisterStockEntry() throws Exception {
