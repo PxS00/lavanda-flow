@@ -129,13 +129,19 @@ Start with:
 
 ## Development workflow
 
-Issue-driven work starts from `develop` using branches named:
+Issue-driven work starts from `develop`. The branch prefix reflects the primary change type:
 
 ```text
-features/<issue-number>/<short-description>
+feature/<issue-number>/<short-description>   # feat
+fix/<issue-number>/<short-description>       # fix
+refactor/<issue-number>/<short-description>  # refactor
+test/<issue-number>/<short-description>      # test
+docs/<issue-number>/<short-description>      # docs
+chore/<issue-number>/<short-description>     # chore
+ci/<issue-number>/<short-description>        # ci
 ```
 
-Feature pull requests target `develop` and are squash merged. `main` is production-only once issue-driven development is active.
+Issue pull requests target `develop` and are squash merged. Releases use `release/vX.Y.Z` into `main`; emergency production fixes use `hotfix/<issue-number>/<short-description>`. `main` is production-only once issue-driven development is active.
 
 ## Status
 

@@ -1,0 +1,2 @@
+ALTER TABLE stock_movement
+  ALTER COLUMN reason TYPE VARCHAR(255);

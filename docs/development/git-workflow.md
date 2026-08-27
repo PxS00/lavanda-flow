@@ -2,29 +2,31 @@
 
 ## Purpose
 
-This document defines the Git workflow, branch strategy, commit policy, pull request flow, release process, and language conventions for Lavanda Flow.
+This document defines the Git workflow, branch strategy, commit policy, pull request flow, release process, versioning policy, and language conventions for Lavanda Flow.
 
-Once functional development starts, `main` is treated as the production branch and must not receive normal feature work directly.
+Once functional development starts, `main` is treated as the production branch and must not receive normal issue-driven work directly.
 
 Commit formatting details are defined in `docs/development/commit-conventions.md`.
 
 ## Branch model
 
 ```text
-feature/<issue-number>/<short-description>
-                │
-                │ Pull Request + squash merge
-                ▼
-             develop
-                │
-                │ create release branch
-                ▼
-        release/v<major>.<minor>.<patch>
-                │
-                │ Release Pull Request
-                ▼
-              main
+<type-prefix>/<issue-number>/<short-description>
+                     │
+                     │ Pull Request + squash merge
+                     ▼
+                  develop
+                     │
+                     │ create release branch
+                     ▼
+             release/v<major>.<minor>.<patch>
+                     │
+                     │ Release Pull Request
+                     ▼
+                   main
 ```
+
+Normal issue-driven branches use one of the approved type prefixes documented below. Release and emergency hotfix branches use their dedicated formats.
 
 ### `main`
 
@@ -32,7 +34,7 @@ feature/<issue-number>/<short-description>
 
 Rules:
 
-- no normal feature development directly on `main`;
+- no normal issue-driven development directly on `main`;
 - no direct commits after the initial repository/bootstrap phase is finished;
 - changes normally reach `main` only through a release pull request;
 - every merge to `main` must represent a release-ready state;
@@ -47,42 +49,55 @@ Rules:
 
 Rules:
 
-- feature branches start from an up-to-date `develop`;
-- feature pull requests target `develop`;
-- completed feature pull requests are merged using **squash merge**;
+- normal issue branches start from an up-to-date `develop`;
+- issue pull requests target `develop`;
+- completed issue pull requests are merged using **squash merge**;
 - `develop` must remain buildable and testable;
 - unfinished or knowingly broken work must not be merged into `develop`;
 - force-push must be disabled through branch protection;
 - pull requests and required CI checks are mandatory once project CI exists.
 
-### Feature branches
+### Issue branches
 
-Functional work must use:
+Normal issue-driven work uses a branch prefix that reflects the semantic type of the change:
 
-```text
-feature/<issue-number>/<short-description>
-```
+| Work type | Branch format | Conventional Commit type |
+| --- | --- | --- |
+| New functionality | `feature/<issue-number>/<short-description>` | `feat` |
+| Non-production bug fix | `fix/<issue-number>/<short-description>` | `fix` |
+| Refactoring | `refactor/<issue-number>/<short-description>` | `refactor` |
+| Test-focused work | `test/<issue-number>/<short-description>` | `test` |
+| Documentation | `docs/<issue-number>/<short-description>` | `docs` |
+| Maintenance/configuration | `chore/<issue-number>/<short-description>` | `chore` |
+| CI/CD | `ci/<issue-number>/<short-description>` | `ci` |
+
+The `feature` branch prefix maps to the Conventional Commit type `feat`. Other approved prefixes intentionally mirror their corresponding Conventional Commit type.
 
 Examples:
 
 ```text
-feature/12/bootstrap-spring-backend
-feature/18/register-inventory-item
-feature/27/implement-fefo-selection
+feature/14/add-inventory-item-model
+fix/43/restore-spring-config-hierarchy
+refactor/52/isolate-stock-allocation-policy
+test/28/cover-concurrent-stock-movements
+docs/49/align-branch-prefixes
+chore/47/pin-development-tool-versions
+ci/9/add-frontend-ci
 ```
 
 Rules:
 
 - branch names are written in English;
 - use lowercase kebab-case for the description;
-- every feature branch must reference an existing issue;
+- every normal issue branch must reference an existing issue;
+- select the prefix according to the primary semantic type of the issue;
 - branch from `develop`;
 - keep the branch focused on the issue scope;
 - checkpoint commits normally reference the same owning issue at the end of the commit message;
 - open a pull request to `develop` when the work is ready for integration;
 - merge into `develop` with squash merge.
 
-Technical work may use the same branch pattern when it belongs to an issue. If a dedicated prefix becomes necessary later, it must be documented before being adopted globally.
+If an issue contains more than one commit type, choose the branch prefix that represents the issue's primary purpose. Do not rename a branch merely because a secondary checkpoint uses another valid Conventional Commit type.
 
 ### Release branches
 
@@ -114,13 +129,41 @@ Do not introduce unrelated features into a release branch.
 
 When the release is validated, open a **Release Pull Request** from the release branch to `main`.
 
-The release PR should use a regular merge commit rather than squash merging the complete release. Feature work has already been squashed individually when entering `develop`; preserving those commits on `main` keeps the release history readable at feature granularity.
+The release PR should use a regular merge commit rather than squash merging the complete release. Issue-driven work has already been squashed individually when entering `develop`; preserving those commits on `main` keeps the release history readable at issue granularity.
 
 After the release reaches `main`:
 
 1. create the corresponding Git tag, such as `v0.1.0`;
 2. synchronize release changes back into `develop` when the release branch received stabilization changes not already present there;
-3. delete the release branch after synchronization.
+3. advance development metadata to the next planned release using the `-SNAPSHOT` suffix;
+4. delete the release branch after synchronization.
+
+## Versioning policy
+
+Lavanda Flow uses a single product version across the monorepo. Backend, frontend, Git tags, and GitHub Releases represent the same product release and must not evolve independently unless a future architectural decision explicitly changes this policy.
+
+Release versions follow Semantic Versioning (`MAJOR.MINOR.PATCH`). While the product remains below `1.0.0`, minor releases may introduce planned product capabilities and patch releases are reserved for compatible corrections and stabilization.
+
+For a release `vX.Y.Z`:
+
+- the Git tag is `vX.Y.Z`;
+- the backend Maven project version is `X.Y.Z`;
+- the frontend package version is `X.Y.Z`;
+- the GitHub Release is published as `vX.Y.Z`.
+
+The release branch removes the development suffix before the release PR reaches `main`:
+
+```text
+develop                    X.Y.Z-SNAPSHOT
+release/vX.Y.Z             X.Y.Z
+main after release         X.Y.Z
+Git tag                    vX.Y.Z
+GitHub Release             vX.Y.Z
+```
+
+After a release is synchronized back into `develop`, both backend and frontend metadata advance together to the next planned release version with the `-SNAPSHOT` suffix. For example, after releasing `v0.2.0`, normal development for the next minor release uses `0.3.0-SNAPSHOT`.
+
+The historical `v0.1.0` release predates this unified artifact-version policy and is not rewritten retroactively.
 
 ## Hotfixes
 
@@ -134,19 +177,22 @@ hotfix/<issue-number>/<short-description>
 
 A hotfix starts from `main`, receives focused validation, and reaches `main` through a pull request. Hotfix commits and the hotfix PR title must reference the owning issue. The resulting fix must then be synchronized back into `develop` so the branches do not diverge.
 
+`hotfix/` is reserved for emergency production fixes. Ordinary bug fixes for the next release use `fix/<issue-number>/<short-description>` and start from `develop`.
+
 Hotfixes must not be used to bypass the normal release process for ordinary development.
 
 ## Pull requests
 
-### Feature PR
+### Issue PR
 
 ```text
-feature/<issue>/<description> -> develop
+<type-prefix>/<issue>/<description> -> develop
 ```
 
 Requirements:
 
 - issue linked in the PR;
+- branch prefix reflects the issue's primary semantic type;
 - scope matches the issue;
 - tests and validation appropriate to the change are complete;
 - documentation is updated when behavior, architecture, configuration, or contracts change;
@@ -165,6 +211,8 @@ Examples:
 ```text
 feat(inventory): add inventory item registration (#18)
 fix(api): return validation errors consistently (#31)
+docs(git): align branch prefix policy (#49)
+chore(repository): pin development tool versions (#47)
 ci(backend): add backend verification workflow (#12)
 ```
 
@@ -242,7 +290,7 @@ release
 
 Do not use file names or individual class names as scopes unless there is a strong reason.
 
-The `(#<issue-number>)` suffix is a Lavanda Flow convention layered on top of Conventional Commits. It is required for normal issue-driven commits and feature/hotfix PR titles. Release PRs are the primary exception because they aggregate multiple issues.
+The `(#<issue-number>)` suffix is a Lavanda Flow convention layered on top of Conventional Commits. It is required for normal issue-driven commits and issue/hotfix PR titles. Release PRs are the primary exception because they aggregate multiple issues.
 
 ### Atomic commits by checkpoint
 
@@ -266,7 +314,7 @@ Bad: dozens of tiny commits for trivial edits
 Bad: one commit containing thousands of unrelated changes
 ```
 
-A feature branch with meaningful complexity should normally contain multiple checkpoint commits during development. The exact number is not a target; coherence is.
+An issue branch with meaningful complexity should normally contain multiple checkpoint commits during development. The exact number is not a target; coherence is.
 
 Before committing, ask:
 
@@ -300,7 +348,7 @@ Expected protection:
 - require status checks applicable to the release;
 - block force pushes;
 - block branch deletion;
-- do not use normal feature branches as PR sources;
+- do not use normal issue branches as PR sources;
 - normal integration path is `release/* -> main`;
 - emergency path is `hotfix/* -> main`.
 
@@ -312,7 +360,7 @@ Expected protection:
 - require backend/frontend CI checks once available;
 - block force pushes;
 - keep the branch buildable;
-- normal integration path is `feature/* -> develop`.
+- normal integration paths are `feature/*`, `fix/*`, `refactor/*`, `test/*`, `docs/*`, `chore/*`, and `ci/*` into `develop`.
 
 Branch protection is a repository setting, while this document is the source of truth for the intended policy.
 
@@ -347,11 +395,11 @@ Expected flow:
 ```text
 Issue
   ↓
-feature/<issue>/<description>
+<type-prefix>/<issue>/<description>
   ↓
 checkpoint commits (#issue)
   ↓
-Feature PR (#issue)
+Issue PR (#issue)
   ↓ squash
  develop
   ↓
@@ -362,11 +410,11 @@ Release PR
  main
 ```
 
-The issue defines the problem and acceptance criteria. The branch implements it. The PR validates and integrates it.
+The issue defines the problem and acceptance criteria. The branch prefix classifies the primary change type. The branch implements it. The PR validates and integrates it.
 
 ## Pre-merge expectations
 
-Before a feature PR is merged into `develop`:
+Before an issue PR is merged into `develop`:
 
 - relevant tests pass;
 - lint/format validation passes;

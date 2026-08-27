@@ -2,9 +2,6 @@ spring:
   application:
     name: lavanda-flow
 
-  profiles:
-    default: local
-
   jpa:
     open-in-view: false
 
@@ -20,3 +17,8 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+
+lavanda:
+  inventory:
+    alerts:
+      expiration-window-days: ${EXPIRATION_ALERT_WINDOW_DAYS:30}

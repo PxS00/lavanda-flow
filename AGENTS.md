@@ -292,15 +292,24 @@ Once issue-driven development starts:
 - `main` is production-only
 - `develop` is the integration branch for the next release
 - normal work starts from a GitHub issue
-- feature branches use `feature/<issue-number>/<short-description>`
-- feature branches start from `develop`
-- feature PRs target `develop`
-- feature PRs use squash merge
+- issue branches start from `develop`
+- branch prefixes reflect the primary change type:
+  - `feature/<issue-number>/<short-description>` for `feat`
+  - `fix/<issue-number>/<short-description>` for ordinary bug fixes
+  - `refactor/<issue-number>/<short-description>` for refactoring
+  - `test/<issue-number>/<short-description>` for test-focused work
+  - `docs/<issue-number>/<short-description>` for documentation
+  - `chore/<issue-number>/<short-description>` for maintenance/configuration
+  - `ci/<issue-number>/<short-description>` for CI/CD
+- issue PRs target `develop`
+- issue PRs use squash merge
 - releases use `release/vX.Y.Z`
 - release branches start from `develop`
 - release PRs target `main`
 - release PRs use a regular merge commit
-- emergency production fixes use `hotfix/<issue-number>/<short-description>` and must be synchronized back into `develop`
+- emergency production fixes use `hotfix/<issue-number>/<short-description>` from `main` and must be synchronized back into `develop`
+
+`hotfix/` is reserved for emergency production fixes. Ordinary bug fixes for the next release use `fix/` from `develop`.
 
 Direct commits to `main` are allowed only during the initial documentation, governance, and bootstrap phase. This exception ends when issue-driven functional development begins and `develop` is established.
 

@@ -16,18 +16,26 @@ Before contributing, read:
 
 1. Start from an approved GitHub issue.
 2. Update local `develop`.
-3. Create a branch using:
+3. Create an issue branch using the prefix that matches the primary change type:
 
 ```text
-feature/<issue-number>/<short-description>
+feature/<issue-number>/<short-description>   # feat
+fix/<issue-number>/<short-description>       # fix
+refactor/<issue-number>/<short-description>  # refactor
+test/<issue-number>/<short-description>      # test
+docs/<issue-number>/<short-description>      # docs
+chore/<issue-number>/<short-description>     # chore
+ci/<issue-number>/<short-description>        # ci
 ```
 
 4. Implement the issue using coherent checkpoint commits.
 5. Run all relevant validation.
 6. Open a pull request targeting `develop`.
-7. Merge the feature PR using squash merge.
+7. Merge the issue PR using squash merge.
 8. Releases are prepared from `develop` using `release/vX.Y.Z`.
 9. Release branches reach `main` only through a release pull request.
+
+Emergency production fixes are the exception: they use `hotfix/<issue-number>/<short-description>` from `main` and follow the dedicated hotfix flow.
 
 See `docs/development/git-workflow.md` for the complete policy.
 
@@ -72,7 +80,7 @@ ci(backend): verify backend build (#12)
 
 Choose a stable scope that identifies the affected module or engineering concern. Avoid scopes that are so granular that they merely repeat a class or file name.
 
-Commits should be atomic by meaningful checkpoint. Do not create a commit for every trivial edit, and do not accumulate a large feature into one oversized commit containing unrelated work.
+Commits should be atomic by meaningful checkpoint. Do not create a commit for every trivial edit, and do not accumulate a large issue into one oversized commit containing unrelated work.
 
 The issue suffix is a Lavanda Flow convention on top of Conventional Commits. Release PRs are exempt from a single issue suffix because they aggregate multiple issues.
 
@@ -95,18 +103,20 @@ HTTP contracts are documented through OpenAPI/Swagger. Architectural decisions b
 
 ## Pull requests
 
-Feature PRs target `develop` and are squash merged.
+Issue PRs target `develop` and are squash merged.
 
-Because the PR title becomes the squash commit message, feature and hotfix PR titles must use:
+Because the PR title becomes the squash commit message, issue and hotfix PR titles must use:
 
 ```text
 <type>(<scope>): <description> (#<issue-number>)
 ```
 
-Example:
+Examples:
 
 ```text
 feat(catalog): add inventory item registration (#18)
+chore(repository): pin development tool versions (#47)
+docs(git): align branch prefixes with change types (#49)
 ```
 
 Release PRs use scoped Conventional Commit titles without a single issue suffix, for example:
@@ -119,6 +129,7 @@ A PR should:
 
 - link the issue;
 - remain within the issue scope;
+- use a branch prefix that reflects the issue's primary semantic type;
 - include tests for relevant behavior;
 - update code and project documentation when necessary;
 - contain no secrets;
@@ -137,7 +148,7 @@ At minimum:
 - applicable CI checks are required;
 - force pushes are disabled;
 - `main` cannot be deleted;
-- normal feature work does not target `main` directly.
+- normal issue-driven work does not target `main` directly.
 
 ## Code ownership
 

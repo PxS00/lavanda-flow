@@ -6,6 +6,8 @@ Describe what changed and why.
 
 Closes #
 
+For normal issue PRs targeting `develop`, keep the `Closes #<issue-number>` reference above. The repository closes linked issues automatically after a successful merge into `develop`.
+
 ## Change type
 
 - [ ] `feat` — new functionality
@@ -18,13 +20,14 @@ Closes #
 
 ## Target branch
 
-- [ ] Feature PR targeting `develop`
+- [ ] Issue PR targeting `develop`
 - [ ] Release PR targeting `main`
 - [ ] Hotfix PR targeting `main`
 
 ## Scope
 
-- [ ] Feature/hotfix PR title follows `<type>(<scope>): <description> (#<issue-number>)`.
+- [ ] Issue/hotfix PR title follows `<type>(<scope>): <description> (#<issue-number>)`.
+- [ ] Issue branch prefix reflects the primary semantic type of the work.
 - [ ] Release PR title follows `<type>(<scope>): <description>` and lists included issues in the body.
 - [ ] The change matches the linked issue and approved scope.
 - [ ] Module boundaries were preserved.
@@ -68,6 +71,6 @@ Include relevant logs, screenshots, decisions, trade-offs, or known risks when u
 
 ## Merge policy
 
-- Feature PRs into `develop`: **squash merge**.
+- Issue PRs into `develop`: **squash merge**.
 - Release PRs from `release/vX.Y.Z` into `main`: **regular merge commit**.
 - Hotfixes follow the documented policy in `docs/development/git-workflow.md`.
