@@ -1,18 +1,40 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.persistence;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 interface SpringDataBatchRepository extends JpaRepository<BatchJpaEntity, UUID> {
 
     List<BatchJpaEntity> findByInventoryItemId(UUID inventoryItemId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select batch
+        from BatchJpaEntity batch
+        where batch.id = :id
+        """)
+    Optional<BatchJpaEntity> findByIdForUpdate(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        select batch
+        from BatchJpaEntity batch
+        where batch.inventoryItemId = :inventoryItemId
+        order by batch.id
+        """)
+    List<BatchJpaEntity> findByInventoryItemIdForUpdate(
+        @Param("inventoryItemId") UUID inventoryItemId
+    );
 
     List<BatchJpaEntity> findByExpiresAtLessThanEqualAndCurrentQuantityGreaterThan(
         LocalDate expiresAt,

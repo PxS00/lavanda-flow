@@ -41,6 +41,8 @@ public class RegisterStockWithdrawal {
      */
     @Transactional
     public StockMovementResult execute(RegisterStockWithdrawalCommand command) {
+        batchRepository.lockByIdForUpdate(command.batchId());
+
         var batch = batchRepository.findById(command.batchId())
             .orElseThrow(() -> new BatchNotFoundException(command.batchId()));
 

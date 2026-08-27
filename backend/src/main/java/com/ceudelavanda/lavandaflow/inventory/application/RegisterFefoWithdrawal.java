@@ -4,8 +4,8 @@ import com.ceudelavanda.lavandaflow.catalog.InventoryItemLookup;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterFefoWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalAllocationResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalResult;
-import com.ceudelavanda.lavandaflow.inventory.domain.FefoAllocationPolicy;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
+import com.ceudelavanda.lavandaflow.inventory.domain.FefoAllocationPolicy;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 import com.ceudelavanda.lavandaflow.inventory.domain.StockMovement;
 import com.ceudelavanda.lavandaflow.inventory.domain.StockMovementRepository;
@@ -61,6 +61,7 @@ public class RegisterFefoWithdrawal {
             throw new InactiveInventoryItemException(command.inventoryItemId());
         }
 
+        batchRepository.lockByInventoryItemIdForUpdate(command.inventoryItemId());
         var batches = batchRepository.findByInventoryItemId(command.inventoryItemId());
         var businessDate = LocalDate.now(clock);
         var allocationPlan = fefoAllocationPolicy.allocate(
