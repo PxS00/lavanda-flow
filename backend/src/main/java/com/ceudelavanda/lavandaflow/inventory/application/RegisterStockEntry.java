@@ -10,6 +10,7 @@ import com.ceudelavanda.lavandaflow.inventory.domain.exception.BatchNotFoundExce
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Clock;
 import java.time.Instant;
 
@@ -38,6 +39,7 @@ public class RegisterStockEntry {
      */
     @Transactional
     public StockMovementResult execute(RegisterStockEntryCommand command) {
+        batchRepository.lockByIdForUpdate(command.batchId());
 
         var batch = batchRepository.findById(command.batchId())
             .orElseThrow(() -> new BatchNotFoundException(command.batchId()));

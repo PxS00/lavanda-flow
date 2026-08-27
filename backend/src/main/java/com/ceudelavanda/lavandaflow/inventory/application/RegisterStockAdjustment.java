@@ -43,6 +43,7 @@ public class RegisterStockAdjustment {
     @Transactional
     public StockMovementResult execute(RegisterStockAdjustmentCommand command) {
         requireReason(command.reason());
+        batchRepository.lockByIdForUpdate(command.batchId());
 
         var batch = batchRepository.findById(command.batchId())
             .orElseThrow(() -> new BatchNotFoundException(command.batchId()));
