@@ -20,7 +20,9 @@ class JpaMovementHistoryQuery implements MovementHistoryQuery {
             query.inventoryItemId(),
             query.batchId(),
             query.type(),
+            query.from() != null,
             query.from(),
+            query.to() != null,
             query.to(),
             pageable
         );

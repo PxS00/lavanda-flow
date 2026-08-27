@@ -34,8 +34,8 @@ interface SpringDataStockMovementRepository
               and (:inventoryItemId is null or batch.inventoryItemId = :inventoryItemId)
               and (:batchId is null or movement.batchId = :batchId)
               and (:type is null or movement.type = :type)
-              and (:from is null or movement.occurredAt >= :from)
-              and (:to is null or movement.occurredAt < :to)
+              and (:hasFrom = false or movement.occurredAt >= :fromInstant)
+              and (:hasTo = false or movement.occurredAt < :toInstant)
             order by movement.occurredAt desc, movement.id desc
             """,
         countQuery = """
@@ -45,16 +45,18 @@ interface SpringDataStockMovementRepository
               and (:inventoryItemId is null or batch.inventoryItemId = :inventoryItemId)
               and (:batchId is null or movement.batchId = :batchId)
               and (:type is null or movement.type = :type)
-              and (:from is null or movement.occurredAt >= :from)
-              and (:to is null or movement.occurredAt < :to)
+              and (:hasFrom = false or movement.occurredAt >= :fromInstant)
+              and (:hasTo = false or movement.occurredAt < :toInstant)
             """
     )
     Page<MovementHistoryEntry> findMovementHistory(
         @Param("inventoryItemId") UUID inventoryItemId,
         @Param("batchId") UUID batchId,
         @Param("type") MovementType type,
-        @Param("from") Instant from,
-        @Param("to") Instant to,
+        @Param("hasFrom") boolean hasFrom,
+        @Param("fromInstant") Instant fromInstant,
+        @Param("hasTo") boolean hasTo,
+        @Param("toInstant") Instant toInstant,
         Pageable pageable
     );
 }
