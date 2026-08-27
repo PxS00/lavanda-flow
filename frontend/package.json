@@ -1,8 +1,8 @@
 {
   "name": "frontend",
-  "version": "0.2.0",
+  "version": "0.3.0-SNAPSHOT",
   "scripts": {
-    "ng": "ng",
+    "ng": "ng serve",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
