@@ -1,10 +1,14 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.inventory.application.GetExpirationAlerts;
+import com.ceudelavanda.lavandaflow.inventory.application.GetLowStockAlerts;
 import com.ceudelavanda.lavandaflow.inventory.application.query.GetExpirationAlertsQuery;
 import com.ceudelavanda.lavandaflow.inventory.application.result.ExpirationAlertEntryResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.ExpirationAlertStatus;
 import com.ceudelavanda.lavandaflow.inventory.application.result.ExpirationAlertsResult;
+import com.ceudelavanda.lavandaflow.inventory.application.result.LowStockAlertEntryResult;
+import com.ceudelavanda.lavandaflow.inventory.application.result.LowStockAlertsResult;
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.config.InventoryAlertProperties;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import org.junit.jupiter.api.Test;
@@ -41,7 +45,30 @@ class InventoryAlertControllerTest {
     private GetExpirationAlerts getExpirationAlerts;
 
     @MockitoBean
+    private GetLowStockAlerts getLowStockAlerts;
+
+    @MockitoBean
     private InventoryAlertProperties inventoryAlertProperties;
+
+    @Test
+    void shouldReturnLowStockAlerts() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(getLowStockAlerts.execute()).thenReturn(new LowStockAlertsResult(
+            LocalDate.of(2026, 8, 26),
+            List.of(new LowStockAlertEntryResult(
+                itemId, "Lavender Essence", UnitOfMeasure.MILLILITER,
+                BigDecimal.ZERO, new BigDecimal("250"), new BigDecimal("250")
+            ))
+        ));
+
+        mockMvc.perform(get("/api/v1/inventory/alerts/low-stock"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.asOfDate").value("2026-08-26"))
+            .andExpect(jsonPath("$.alerts[0].inventoryItemId").value(itemId.toString()))
+            .andExpect(jsonPath("$.alerts[0].availableQuantity").value(0))
+            .andExpect(jsonPath("$.alerts[0].minimumQuantity").value(250))
+            .andExpect(jsonPath("$.alerts[0].deficitQuantity").value(250));
+    }
 
     @Test
     void shouldReturnExpirationAlertsUsingConfiguredDefaultWindow() throws Exception {

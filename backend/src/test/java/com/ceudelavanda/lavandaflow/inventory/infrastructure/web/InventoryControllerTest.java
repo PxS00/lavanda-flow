@@ -1,6 +1,9 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.inventory.application.GetCurrentStock;
+import com.ceudelavanda.lavandaflow.inventory.application.ConfigureMinimumStockLevel;
+import com.ceudelavanda.lavandaflow.inventory.application.DeleteMinimumStockLevel;
+import com.ceudelavanda.lavandaflow.inventory.application.GetMinimumStockLevel;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterFefoWithdrawal;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockAdjustment;
 import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
@@ -12,6 +15,8 @@ import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockW
 import com.ceudelavanda.lavandaflow.inventory.application.query.GetCurrentStockQuery;
 import com.ceudelavanda.lavandaflow.inventory.application.result.BatchStockResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.CurrentStockResult;
+import com.ceudelavanda.lavandaflow.inventory.application.result.MinimumStockLevelResult;
+import com.ceudelavanda.lavandaflow.inventory.application.result.MinimumStockLevelUpdateResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalAllocationResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalResult;
 import com.ceudelavanda.lavandaflow.inventory.application.result.StockMovementResult;
@@ -37,7 +42,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -53,6 +60,15 @@ class InventoryControllerTest {
     private GetCurrentStock getCurrentStock;
 
     @MockitoBean
+    private ConfigureMinimumStockLevel configureMinimumStockLevel;
+
+    @MockitoBean
+    private GetMinimumStockLevel getMinimumStockLevel;
+
+    @MockitoBean
+    private DeleteMinimumStockLevel deleteMinimumStockLevel;
+
+    @MockitoBean
     private RegisterStockEntry registerStockEntry;
 
     @MockitoBean
@@ -63,6 +79,53 @@ class InventoryControllerTest {
 
     @MockitoBean
     private RegisterFefoWithdrawal registerFefoWithdrawal;
+
+    @Test
+    void shouldCreateUpdateRetrieveAndDeleteMinimumStockLevel() throws Exception {
+        var itemId = UUID.randomUUID();
+        var level = new MinimumStockLevelResult(itemId, new BigDecimal("250.000000"));
+        when(configureMinimumStockLevel.execute(itemId, new BigDecimal("250")))
+            .thenReturn(new MinimumStockLevelUpdateResult(level, true));
+
+        mockMvc.perform(put("/api/v1/inventory/items/{inventoryItemId}/minimum-stock-level", itemId)
+                .with(csrf()).contentType("application/json").content("{ \"minimumQuantity\": 250 }"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.inventoryItemId").value(itemId.toString()))
+            .andExpect(jsonPath("$.minimumQuantity").value(250));
+
+        when(configureMinimumStockLevel.execute(itemId, new BigDecimal("300")))
+            .thenReturn(new MinimumStockLevelUpdateResult(new MinimumStockLevelResult(itemId, new BigDecimal("300")), false));
+        mockMvc.perform(put("/api/v1/inventory/items/{inventoryItemId}/minimum-stock-level", itemId)
+                .with(csrf()).contentType("application/json").content("{ \"minimumQuantity\": 300 }"))
+            .andExpect(status().isOk());
+
+        when(getMinimumStockLevel.execute(itemId)).thenReturn(level);
+        mockMvc.perform(get("/api/v1/inventory/items/{inventoryItemId}/minimum-stock-level", itemId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.minimumQuantity").value(250));
+
+        mockMvc.perform(delete("/api/v1/inventory/items/{inventoryItemId}/minimum-stock-level", itemId).with(csrf()))
+            .andExpect(status().isNoContent());
+        verify(deleteMinimumStockLevel).execute(itemId);
+    }
+
+    @Test
+    void shouldReturnStandardErrorsForMinimumStockLevelFailures() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(configureMinimumStockLevel.execute(itemId, BigDecimal.ZERO))
+            .thenThrow(new InvalidMinimumStockQuantityException(BigDecimal.ZERO));
+        when(getMinimumStockLevel.execute(itemId))
+            .thenThrow(new MinimumStockLevelNotFoundException(itemId));
+
+        mockMvc.perform(put("/api/v1/inventory/items/{inventoryItemId}/minimum-stock-level", itemId)
+                .with(csrf()).contentType("application/json").content("{ \"minimumQuantity\": 0 }"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("INVALID_MINIMUM_STOCK_QUANTITY"));
+
+        mockMvc.perform(get("/api/v1/inventory/items/{inventoryItemId}/minimum-stock-level", itemId))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("MINIMUM_STOCK_LEVEL_NOT_FOUND"));
+    }
 
     @Test
     void shouldReturnCurrentStock() throws Exception {
