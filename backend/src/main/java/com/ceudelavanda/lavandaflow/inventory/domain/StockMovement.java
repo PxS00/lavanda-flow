@@ -32,7 +32,7 @@ public record StockMovement(
         this.id = requireNonNull(id, "id");
         this.batchId = requireNonNull(batchId, "batchId");
         this.type = requireNonNull(type, "type");
-        this.quantity = requirePositive(quantity);
+        this.quantity = StockQuantityRules.requirePositive(quantity, "quantity");
         this.reason = validateReason(normalizeOptional(reason));
         this.occurredAt = requireNonNull(occurredAt, "occurredAt");
     }
@@ -55,14 +55,6 @@ public record StockMovement(
             reason,
             occurredAt
         );
-    }
-
-    private static BigDecimal requirePositive(BigDecimal value) {
-        if (value == null || value.signum() <= 0) {
-            throw new IllegalArgumentException("quantity must be greater than zero");
-        }
-
-        return value;
     }
 
     private static String normalizeOptional(String value) {

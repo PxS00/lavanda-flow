@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the Git workflow, branch strategy, commit policy, pull request flow, release process, and language conventions for Lavanda Flow.
+This document defines the Git workflow, branch strategy, commit policy, pull request flow, release process, versioning policy, and language conventions for Lavanda Flow.
 
 Once functional development starts, `main` is treated as the production branch and must not receive normal issue-driven work directly.
 
@@ -135,7 +135,35 @@ After the release reaches `main`:
 
 1. create the corresponding Git tag, such as `v0.1.0`;
 2. synchronize release changes back into `develop` when the release branch received stabilization changes not already present there;
-3. delete the release branch after synchronization.
+3. advance development metadata to the next planned release using the `-SNAPSHOT` suffix;
+4. delete the release branch after synchronization.
+
+## Versioning policy
+
+Lavanda Flow uses a single product version across the monorepo. Backend, frontend, Git tags, and GitHub Releases represent the same product release and must not evolve independently unless a future architectural decision explicitly changes this policy.
+
+Release versions follow Semantic Versioning (`MAJOR.MINOR.PATCH`). While the product remains below `1.0.0`, minor releases may introduce planned product capabilities and patch releases are reserved for compatible corrections and stabilization.
+
+For a release `vX.Y.Z`:
+
+- the Git tag is `vX.Y.Z`;
+- the backend Maven project version is `X.Y.Z`;
+- the frontend package version is `X.Y.Z`;
+- the GitHub Release is published as `vX.Y.Z`.
+
+The release branch removes the development suffix before the release PR reaches `main`:
+
+```text
+develop                    X.Y.Z-SNAPSHOT
+release/vX.Y.Z             X.Y.Z
+main after release         X.Y.Z
+Git tag                    vX.Y.Z
+GitHub Release             vX.Y.Z
+```
+
+After a release is synchronized back into `develop`, both backend and frontend metadata advance together to the next planned release version with the `-SNAPSHOT` suffix. For example, after releasing `v0.2.0`, normal development for the next minor release uses `0.3.0-SNAPSHOT`.
+
+The historical `v0.1.0` release predates this unified artifact-version policy and is not rewritten retroactively.
 
 ## Hotfixes
 

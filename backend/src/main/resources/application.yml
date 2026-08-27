@@ -2,9 +2,6 @@ spring:
   application:
     name: lavanda-flow
 
-  profiles:
-    default: local
-
   jpa:
     open-in-view: false
 
