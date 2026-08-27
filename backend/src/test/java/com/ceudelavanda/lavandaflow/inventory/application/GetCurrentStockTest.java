@@ -2,6 +2,7 @@ package com.ceudelavanda.lavandaflow.inventory.application;
 
 import com.ceudelavanda.lavandaflow.catalog.InventoryItemLookup;
 import com.ceudelavanda.lavandaflow.catalog.InventoryItemSnapshot;
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.inventory.application.query.GetCurrentStockQuery;
 import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
@@ -202,7 +203,7 @@ class GetCurrentStockTest {
 
     private void item(UUID itemId, boolean active) {
         when(inventoryItemLookup.findById(itemId))
-            .thenReturn(Optional.of(new InventoryItemSnapshot(itemId, active)));
+            .thenReturn(Optional.of(new InventoryItemSnapshot(itemId, "Test item", UnitOfMeasure.UNIT, active)));
     }
 
     private static GetCurrentStockQuery query(UUID itemId, boolean includeZeroBalance) {

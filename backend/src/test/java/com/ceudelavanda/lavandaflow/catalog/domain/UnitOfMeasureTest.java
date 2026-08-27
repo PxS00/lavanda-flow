@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.catalog.domain;
 
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;

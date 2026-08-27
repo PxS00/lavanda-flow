@@ -1,7 +1,7 @@
 package com.ceudelavanda.lavandaflow.catalog.infrastructure.persistence;
 
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
-import com.ceudelavanda.lavandaflow.catalog.domain.UnitOfMeasure;
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

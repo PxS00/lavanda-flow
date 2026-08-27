@@ -1,9 +1,11 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.inventory.application.GetExpirationAlerts;
+import com.ceudelavanda.lavandaflow.inventory.application.GetLowStockAlerts;
 import com.ceudelavanda.lavandaflow.inventory.application.query.GetExpirationAlertsQuery;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.config.InventoryAlertProperties;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.ExpirationAlertsResponse;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.LowStockAlertsResponse;
 import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,7 +26,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class InventoryAlertController {
 
     private final GetExpirationAlerts getExpirationAlerts;
+    private final GetLowStockAlerts getLowStockAlerts;
     private final InventoryAlertProperties inventoryAlertProperties;
+
+    @Operation(
+        summary = "Retrieve inventory low-stock alerts",
+        description = "Returns active items with configured minimum stock levels when available non-expired stock is below the minimum. "
+            + "Expired batches, batches expiring today, and zero balances are excluded from availability. Inactive items do not generate alerts."
+    )
+    @ApiResponse(responseCode = "200", description = "Low-stock alerts retrieved successfully", content = @Content(schema = @Schema(implementation = LowStockAlertsResponse.class)))
+    @GetMapping("/low-stock")
+    public ResponseEntity<LowStockAlertsResponse> getLowStockAlerts() {
+        return ResponseEntity.ok(LowStockAlertsResponse.from(getLowStockAlerts.execute()));
+    }
 
     @Operation(
         summary = "Retrieve inventory expiration alerts",

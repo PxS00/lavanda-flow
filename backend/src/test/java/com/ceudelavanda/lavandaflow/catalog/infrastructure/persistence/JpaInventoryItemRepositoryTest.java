@@ -4,7 +4,7 @@ import com.ceudelavanda.lavandaflow.TestcontainersConfiguration;
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItemRepository;
-import com.ceudelavanda.lavandaflow.catalog.domain.UnitOfMeasure;
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
