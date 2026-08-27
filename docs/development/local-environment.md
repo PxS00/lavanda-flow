@@ -2,7 +2,7 @@
 
 ## PostgreSQL
 
-The local PostgreSQL instance is provided by the repository-level [`compose.yaml`](file:///home/pxs/projects/lavanda-flow/compose.yaml).
+The local PostgreSQL instance is provided by the repository-level `compose.yaml`.
 
 ### Default Configuration
 
@@ -67,7 +67,21 @@ docker compose down -v
 
 ### Backend Integration
 
-The backend is configured with `spring.docker.compose.lifecycle-management: start-only` under the `local` profile. When starting the backend locally, Spring Boot Docker Compose support can automatically start the container if it is not already running, without tearing down the database container when the JVM exits.
+The `local` Spring profile is opt-in. Start the backend locally with one of the following:
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+or:
+
+```bash
+SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
+```
+
+The backend is configured with `spring.docker.compose.lifecycle-management: start-only` under the `local` profile. When that profile is selected, Spring Boot Docker Compose support can automatically start the container if it is not already running, without tearing down the database container when the JVM exits.
+
+Without an active profile, the application uses the environment-neutral base configuration and does not implicitly enable repository-local Docker Compose integration.
 
 > [!NOTE]
 > Spring Boot Docker Compose support is intended strictly for local development. Production environments must provide standard PostgreSQL connection properties (`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`) and must not depend on Spring Boot managing Docker Compose.
