@@ -20,6 +20,10 @@ public final class StockQuantityRules {
     }
 
     public static BigDecimal requirePositive(BigDecimal value, String field) {
+        if (value == null) {
+            throw new IllegalArgumentException(field + " must be greater than zero");
+        }
+
         var normalized = normalizeExact(value, field);
         if (normalized.signum() <= 0) {
             throw new IllegalArgumentException(field + " must be greater than zero");
