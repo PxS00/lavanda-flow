@@ -5,13 +5,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -56,8 +60,6 @@ public class GlobalExceptionHandler {
         MethodArgumentNotValidException exception,
         HttpServletRequest request
     ) {
-        var status = HttpStatus.BAD_REQUEST;
-
         var details = exception.getBindingResult()
             .getFieldErrors()
             .stream()
@@ -67,12 +69,66 @@ public class GlobalExceptionHandler {
                 (first, second) -> first
             ));
 
+        return badRequest(
+            "VALIDATION_ERROR",
+            "Request validation failed",
+            request,
+            details
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleTypeMismatch(
+        MethodArgumentTypeMismatchException exception,
+        HttpServletRequest request
+    ) {
+        return badRequest(
+            "INVALID_REQUEST_PARAMETER",
+            "Request parameter has an invalid value",
+            request,
+            Map.of(exception.getName(), "Invalid value")
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnreadableMessage(
+        HttpMessageNotReadableException exception,
+        HttpServletRequest request
+    ) {
+        return badRequest(
+            "MALFORMED_REQUEST_BODY",
+            "Request body is malformed or unreadable",
+            request,
+            null
+        );
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingRequestParameter(
+        MissingServletRequestParameterException exception,
+        HttpServletRequest request
+    ) {
+        return badRequest(
+            "MISSING_REQUEST_PARAMETER",
+            "Required request parameter is missing",
+            request,
+            Map.of(exception.getParameterName(), "Required parameter")
+        );
+    }
+
+    private ResponseEntity<ApiErrorResponse> badRequest(
+        String code,
+        String message,
+        HttpServletRequest request,
+        Map<String, String> details
+    ) {
+        var status = HttpStatus.BAD_REQUEST;
         var response = new ApiErrorResponse(
             Instant.now(clock),
             status.value(),
             status.getReasonPhrase(),
-            "VALIDATION_ERROR",
-            "Request validation failed",
+            code,
+            message,
             request.getRequestURI(),
             details
         );
