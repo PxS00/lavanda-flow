@@ -41,8 +41,14 @@ public class Batch {
         this.inventoryItemId = requireNonNull(inventoryItemId, "inventoryItemId");
         this.supplierId = supplierId;
         this.lotCode = normalizeOptional(lotCode);
-        this.initialQuantity = requirePositive(initialQuantity, "initialQuantity");
-        this.currentQuantity = requireNonNegative(currentQuantity);
+        this.initialQuantity = StockQuantityRules.requirePositive(
+            initialQuantity,
+            "initialQuantity"
+        );
+        this.currentQuantity = StockQuantityRules.requireNonNegative(
+            currentQuantity,
+            "currentQuantity"
+        );
         this.receivedAt = requireNonNull(receivedAt, "receivedAt");
         this.expiresAt = expiresAt;
     }
@@ -75,10 +81,10 @@ public class Batch {
      * Adds a positive quantity to the current batch balance.
      *
      * @param quantity quantity to add
-     * @throws IllegalArgumentException if the quantity is null or not positive
+     * @throws IllegalArgumentException if the quantity cannot be represented exactly or is not positive
      */
     public void addQuantity(BigDecimal quantity) {
-        var validatedQuantity = requirePositive(quantity, "quantity");
+        var validatedQuantity = StockQuantityRules.requirePositive(quantity, "quantity");
         this.currentQuantity = this.currentQuantity.add(validatedQuantity);
     }
 
@@ -86,11 +92,11 @@ public class Batch {
      * Removes a positive quantity from the current batch balance.
      *
      * @param quantity quantity to remove
-     * @throws IllegalArgumentException if the quantity is null or not positive
+     * @throws IllegalArgumentException if the quantity cannot be represented exactly or is not positive
      * @throws InsufficientStockException if the quantity exceeds the available balance
      */
     public void removeQuantity(BigDecimal quantity) {
-        var validatedQuantity = requirePositive(quantity, "quantity");
+        var validatedQuantity = StockQuantityRules.requirePositive(quantity, "quantity");
 
         if (currentQuantity.compareTo(validatedQuantity) < 0) {
             throw new InsufficientStockException(id, validatedQuantity, currentQuantity);
@@ -106,15 +112,19 @@ public class Batch {
      * The adjustment must not reduce the balance below zero.</p>
      *
      * @param adjustment signed quantity to apply
-     * @throws IllegalArgumentException if the adjustment is null
+     * @throws IllegalArgumentException if the adjustment cannot be represented exactly or is null
      * @throws InvalidStockAdjustmentException if the adjustment is zero
      * @throws InsufficientStockException if a negative adjustment exceeds the available balance
      */
     public void adjustQuantity(BigDecimal adjustment) {
-        var validatedAdjustment = requireNonNull(adjustment, "adjustment");
-
-        if (validatedAdjustment.signum() == 0) {
-            throw new InvalidStockAdjustmentException();
+        final BigDecimal validatedAdjustment;
+        try {
+            validatedAdjustment = StockQuantityRules.requireNonZero(adjustment, "adjustment");
+        } catch (IllegalArgumentException exception) {
+            if (adjustment != null && adjustment.signum() == 0) {
+                throw new InvalidStockAdjustmentException();
+            }
+            throw exception;
         }
 
         if (validatedAdjustment.signum() > 0) {
@@ -123,21 +133,6 @@ public class Batch {
         }
 
         removeQuantity(validatedAdjustment.abs());
-    }
-
-    private static BigDecimal requirePositive(BigDecimal value, String field) {
-        if (value == null || value.signum() <= 0) {
-            throw new IllegalArgumentException(field + " must be greater than zero");
-        }
-        return value;
-    }
-
-    private static BigDecimal requireNonNegative(BigDecimal value) {
-        if (value == null || value.signum() < 0) {
-            throw new IllegalArgumentException("currentQuantity must not be negative");
-        }
-
-        return value;
     }
 
     private static String normalizeOptional(String value) {
