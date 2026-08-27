@@ -4,7 +4,7 @@ import com.ceudelavanda.lavandaflow.TestcontainersConfiguration;
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItemRepository;
-import com.ceudelavanda.lavandaflow.catalog.domain.UnitOfMeasure;
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.inventory.application.query.GetExpirationAlertsQuery;
 import com.ceudelavanda.lavandaflow.inventory.application.result.ExpirationAlertStatus;
 import com.ceudelavanda.lavandaflow.inventory.domain.Batch;

@@ -4,6 +4,8 @@ import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItemRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,5 +33,12 @@ class JpaInventoryItemRepository
     public Optional<InventoryItem> findById(UUID id) {
         return repository.findById(id)
             .map(InventoryItemMapper::toDomain);
+    }
+
+    @Override
+    public List<InventoryItem> findByIds(Collection<UUID> ids) {
+        return repository.findAllById(ids).stream()
+            .map(InventoryItemMapper::toDomain)
+            .toList();
     }
 }

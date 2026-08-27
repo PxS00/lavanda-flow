@@ -6,6 +6,8 @@ import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,6 +20,22 @@ class CatalogInventoryItemLookup implements InventoryItemLookup {
     @Override
     public Optional<InventoryItemSnapshot> findById(UUID inventoryItemId) {
         return inventoryItemRepository.findById(inventoryItemId)
-            .map(item -> new InventoryItemSnapshot(item.getId(), item.isActive()));
+            .map(this::toSnapshot);
+    }
+
+    @Override
+    public List<InventoryItemSnapshot> findByIds(Collection<UUID> inventoryItemIds) {
+        return inventoryItemRepository.findByIds(inventoryItemIds).stream()
+            .map(this::toSnapshot)
+            .toList();
+    }
+
+    private InventoryItemSnapshot toSnapshot(com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem item) {
+        return new InventoryItemSnapshot(
+            item.getId(),
+            item.getName(),
+            item.getUnitOfMeasure(),
+            item.isActive()
+        );
     }
 }

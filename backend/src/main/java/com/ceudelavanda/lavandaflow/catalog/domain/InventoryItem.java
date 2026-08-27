@@ -1,5 +1,7 @@
 package com.ceudelavanda.lavandaflow.catalog.domain;
 
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
+
 import lombok.Getter;
 import java.util.UUID;
 

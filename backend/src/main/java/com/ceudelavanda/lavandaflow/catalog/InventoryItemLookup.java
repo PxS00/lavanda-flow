@@ -1,5 +1,7 @@
 package com.ceudelavanda.lavandaflow.catalog;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,4 +12,6 @@ import java.util.UUID;
 public interface InventoryItemLookup {
 
     Optional<InventoryItemSnapshot> findById(UUID inventoryItemId);
+
+    List<InventoryItemSnapshot> findByIds(Collection<UUID> inventoryItemIds);
 }

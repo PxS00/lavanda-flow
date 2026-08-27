@@ -2,6 +2,7 @@ package com.ceudelavanda.lavandaflow.inventory.application;
 
 import com.ceudelavanda.lavandaflow.catalog.InventoryItemLookup;
 import com.ceudelavanda.lavandaflow.catalog.InventoryItemSnapshot;
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterFefoWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalAllocationResult;
 import com.ceudelavanda.lavandaflow.inventory.domain.*;
@@ -254,7 +255,7 @@ class RegisterFefoWithdrawalTest {
 
     private void activeItem(UUID itemId, boolean active) {
         when(inventoryItemLookup.findById(itemId))
-            .thenReturn(Optional.of(new InventoryItemSnapshot(itemId, active)));
+            .thenReturn(Optional.of(new InventoryItemSnapshot(itemId, "Test item", UnitOfMeasure.UNIT, active)));
     }
 
     private static RegisterFefoWithdrawalCommand command(UUID itemId, String quantity, String reason) {
