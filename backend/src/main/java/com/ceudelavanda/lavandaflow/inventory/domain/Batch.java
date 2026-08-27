@@ -81,11 +81,14 @@ public class Batch {
      * Adds a positive quantity to the current batch balance.
      *
      * @param quantity quantity to add
-     * @throws IllegalArgumentException if the quantity cannot be represented exactly or is not positive
+     * @throws IllegalArgumentException if the quantity or resulting balance cannot be represented exactly, or the quantity is not positive
      */
     public void addQuantity(BigDecimal quantity) {
         var validatedQuantity = StockQuantityRules.requirePositive(quantity, "quantity");
-        this.currentQuantity = this.currentQuantity.add(validatedQuantity);
+        this.currentQuantity = StockQuantityRules.requireNonNegative(
+            this.currentQuantity.add(validatedQuantity),
+            "currentQuantity"
+        );
     }
 
     /**
@@ -117,15 +120,17 @@ public class Batch {
      * @throws InsufficientStockException if a negative adjustment exceeds the available balance
      */
     public void adjustQuantity(BigDecimal adjustment) {
-        final BigDecimal validatedAdjustment;
-        try {
-            validatedAdjustment = StockQuantityRules.requireNonZero(adjustment, "adjustment");
-        } catch (IllegalArgumentException exception) {
-            if (adjustment != null && adjustment.signum() == 0) {
-                throw new InvalidStockAdjustmentException();
-            }
-            throw exception;
+        if (adjustment == null) {
+            throw new IllegalArgumentException("adjustment must not be null");
         }
+        if (adjustment.signum() == 0) {
+            throw new InvalidStockAdjustmentException();
+        }
+
+        var validatedAdjustment = StockQuantityRules.requireNonZero(
+            adjustment,
+            "adjustment"
+        );
 
         if (validatedAdjustment.signum() > 0) {
             addQuantity(validatedAdjustment);
