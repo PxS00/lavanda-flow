@@ -15,7 +15,7 @@ interface SpringDataInventoryItemRepository extends JpaRepository<InventoryItemJ
         value = """
             select item
             from InventoryItemJpaEntity item
-            where (:namePattern is null or lower(item.name) like :namePattern)
+            where (:namePattern is null or lower(item.name) like :namePattern escape '!')
               and (:category is null or item.category = :category)
               and (:active is null or item.active = :active)
             order by lower(item.name), item.id
@@ -23,7 +23,7 @@ interface SpringDataInventoryItemRepository extends JpaRepository<InventoryItemJ
         countQuery = """
             select count(item)
             from InventoryItemJpaEntity item
-            where (:namePattern is null or lower(item.name) like :namePattern)
+            where (:namePattern is null or lower(item.name) like :namePattern escape '!')
               and (:category is null or item.category = :category)
               and (:active is null or item.active = :active)
             """

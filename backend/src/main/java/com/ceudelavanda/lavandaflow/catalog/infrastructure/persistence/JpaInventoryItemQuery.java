@@ -28,10 +28,7 @@ class JpaInventoryItemQuery implements InventoryItemQuery {
     @Override
     public InventoryItemPage search(InventoryItemSearchQuery query) {
         var pageable = PageRequest.of(query.page(), query.size());
-        var namePattern = query.name() == null
-            ? null
-            : "%" + query.name().toLowerCase(Locale.ROOT) + "%";
-        var page = repository.search(namePattern, query.category(), query.active(), pageable);
+        var page = repository.search(toNamePattern(query.name()), query.category(), query.active(), pageable);
         return new InventoryItemPage(
             page.getContent().stream()
                 .map(InventoryItemMapper::toDomain)
@@ -42,5 +39,16 @@ class JpaInventoryItemQuery implements InventoryItemQuery {
             page.getTotalElements(),
             page.getTotalPages()
         );
+    }
+
+    private static String toNamePattern(String name) {
+        if (name == null) {
+            return null;
+        }
+        var escaped = name.toLowerCase(Locale.ROOT)
+            .replace("!", "!!")
+            .replace("%", "!%")
+            .replace("_", "!_");
+        return "%" + escaped + "%";
     }
 }

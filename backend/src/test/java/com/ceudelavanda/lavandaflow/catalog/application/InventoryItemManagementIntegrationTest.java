@@ -75,4 +75,20 @@ class InventoryItemManagementIntegrationTest {
         assertThat(inactive.content()).extracting(InventoryItemResult::id)
             .containsExactly(inactiveId);
     }
+
+    @Test
+    void shouldTreatLikeWildcardsAsLiteralNameCharacters() {
+        var percentId = new UUID(0, 4);
+        var regularId = new UUID(0, 5);
+        inventoryItemRepository.save(new InventoryItem(
+            percentId, "Special % Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
+        ));
+        inventoryItemRepository.save(new InventoryItem(
+            regularId, "Regular Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
+        ));
+
+        var result = searchInventoryItems.execute(new InventoryItemSearchQuery("%", null, null, 0, 20));
+
+        assertThat(result.content()).extracting(InventoryItemResult::id).containsExactly(percentId);
+    }
 }
