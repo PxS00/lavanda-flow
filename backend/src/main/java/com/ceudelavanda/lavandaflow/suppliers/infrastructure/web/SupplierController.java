@@ -68,7 +68,7 @@ public class SupplierController {
 
     @Operation(
         summary = "Search suppliers",
-        description = "Filters are optional. Name matching is partial and case-insensitive. Results are ordered by name and then identifier."
+        description = "Filters are optional. Name matching is partial and case-insensitive. Results are ordered by name and then supplier ID."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Suppliers retrieved", content = @Content(schema = @Schema(implementation = SupplierPageResponse.class))),
