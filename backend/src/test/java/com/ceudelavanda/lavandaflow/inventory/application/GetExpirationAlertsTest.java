@@ -1,7 +1,8 @@
 package com.ceudelavanda.lavandaflow.inventory.application;
 
-import com.ceudelavanda.lavandaflow.inventory.application.query.GetExpirationAlertsQuery;
-import com.ceudelavanda.lavandaflow.inventory.application.result.ExpirationAlertStatus;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.ExpirationAlertStatus;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.GetExpirationAlerts;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.GetExpirationAlertsQuery;
 import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InvalidExpirationAlertWindowException;

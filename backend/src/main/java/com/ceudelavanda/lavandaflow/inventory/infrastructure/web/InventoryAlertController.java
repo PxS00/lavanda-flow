@@ -1,8 +1,8 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
-import com.ceudelavanda.lavandaflow.inventory.application.GetExpirationAlerts;
-import com.ceudelavanda.lavandaflow.inventory.application.GetLowStockAlerts;
-import com.ceudelavanda.lavandaflow.inventory.application.query.GetExpirationAlertsQuery;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.GetExpirationAlerts;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.GetExpirationAlertsQuery;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.GetLowStockAlerts;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.config.InventoryAlertProperties;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.ExpirationAlertsResponse;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.LowStockAlertsResponse;
@@ -49,34 +49,21 @@ public class InventoryAlertController {
             + "The alert is informational and does not define stock-consumption eligibility."
     )
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Expiration alerts retrieved successfully",
-            content = @Content(schema = @Schema(implementation = ExpirationAlertsResponse.class))
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Invalid negative expiration alert window",
-            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
-        )
+        @ApiResponse(responseCode = "200", description = "Expiration alerts retrieved successfully", content = @Content(schema = @Schema(implementation = ExpirationAlertsResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid negative expiration alert window", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     @GetMapping("/expiration")
     public ResponseEntity<ExpirationAlertsResponse> getExpirationAlerts(
         @Parameter(
-            description = "Optional non-negative future alert window in days. When omitted, the configured application default is used. "
-                + "Expired batches remain included regardless of the window. A value of 0 returns expired batches only.",
+            description = "Optional non-negative future alert window in days. When omitted, the configured application default is used. Expired batches remain included regardless of the window. A value of 0 returns expired batches only.",
             required = false,
             schema = @Schema(minimum = "0"),
             example = "30"
         )
         @RequestParam(required = false) Integer windowDays
     ) {
-        var resolvedWindowDays = windowDays != null
-            ? windowDays
-            : inventoryAlertProperties.expirationWindowDays();
-        var query = new GetExpirationAlertsQuery(resolvedWindowDays);
-        var result = getExpirationAlerts.execute(query);
-
+        var resolvedWindowDays = windowDays != null ? windowDays : inventoryAlertProperties.expirationWindowDays();
+        var result = getExpirationAlerts.execute(new GetExpirationAlertsQuery(resolvedWindowDays));
         return ResponseEntity.ok(ExpirationAlertsResponse.from(result));
     }
 }

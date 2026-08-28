@@ -1,6 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response;
 
-import com.ceudelavanda.lavandaflow.inventory.application.result.MinimumStockLevelResult;
+import com.ceudelavanda.lavandaflow.inventory.application.minimumstock.MinimumStockLevelResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
