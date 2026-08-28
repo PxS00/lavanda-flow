@@ -1,25 +1,25 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
-import com.ceudelavanda.lavandaflow.inventory.application.GetCurrentStock;
-import com.ceudelavanda.lavandaflow.inventory.application.ConfigureMinimumStockLevel;
-import com.ceudelavanda.lavandaflow.inventory.application.DeleteMinimumStockLevel;
-import com.ceudelavanda.lavandaflow.inventory.application.GetMinimumStockLevel;
-import com.ceudelavanda.lavandaflow.inventory.application.RegisterFefoWithdrawal;
-import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockAdjustment;
-import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockEntry;
-import com.ceudelavanda.lavandaflow.inventory.application.RegisterStockWithdrawal;
-import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterFefoWithdrawalCommand;
-import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockAdjustmentCommand;
-import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
-import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockWithdrawalCommand;
-import com.ceudelavanda.lavandaflow.inventory.application.query.GetCurrentStockQuery;
-import com.ceudelavanda.lavandaflow.inventory.application.result.BatchStockResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.CurrentStockResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.MinimumStockLevelResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.MinimumStockLevelUpdateResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalAllocationResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.StockMovementResult;
+import com.ceudelavanda.lavandaflow.inventory.application.fefo.FefoWithdrawalAllocationResult;
+import com.ceudelavanda.lavandaflow.inventory.application.fefo.FefoWithdrawalResult;
+import com.ceudelavanda.lavandaflow.inventory.application.fefo.RegisterFefoWithdrawal;
+import com.ceudelavanda.lavandaflow.inventory.application.fefo.RegisterFefoWithdrawalCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.minimumstock.ConfigureMinimumStockLevel;
+import com.ceudelavanda.lavandaflow.inventory.application.minimumstock.DeleteMinimumStockLevel;
+import com.ceudelavanda.lavandaflow.inventory.application.minimumstock.GetMinimumStockLevel;
+import com.ceudelavanda.lavandaflow.inventory.application.minimumstock.MinimumStockLevelResult;
+import com.ceudelavanda.lavandaflow.inventory.application.minimumstock.MinimumStockLevelUpdateResult;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockAdjustment;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockAdjustmentCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockEntry;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockEntryCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockWithdrawal;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockWithdrawalCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.StockMovementResult;
+import com.ceudelavanda.lavandaflow.inventory.application.stock.BatchStockResult;
+import com.ceudelavanda.lavandaflow.inventory.application.stock.CurrentStockResult;
+import com.ceudelavanda.lavandaflow.inventory.application.stock.GetCurrentStock;
+import com.ceudelavanda.lavandaflow.inventory.application.stock.GetCurrentStockQuery;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.*;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
@@ -41,14 +41,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(InventoryController.class)
+@WebMvcTest({
+    CurrentStockController.class,
+    MinimumStockLevelController.class,
+    StockMovementController.class,
+    FefoWithdrawalController.class
+})
 @Import(ClockConfig.class)
 @WithMockUser
 class InventoryControllerTest {

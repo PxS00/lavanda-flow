@@ -1,7 +1,7 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.persistence;
 
-import com.ceudelavanda.lavandaflow.inventory.application.AvailableStockBalance;
-import com.ceudelavanda.lavandaflow.inventory.application.AvailableStockQuery;
+import com.ceudelavanda.lavandaflow.inventory.application.stock.AvailableStockBalance;
+import com.ceudelavanda.lavandaflow.inventory.application.stock.AvailableStockQuery;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -26,7 +26,6 @@ class JpaAvailableStockQuery implements AvailableStockQuery {
         if (inventoryItemIds.isEmpty()) {
             return List.of();
         }
-
         return repository.findAvailableStockBalances(inventoryItemIds, asOfDate);
     }
 }

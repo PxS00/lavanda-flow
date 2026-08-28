@@ -1,6 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.persistence;
 
-import com.ceudelavanda.lavandaflow.inventory.application.MovementHistoryEntry;
+import com.ceudelavanda.lavandaflow.inventory.application.history.MovementHistoryEntry;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,14 +12,13 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-interface SpringDataStockMovementRepository
-    extends JpaRepository<StockMovementJpaEntity, UUID> {
+interface SpringDataStockMovementRepository extends JpaRepository<StockMovementJpaEntity, UUID> {
 
     List<StockMovementJpaEntity> findByBatchIdOrderByOccurredAtAsc(UUID batchId);
 
     @Query(
         value = """
-            select new com.ceudelavanda.lavandaflow.inventory.application.MovementHistoryEntry(
+            select new com.ceudelavanda.lavandaflow.inventory.application.history.MovementHistoryEntry(
                 movement.id,
                 batch.inventoryItemId,
                 movement.batchId,

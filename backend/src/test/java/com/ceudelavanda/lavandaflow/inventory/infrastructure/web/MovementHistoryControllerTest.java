@@ -1,10 +1,10 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
-import com.ceudelavanda.lavandaflow.inventory.application.GetMovementHistory;
-import com.ceudelavanda.lavandaflow.inventory.application.query.GetMovementHistoryQuery;
-import com.ceudelavanda.lavandaflow.inventory.application.result.MovementHistoryEntryResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.MovementHistoryResult;
+import com.ceudelavanda.lavandaflow.inventory.application.history.GetMovementHistory;
+import com.ceudelavanda.lavandaflow.inventory.application.history.GetMovementHistoryQuery;
+import com.ceudelavanda.lavandaflow.inventory.application.history.MovementHistoryEntryResult;
+import com.ceudelavanda.lavandaflow.inventory.application.history.MovementHistoryResult;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import org.junit.jupiter.api.Test;

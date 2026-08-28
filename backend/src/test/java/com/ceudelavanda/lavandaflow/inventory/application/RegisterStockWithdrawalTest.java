@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.inventory.application;
 
-import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockWithdrawalCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockWithdrawal;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;

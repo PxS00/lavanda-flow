@@ -1,6 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response;
 
-import com.ceudelavanda.lavandaflow.inventory.application.result.StockMovementResult;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.StockMovementResult;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 
 import java.math.BigDecimal;
@@ -16,16 +16,10 @@ public record RegisterStockWithdrawalResponse(
     String reason,
     Instant occurredAt
 ) {
-
     public static RegisterStockWithdrawalResponse from(StockMovementResult result) {
         return new RegisterStockWithdrawalResponse(
-            result.movementId(),
-            result.batchId(),
-            result.type(),
-            result.quantity(),
-            result.resultingBalance(),
-            result.reason(),
-            result.occurredAt()
+            result.movementId(), result.batchId(), result.type(), result.quantity(),
+            result.resultingBalance(), result.reason(), result.occurredAt()
         );
     }
 }
