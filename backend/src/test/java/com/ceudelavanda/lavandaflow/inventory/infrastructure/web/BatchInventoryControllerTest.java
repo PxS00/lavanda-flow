@@ -5,9 +5,11 @@ import com.ceudelavanda.lavandaflow.inventory.application.batch.BatchInventoryRe
 import com.ceudelavanda.lavandaflow.inventory.application.batch.BatchOperationalStatus;
 import com.ceudelavanda.lavandaflow.inventory.application.batch.GetBatchInventory;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InventoryItemNotFoundException;
+import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(BatchInventoryController.class)
+@Import(ClockConfig.class)
 @WithMockUser
 class BatchInventoryControllerTest {
 
