@@ -35,7 +35,7 @@ class InventoryItemManagementIntegrationTest {
     @Test
     void shouldRegisterAndRetrieveInventoryItem() {
         var registered = registerInventoryItem.execute(new RegisterInventoryItemCommand(
-            "Lavender Essence",
+            "Issue93 Registered Essence",
             "Floral raw material",
             Category.ESSENCE,
             UnitOfMeasure.MILLILITER
@@ -53,20 +53,20 @@ class InventoryItemManagementIntegrationTest {
         var higherId = new UUID(0, 2);
         var inactiveId = new UUID(0, 3);
         inventoryItemRepository.save(new InventoryItem(
-            higherId, "Lavender Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
+            higherId, "Issue93 Lavender Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
         ));
         inventoryItemRepository.save(new InventoryItem(
-            lowerId, "lavender essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
+            lowerId, "issue93 lavender essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
         ));
         inventoryItemRepository.save(new InventoryItem(
-            inactiveId, "Lavender Bottle", null, Category.BOTTLE, UnitOfMeasure.UNIT, false
+            inactiveId, "Issue93 Inactive Bottle", null, Category.BOTTLE, UnitOfMeasure.UNIT, false
         ));
 
         var filtered = searchInventoryItems.execute(new InventoryItemSearchQuery(
-            "LAVENDER", Category.ESSENCE, true, 0, 20
+            "issue93 lavender essence", Category.ESSENCE, true, 0, 20
         ));
         var inactive = searchInventoryItems.execute(new InventoryItemSearchQuery(
-            "bottle", Category.BOTTLE, false, 0, 20
+            "Issue93 Inactive Bottle", Category.BOTTLE, false, 0, 20
         ));
 
         assertThat(filtered.content()).extracting(InventoryItemResult::id)
@@ -81,13 +81,15 @@ class InventoryItemManagementIntegrationTest {
         var percentId = new UUID(0, 4);
         var regularId = new UUID(0, 5);
         inventoryItemRepository.save(new InventoryItem(
-            percentId, "Special % Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
+            percentId, "Issue93 Special % Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
         ));
         inventoryItemRepository.save(new InventoryItem(
-            regularId, "Regular Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
+            regularId, "Issue93 Special Regular Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, true
         ));
 
-        var result = searchInventoryItems.execute(new InventoryItemSearchQuery("%", null, null, 0, 20));
+        var result = searchInventoryItems.execute(new InventoryItemSearchQuery(
+            "Issue93 Special %", null, null, 0, 20
+        ));
 
         assertThat(result.content()).extracting(InventoryItemResult::id).containsExactly(percentId);
     }
