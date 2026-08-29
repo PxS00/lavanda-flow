@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.persistence;
 
+import com.ceudelavanda.lavandaflow.inventory.application.batch.BatchInventoryRecord;
 import com.ceudelavanda.lavandaflow.inventory.application.stock.AvailableStockBalance;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -53,5 +54,28 @@ interface SpringDataBatchRepository extends JpaRepository<BatchJpaEntity, UUID> 
     List<AvailableStockBalance> findAvailableStockBalances(
         @Param("inventoryItemIds") Collection<UUID> inventoryItemIds,
         @Param("asOfDate") LocalDate asOfDate
+    );
+
+    @Query("""
+        select new com.ceudelavanda.lavandaflow.inventory.application.batch.BatchInventoryRecord(
+            batch.id,
+            batch.inventoryItemId,
+            batch.supplierId,
+            batch.lotCode,
+            batch.initialQuantity,
+            batch.currentQuantity,
+            batch.receivedAt,
+            batch.expiresAt
+        )
+        from BatchJpaEntity batch
+        where batch.inventoryItemId = :inventoryItemId
+        order by
+            case when batch.expiresAt is null then 1 else 0 end,
+            batch.expiresAt asc,
+            batch.receivedAt asc,
+            batch.id asc
+        """)
+    List<BatchInventoryRecord> findBatchInventoryByInventoryItemId(
+        @Param("inventoryItemId") UUID inventoryItemId
     );
 }
