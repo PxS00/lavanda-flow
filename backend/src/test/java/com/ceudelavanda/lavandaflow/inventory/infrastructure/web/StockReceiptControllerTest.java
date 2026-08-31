@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,6 +56,7 @@ class StockReceiptControllerTest {
         ));
 
         mockMvc.perform(post("/api/v1/inventory/receipts")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validRequest(itemId, supplierId)))
             .andExpect(status().isCreated())
@@ -74,6 +76,7 @@ class StockReceiptControllerTest {
         var itemId = UUID.randomUUID();
 
         mockMvc.perform(post("/api/v1/inventory/receipts")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
@@ -94,6 +97,7 @@ class StockReceiptControllerTest {
         when(registerStockReceipt.execute(any())).thenThrow(new InventoryItemNotFoundException(itemId));
 
         mockMvc.perform(post("/api/v1/inventory/receipts")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validRequest(itemId, null)))
             .andExpect(status().isNotFound())
@@ -107,6 +111,7 @@ class StockReceiptControllerTest {
         when(registerStockReceipt.execute(any())).thenThrow(new SupplierNotFoundException(supplierId));
 
         mockMvc.perform(post("/api/v1/inventory/receipts")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validRequest(itemId, supplierId)))
             .andExpect(status().isNotFound())
@@ -121,6 +126,7 @@ class StockReceiptControllerTest {
         when(registerStockReceipt.execute(any())).thenThrow(new InactiveSupplierException(supplierId));
 
         mockMvc.perform(post("/api/v1/inventory/receipts")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validRequest(itemId, supplierId)))
             .andExpect(status().isUnprocessableContent())
@@ -136,6 +142,7 @@ class StockReceiptControllerTest {
         ));
 
         mockMvc.perform(post("/api/v1/inventory/receipts")
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(validRequest(itemId, null)))
             .andExpect(status().isBadRequest())
