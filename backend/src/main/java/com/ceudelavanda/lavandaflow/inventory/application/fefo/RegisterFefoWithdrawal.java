@@ -1,6 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.application.fefo;
 
-import com.ceudelavanda.lavandaflow.catalog.InventoryItemLookup;
+import com.ceudelavanda.lavandaflow.catalog.InventoryItemOperationLock;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
 import com.ceudelavanda.lavandaflow.inventory.domain.FefoAllocationPolicy;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
@@ -23,15 +23,16 @@ import java.util.UUID;
 /**
  * Application use case for an automatic, all-or-nothing FEFO withdrawal from an inventory item.
  *
- * <p>The use case validates catalog availability, pessimistically locks all current batches for the item,
- * and calculates the complete FEFO allocation plan before applying any mutation. Each allocation creates
- * one immutable consumption movement inside the same transaction.</p>
+ * <p>The use case first acquires the catalog-owned item serialization point, then pessimistically locks
+ * all current batches for the item in deterministic UUID order. This prevents a concurrent receipt from
+ * inserting a new batch while FEFO is deciding from the eligible-batch set. The pure allocation policy
+ * runs only after that set is stable, and every balance change and immutable movement commits atomically.</p>
  */
 @Service
 @RequiredArgsConstructor
 public class RegisterFefoWithdrawal {
 
-    private final InventoryItemLookup inventoryItemLookup;
+    private final InventoryItemOperationLock inventoryItemOperationLock;
     private final BatchRepository batchRepository;
     private final StockMovementRepository stockMovementRepository;
     private final Clock clock;
@@ -40,8 +41,9 @@ public class RegisterFefoWithdrawal {
     /**
      * Registers an automatic FEFO withdrawal for one active inventory item.
      *
-     * <p>Expiration eligibility uses the business date provided by the injected clock. All generated
-     * movements share one absolute occurrence instant.</p>
+     * <p>Concurrent receipts for the same item wait on the same item-level lock. After the competing
+     * transaction commits, PostgreSQL READ COMMITTED makes the fresh batch set visible to the next
+     * statement. There is no automatic application retry.</p>
      *
      * @param command requested item, quantity, and optional audit reason
      * @return the complete committed allocation result
@@ -51,7 +53,7 @@ public class RegisterFefoWithdrawal {
      */
     @Transactional
     public FefoWithdrawalResult execute(RegisterFefoWithdrawalCommand command) {
-        var inventoryItem = inventoryItemLookup.findById(command.inventoryItemId())
+        var inventoryItem = inventoryItemOperationLock.lockById(command.inventoryItemId())
             .orElseThrow(() -> new InventoryItemNotFoundException(command.inventoryItemId()));
 
         if (!inventoryItem.active()) {
