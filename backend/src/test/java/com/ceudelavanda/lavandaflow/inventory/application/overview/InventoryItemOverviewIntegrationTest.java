@@ -100,9 +100,11 @@ class InventoryItemOverviewIntegrationTest {
     }
 
     private void saveBatch(UUID itemId, String quantity, LocalDate receivedAt, LocalDate expiresAt) {
+        var currentQuantity = new BigDecimal(quantity);
+        var initialQuantity = currentQuantity.signum() == 0 ? BigDecimal.ONE.setScale(6) : currentQuantity;
         batchRepository.save(new Batch(
             UUID.randomUUID(), itemId, null, null,
-            new BigDecimal(quantity), new BigDecimal(quantity), receivedAt, expiresAt
+            initialQuantity, currentQuantity, receivedAt, expiresAt
         ));
     }
 
