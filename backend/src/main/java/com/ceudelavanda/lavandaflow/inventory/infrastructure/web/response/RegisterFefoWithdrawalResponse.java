@@ -1,6 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response;
 
-import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalResult;
+import com.ceudelavanda.lavandaflow.inventory.application.fefo.FefoWithdrawalResult;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,15 +12,10 @@ public record RegisterFefoWithdrawalResponse(
     BigDecimal allocatedQuantity,
     List<FefoWithdrawalAllocationResponse> allocations
 ) {
-
     public static RegisterFefoWithdrawalResponse from(FefoWithdrawalResult result) {
         return new RegisterFefoWithdrawalResponse(
-            result.inventoryItemId(),
-            result.requestedQuantity(),
-            result.allocatedQuantity(),
-            result.allocations().stream()
-                .map(FefoWithdrawalAllocationResponse::from)
-                .toList()
+            result.inventoryItemId(), result.requestedQuantity(), result.allocatedQuantity(),
+            result.allocations().stream().map(FefoWithdrawalAllocationResponse::from).toList()
         );
     }
 }

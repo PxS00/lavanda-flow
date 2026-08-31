@@ -1,10 +1,11 @@
 package com.ceudelavanda.lavandaflow.inventory.application;
 
-import com.ceudelavanda.lavandaflow.catalog.InventoryItemLookup;
+import com.ceudelavanda.lavandaflow.catalog.InventoryItemOperationLock;
 import com.ceudelavanda.lavandaflow.catalog.InventoryItemSnapshot;
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
-import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterFefoWithdrawalCommand;
-import com.ceudelavanda.lavandaflow.inventory.application.result.FefoWithdrawalAllocationResult;
+import com.ceudelavanda.lavandaflow.inventory.application.fefo.FefoWithdrawalAllocationResult;
+import com.ceudelavanda.lavandaflow.inventory.application.fefo.RegisterFefoWithdrawal;
+import com.ceudelavanda.lavandaflow.inventory.application.fefo.RegisterFefoWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.domain.*;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InactiveInventoryItemException;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InsufficientEligibleStockException;
@@ -38,7 +39,7 @@ class RegisterFefoWithdrawalTest {
     private static final Instant OCCURRED_AT = Instant.parse("2026-08-25T16:00:00Z");
 
     @Mock
-    private InventoryItemLookup inventoryItemLookup;
+    private InventoryItemOperationLock inventoryItemOperationLock;
 
     @Mock
     private BatchRepository batchRepository;
@@ -56,7 +57,7 @@ class RegisterFefoWithdrawalTest {
     @Test
     void shouldRejectMissingInventoryItem() {
         var itemId = UUID.randomUUID();
-        when(inventoryItemLookup.findById(itemId)).thenReturn(Optional.empty());
+        when(inventoryItemOperationLock.lockById(itemId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> registerFefoWithdrawal.execute(command(itemId, "1", null)))
             .isInstanceOf(InventoryItemNotFoundException.class)
@@ -246,7 +247,7 @@ class RegisterFefoWithdrawalTest {
 
     private RegisterFefoWithdrawal useCaseAt(Instant instant) {
         return new RegisterFefoWithdrawal(
-            inventoryItemLookup,
+            inventoryItemOperationLock,
             batchRepository,
             stockMovementRepository,
             Clock.fixed(instant, BUSINESS_ZONE)
@@ -254,7 +255,7 @@ class RegisterFefoWithdrawalTest {
     }
 
     private void activeItem(UUID itemId, boolean active) {
-        when(inventoryItemLookup.findById(itemId))
+        when(inventoryItemOperationLock.lockById(itemId))
             .thenReturn(Optional.of(new InventoryItemSnapshot(itemId, "Test item", UnitOfMeasure.UNIT, active)));
     }
 

@@ -1,5 +1,7 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.persistence;
 
+import com.ceudelavanda.lavandaflow.inventory.application.batch.BatchInventoryRecord;
+import com.ceudelavanda.lavandaflow.inventory.application.stock.AvailableStockBalance;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -32,9 +34,7 @@ interface SpringDataBatchRepository extends JpaRepository<BatchJpaEntity, UUID> 
         where batch.inventoryItemId = :inventoryItemId
         order by batch.id
         """)
-    List<BatchJpaEntity> findByInventoryItemIdForUpdate(
-        @Param("inventoryItemId") UUID inventoryItemId
-    );
+    List<BatchJpaEntity> findByInventoryItemIdForUpdate(@Param("inventoryItemId") UUID inventoryItemId);
 
     List<BatchJpaEntity> findByExpiresAtLessThanEqualAndCurrentQuantityGreaterThan(
         LocalDate expiresAt,
@@ -42,7 +42,7 @@ interface SpringDataBatchRepository extends JpaRepository<BatchJpaEntity, UUID> 
     );
 
     @Query("""
-        select new com.ceudelavanda.lavandaflow.inventory.application.AvailableStockBalance(
+        select new com.ceudelavanda.lavandaflow.inventory.application.stock.AvailableStockBalance(
             batch.inventoryItemId, sum(batch.currentQuantity)
         )
         from BatchJpaEntity batch
@@ -51,8 +51,31 @@ interface SpringDataBatchRepository extends JpaRepository<BatchJpaEntity, UUID> 
           and (batch.expiresAt is null or batch.expiresAt > :asOfDate)
         group by batch.inventoryItemId
         """)
-    List<com.ceudelavanda.lavandaflow.inventory.application.AvailableStockBalance> findAvailableStockBalances(
+    List<AvailableStockBalance> findAvailableStockBalances(
         @Param("inventoryItemIds") Collection<UUID> inventoryItemIds,
         @Param("asOfDate") LocalDate asOfDate
+    );
+
+    @Query("""
+        select new com.ceudelavanda.lavandaflow.inventory.application.batch.BatchInventoryRecord(
+            batch.id,
+            batch.inventoryItemId,
+            batch.supplierId,
+            batch.lotCode,
+            batch.initialQuantity,
+            batch.currentQuantity,
+            batch.receivedAt,
+            batch.expiresAt
+        )
+        from BatchJpaEntity batch
+        where batch.inventoryItemId = :inventoryItemId
+        order by
+            case when batch.expiresAt is null then 1 else 0 end,
+            batch.expiresAt asc,
+            batch.receivedAt asc,
+            batch.id asc
+        """)
+    List<BatchInventoryRecord> findBatchInventoryByInventoryItemId(
+        @Param("inventoryItemId") UUID inventoryItemId
     );
 }

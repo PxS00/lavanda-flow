@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.inventory.application;
 
-import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockAdjustmentCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockAdjustment;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockAdjustmentCommand;
 import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;

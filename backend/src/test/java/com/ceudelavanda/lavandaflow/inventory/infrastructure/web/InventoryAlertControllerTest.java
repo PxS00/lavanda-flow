@@ -1,14 +1,14 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
-import com.ceudelavanda.lavandaflow.inventory.application.GetExpirationAlerts;
-import com.ceudelavanda.lavandaflow.inventory.application.GetLowStockAlerts;
-import com.ceudelavanda.lavandaflow.inventory.application.query.GetExpirationAlertsQuery;
-import com.ceudelavanda.lavandaflow.inventory.application.result.ExpirationAlertEntryResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.ExpirationAlertStatus;
-import com.ceudelavanda.lavandaflow.inventory.application.result.ExpirationAlertsResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.LowStockAlertEntryResult;
-import com.ceudelavanda.lavandaflow.inventory.application.result.LowStockAlertsResult;
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.ExpirationAlertEntryResult;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.ExpirationAlertStatus;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.ExpirationAlertsResult;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.GetExpirationAlerts;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.GetExpirationAlertsQuery;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.GetLowStockAlerts;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.LowStockAlertEntryResult;
+import com.ceudelavanda.lavandaflow.inventory.application.alerts.LowStockAlertsResult;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.config.InventoryAlertProperties;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import org.junit.jupiter.api.Test;

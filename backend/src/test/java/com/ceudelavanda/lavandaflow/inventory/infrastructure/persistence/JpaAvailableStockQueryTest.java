@@ -5,7 +5,7 @@ import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItemRepository;
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
-import com.ceudelavanda.lavandaflow.inventory.application.AvailableStockQuery;
+import com.ceudelavanda.lavandaflow.inventory.application.stock.AvailableStockQuery;
 import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
 import org.junit.jupiter.api.Test;

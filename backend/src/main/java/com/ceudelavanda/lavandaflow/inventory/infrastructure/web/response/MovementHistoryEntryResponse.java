@@ -1,7 +1,7 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response;
 
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
-import com.ceudelavanda.lavandaflow.inventory.application.result.MovementHistoryEntryResult;
+import com.ceudelavanda.lavandaflow.inventory.application.history.MovementHistoryEntryResult;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -23,20 +23,11 @@ public record MovementHistoryEntryResponse(
     String reason,
     Instant occurredAt
 ) {
-
     public static MovementHistoryEntryResponse from(MovementHistoryEntryResult result) {
         return new MovementHistoryEntryResponse(
-            result.movementId(),
-            result.inventoryItemId(),
-            result.inventoryItemName(),
-            result.unitOfMeasure(),
-            result.inventoryItemActive(),
-            result.batchId(),
-            result.lotCode(),
-            result.type(),
-            result.quantity(),
-            result.reason(),
-            result.occurredAt()
+            result.movementId(), result.inventoryItemId(), result.inventoryItemName(), result.unitOfMeasure(),
+            result.inventoryItemActive(), result.batchId(), result.lotCode(), result.type(), result.quantity(),
+            result.reason(), result.occurredAt()
         );
     }
 }

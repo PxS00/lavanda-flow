@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.inventory.application;
 
-import com.ceudelavanda.lavandaflow.inventory.application.command.RegisterStockEntryCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockEntry;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockEntryCommand;
 import com.ceudelavanda.lavandaflow.inventory.domain.*;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.BatchNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
