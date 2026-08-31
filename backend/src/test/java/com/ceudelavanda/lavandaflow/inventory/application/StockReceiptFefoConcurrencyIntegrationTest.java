@@ -172,6 +172,49 @@ class StockReceiptFefoConcurrencyIntegrationTest {
         }
     }
 
+    @Test
+    void shouldKeepDifferentInventoryItemsIndependent() throws Exception {
+        var lockedItem = createInventoryItem();
+        var independentItem = createInventoryItem();
+        var executor = newExecutor();
+        controlledClock.blockNextInstant();
+
+        try {
+            var blockedReceipt = executor.submit(() -> registerStockReceipt.execute(new RegisterStockReceiptCommand(
+                lockedItem.id(),
+                null,
+                "LOT-78-LOCKED-ITEM",
+                new BigDecimal("4.000000"),
+                LocalDate.of(2026, 8, 27),
+                LocalDate.of(2026, 9, 1),
+                "Blocked item receipt"
+            )));
+
+            assertThat(controlledClock.awaitBlocked(5, TimeUnit.SECONDS)).isTrue();
+
+            var independentReceipt = executor.submit(() -> registerStockReceipt.execute(new RegisterStockReceiptCommand(
+                independentItem.id(),
+                null,
+                "LOT-78-INDEPENDENT-ITEM",
+                new BigDecimal("3.000000"),
+                LocalDate.of(2026, 8, 27),
+                LocalDate.of(2026, 9, 1),
+                "Independent item receipt"
+            )));
+
+            var independentResult = independentReceipt.get(2, TimeUnit.SECONDS);
+            assertThat(currentBalance(independentResult.batchId())).isEqualByComparingTo("3.000000");
+            assertThat(blockedReceipt.isDone()).isFalse();
+
+            controlledClock.releaseBlockedInstant();
+            var blockedResult = blockedReceipt.get(5, TimeUnit.SECONDS);
+            assertThat(currentBalance(blockedResult.batchId())).isEqualByComparingTo("4.000000");
+        } finally {
+            controlledClock.releaseBlockedInstant();
+            shutdown(executor);
+        }
+    }
+
     private com.ceudelavanda.lavandaflow.catalog.application.InventoryItemResult createInventoryItem() {
         return registerInventoryItem.execute(new RegisterInventoryItemCommand(
             "Concurrent receipt/FEFO item " + UUID.randomUUID(),
