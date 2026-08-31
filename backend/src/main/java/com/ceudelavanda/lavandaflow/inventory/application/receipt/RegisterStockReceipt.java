@@ -1,6 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.application.receipt;
 
-import com.ceudelavanda.lavandaflow.catalog.InventoryItemLookup;
+import com.ceudelavanda.lavandaflow.catalog.InventoryItemOperationLock;
 import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
@@ -22,15 +22,15 @@ import java.util.UUID;
 /**
  * Registers one business stock receipt as a new batch and one immutable initial ENTRY movement.
  *
- * <p>Catalog and supplier references are validated through published module contracts. Batch persistence
- * and movement persistence are deliberately orchestrated here, under one transaction, so neither side
- * effect can commit without the other.</p>
+ * <p>The catalog-owned inventory-item serialization point is acquired before supplier validation and
+ * batch creation. A concurrent FEFO operation for the same item therefore cannot plan against a batch
+ * set while this receipt is being inserted. Batch and movement persistence remain one transaction.</p>
  */
 @Service
 @RequiredArgsConstructor
 public class RegisterStockReceipt {
 
-    private final InventoryItemLookup inventoryItemLookup;
+    private final InventoryItemOperationLock inventoryItemOperationLock;
     private final SupplierLookup supplierLookup;
     private final BatchRepository batchRepository;
     private final StockMovementRepository stockMovementRepository;
@@ -38,6 +38,10 @@ public class RegisterStockReceipt {
 
     /**
      * Creates a new batch and its initial stock audit movement atomically.
+     *
+     * <p>Competing FEFO/receipt operations for the same item wait for the item-level lock. There is no
+     * automatic application retry; after the holder commits or rolls back, the waiting transaction
+     * continues against the fresh committed state.</p>
      *
      * @param command receipt data
      * @return committed operational receipt data
@@ -48,7 +52,7 @@ public class RegisterStockReceipt {
      */
     @Transactional
     public StockReceiptResult execute(RegisterStockReceiptCommand command) {
-        var inventoryItem = inventoryItemLookup.findById(command.inventoryItemId())
+        var inventoryItem = inventoryItemOperationLock.lockById(command.inventoryItemId())
             .orElseThrow(() -> new InventoryItemNotFoundException(command.inventoryItemId()));
 
         if (!inventoryItem.active()) {

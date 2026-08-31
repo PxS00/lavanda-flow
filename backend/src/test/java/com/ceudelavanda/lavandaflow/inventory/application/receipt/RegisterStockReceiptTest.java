@@ -1,6 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.application.receipt;
 
-import com.ceudelavanda.lavandaflow.catalog.InventoryItemLookup;
+import com.ceudelavanda.lavandaflow.catalog.InventoryItemOperationLock;
 import com.ceudelavanda.lavandaflow.catalog.InventoryItemSnapshot;
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.inventory.domain.Batch;
@@ -46,7 +46,7 @@ class RegisterStockReceiptTest {
     private static final Instant OCCURRED_AT = Instant.parse("2026-08-31T15:00:00Z");
     private static final Clock CLOCK = Clock.fixed(OCCURRED_AT, ZoneOffset.UTC);
 
-    @Mock private InventoryItemLookup inventoryItemLookup;
+    @Mock private InventoryItemOperationLock inventoryItemOperationLock;
     @Mock private SupplierLookup supplierLookup;
     @Mock private BatchRepository batchRepository;
     @Mock private StockMovementRepository stockMovementRepository;
@@ -56,7 +56,7 @@ class RegisterStockReceiptTest {
     @BeforeEach
     void setUp() {
         registerStockReceipt = new RegisterStockReceipt(
-            inventoryItemLookup,
+            inventoryItemOperationLock,
             supplierLookup,
             batchRepository,
             stockMovementRepository,
@@ -66,7 +66,7 @@ class RegisterStockReceiptTest {
 
     @Test
     void shouldCreateBatchAndExactlyOneInitialEntryMovement() {
-        when(inventoryItemLookup.findById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
+        when(inventoryItemOperationLock.lockById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
         when(supplierLookup.findById(SUPPLIER_ID)).thenReturn(Optional.of(activeSupplier()));
 
         var result = registerStockReceipt.execute(command(SUPPLIER_ID));
@@ -91,7 +91,7 @@ class RegisterStockReceiptTest {
 
     @Test
     void shouldAllowReceiptWithoutSupplier() {
-        when(inventoryItemLookup.findById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
+        when(inventoryItemOperationLock.lockById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
 
         var result = registerStockReceipt.execute(command(null));
 
@@ -103,7 +103,7 @@ class RegisterStockReceiptTest {
 
     @Test
     void shouldRejectUnknownInventoryItemBeforeAnyPersistence() {
-        when(inventoryItemLookup.findById(ITEM_ID)).thenReturn(Optional.empty());
+        when(inventoryItemOperationLock.lockById(ITEM_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> registerStockReceipt.execute(command(SUPPLIER_ID)))
             .isInstanceOf(InventoryItemNotFoundException.class);
@@ -113,7 +113,7 @@ class RegisterStockReceiptTest {
 
     @Test
     void shouldRejectInactiveInventoryItemBeforeAnyPersistence() {
-        when(inventoryItemLookup.findById(ITEM_ID)).thenReturn(Optional.of(
+        when(inventoryItemOperationLock.lockById(ITEM_ID)).thenReturn(Optional.of(
             new InventoryItemSnapshot(ITEM_ID, "Lavender", UnitOfMeasure.MILLILITER, false)
         ));
 
@@ -125,7 +125,7 @@ class RegisterStockReceiptTest {
 
     @Test
     void shouldRejectUnknownSupplierBeforeAnyPersistence() {
-        when(inventoryItemLookup.findById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
+        when(inventoryItemOperationLock.lockById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
         when(supplierLookup.findById(SUPPLIER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> registerStockReceipt.execute(command(SUPPLIER_ID)))
@@ -136,7 +136,7 @@ class RegisterStockReceiptTest {
 
     @Test
     void shouldRejectInactiveSupplierBeforeAnyPersistence() {
-        when(inventoryItemLookup.findById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
+        when(inventoryItemOperationLock.lockById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
         when(supplierLookup.findById(SUPPLIER_ID)).thenReturn(Optional.of(
             new SupplierSnapshot(SUPPLIER_ID, "Inactive supplier", false)
         ));
@@ -149,7 +149,7 @@ class RegisterStockReceiptTest {
 
     @Test
     void shouldNotPersistMovementWhenBatchPersistenceFails() {
-        when(inventoryItemLookup.findById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
+        when(inventoryItemOperationLock.lockById(ITEM_ID)).thenReturn(Optional.of(activeItem()));
         when(supplierLookup.findById(SUPPLIER_ID)).thenReturn(Optional.of(activeSupplier()));
         doThrow(new RuntimeException("batch persistence failed"))
             .when(batchRepository).save(any(Batch.class));

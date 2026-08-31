@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-27
+- **Updated:** 2026-08-31
 
 ## Context
 
@@ -18,10 +19,17 @@ mutate existing batch balances. FEFO is additionally a multi-row operation: it
 plans allocations across all eligible batches and persists one movement per
 allocated batch in the same transaction.
 
+The original decision locked the existing batch rows for FEFO. That protects
+writers over rows that already exist but does not protect the predicate “all
+batches for this inventory item”. Under PostgreSQL `READ COMMITTED`, a stock
+receipt can insert a new batch after FEFO has acquired its current batch lock
+set. Once stock receipt became a real transactional workflow in v0.3.0, that
+predicate gap became a reachable production race.
+
 ## Decision
 
-Stock-changing use cases will use **pessimistic write locking** for the batches
-whose balances can be mutated.
+Stock-changing use cases continue to use **pessimistic write locking** for the
+batches whose balances can be mutated.
 
 The domain repository port exposes lock semantics without depending on JPA:
 
@@ -32,21 +40,45 @@ The domain repository port exposes lock semantics without depending on JPA:
 The JPA adapter implements those operations with
 `LockModeType.PESSIMISTIC_WRITE`. Ordinary read methods remain unlocked.
 
-For FEFO, rows are locked in immutable UUID order before the pure domain policy
-applies its business ordering. This intentionally separates **lock acquisition
-order** from **FEFO allocation order** and reduces deadlock risk between
-concurrent multi-batch operations.
+### Item-level serialization for FEFO and stock receipt
 
-The lock is held by the existing application transaction until commit or
-rollback. Balance persistence and movement persistence therefore remain atomic.
-A competing writer waits for the lock, then evaluates the domain rules against
-the latest committed balance.
+FEFO withdrawal and stock receipt additionally acquire a transaction-scoped
+pessimistic write lock on the catalog-owned `inventory_item` row before either
+operation reads, locks, or inserts inventory batches.
 
-There is no automatic application retry in V1. After waiting for a conflicting
-transaction, a command either succeeds against the fresh state or fails through
-its existing business exception, such as insufficient stock. Database-level
-lock timeout or deadlock failures remain infrastructure failures and can be
-addressed by a future retry policy if production evidence justifies it.
+The catalog publishes this synchronization point through
+`InventoryItemOperationLock`. Its implementation uses a JPA
+`PESSIMISTIC_WRITE` lookup and returns the fresh public inventory-item snapshot
+while the row lock is held. Inventory therefore does not access catalog
+repositories or persistence entities directly.
+
+The lock acquisition order is deterministic:
+
+1. acquire the `inventory_item` lock;
+2. for FEFO, acquire existing batch row locks in immutable UUID order;
+3. perform FEFO allocation or stock-receipt insertion;
+4. persist balance changes and immutable movements;
+5. release every lock on transaction commit or rollback.
+
+Stock receipt does not lock existing batch rows because it only inserts a new
+batch. It shares the item-level serialization point with FEFO so the two
+operations cannot overlap while FEFO is deciding which batches exist.
+
+If stock receipt acquires the item lock first, FEFO waits. After receipt commits,
+FEFO acquires the lock and, under `READ COMMITTED`, its following batch query
+sees the newly committed batch. If FEFO acquires the item lock first, receipt
+waits until the FEFO allocation and movements commit, then inserts the new batch.
+Both schedules are therefore equivalent to a deterministic serial order.
+
+For FEFO, batch rows remain locked in immutable UUID order before the pure domain
+policy applies its business ordering. This intentionally separates **lock
+acquisition order** from **FEFO allocation order** and reduces deadlock risk.
+
+There is no automatic application retry in V1. A competing operation waits for
+the conflicting transaction and then continues against fresh committed state.
+Database-level lock timeout or deadlock failures remain infrastructure failures;
+a retry policy will only be added if production evidence justifies a concrete
+contract.
 
 ## Consequences
 
@@ -54,16 +86,19 @@ addressed by a future retry policy if production evidence justifies it.
 
 - prevents lost updates on materialized batch balances;
 - prevents stale balance validation from authorizing conflicting withdrawals;
-- keeps balance changes and audit movements consistent in one transaction;
-- does not leak JPA lock types into the domain or application layers;
-- avoids adding a persistence version field to the domain model;
-- gives FEFO deterministic multi-row lock acquisition.
+- closes the FEFO predicate gap created by concurrent batch insertion;
+- keeps receipt batch creation and initial `ENTRY` history atomic;
+- keeps FEFO balance changes and consumption history atomic;
+- keeps catalog persistence internals behind a published module contract;
+- avoids advisory-lock key hashing and collision semantics;
+- avoids a dedicated lock table or new migration;
+- gives FEFO deterministic item-then-batch lock acquisition.
 
 ### Trade-offs
 
-- concurrent writes to the same batch are serialized;
-- FEFO takes a deliberately coarse lock over all existing batches for the item,
-  so an adjustment to any of those batches waits while FEFO completes;
+- concurrent FEFO and stock receipts for the same inventory item are serialized;
+- concurrent receipts for the same inventory item are also serialized;
+- FEFO takes a deliberately coarse item lock plus locks over existing batches;
 - lock contention can increase response time under heavy write load.
 
 This is acceptable for Lavanda Flow because inventory writes are short,
@@ -72,22 +107,35 @@ maximum write throughput.
 
 ## Alternatives considered
 
+### PostgreSQL advisory locking
+
+Rejected for V1. Advisory locks would avoid coupling serialization to a table
+row, but UUID item identifiers would need a deterministic advisory key mapping.
+That introduces hash/key-collision semantics and a second locking convention
+without providing a material benefit over the existing catalog row.
+
+### Dedicated inventory lock row
+
+Rejected. A separate lock table would make the synchronization point explicit
+but would add schema, lifecycle, and consistency overhead for a row that already
+has a stable catalog identity.
+
 ### Optimistic locking
 
 Rejected for V1. `@Version` would require carrying persistence version state
 through the current entity-to-domain mapping or redesigning the adapter around
 managed entities. More importantly, a FEFO operation can update several rows;
 one optimistic conflict at flush time would invalidate the entire allocation
-plan and require explicit whole-command retry semantics. That complexity is not
-justified by the expected workload.
+plan and require explicit whole-command retry semantics.
 
 ### Database constraint only
 
 Rejected. The existing non-negative constraint is useful defense in depth but
-cannot detect a lost update that overwrites another valid non-negative balance.
+cannot detect a lost update or a FEFO allocation made from an incomplete batch
+set.
 
 ### Serializable isolation for every stock transaction
 
 Rejected. It is broader than the invariant being protected and would introduce
 transaction-level serialization failures and retry requirements where targeted
-row locks are sufficient.
+row locks provide a deterministic wait contract.
