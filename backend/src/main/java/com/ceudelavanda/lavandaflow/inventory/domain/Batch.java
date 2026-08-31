@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.inventory.domain;
 
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InsufficientStockException;
+import com.ceudelavanda.lavandaflow.inventory.domain.exception.InvalidBatchDataException;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InvalidStockAdjustmentException;
 import lombok.Getter;
 
@@ -17,6 +18,8 @@ import java.util.UUID;
  */
 @Getter
 public class Batch {
+
+    private static final int MAX_LOT_CODE_LENGTH = 255;
 
     private final UUID id;
     private final UUID inventoryItemId;
@@ -40,7 +43,7 @@ public class Batch {
         this.id = requireNonNull(id, "id");
         this.inventoryItemId = requireNonNull(inventoryItemId, "inventoryItemId");
         this.supplierId = supplierId;
-        this.lotCode = normalizeOptional(lotCode);
+        this.lotCode = validateLotCode(normalizeOptional(lotCode));
         this.initialQuantity = StockQuantityRules.requirePositive(
             initialQuantity,
             "initialQuantity"
@@ -50,7 +53,7 @@ public class Batch {
             "currentQuantity"
         );
         this.receivedAt = requireNonNull(receivedAt, "receivedAt");
-        this.expiresAt = expiresAt;
+        this.expiresAt = validateExpiration(expiresAt, this.receivedAt);
     }
 
     /**
@@ -147,6 +150,26 @@ public class Batch {
 
         var normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static String validateLotCode(String value) {
+        if (value != null && value.length() > MAX_LOT_CODE_LENGTH) {
+            throw new InvalidBatchDataException(
+                "lotCode",
+                "lotCode must not exceed " + MAX_LOT_CODE_LENGTH + " characters"
+            );
+        }
+        return value;
+    }
+
+    private static LocalDate validateExpiration(LocalDate expiresAt, LocalDate receivedAt) {
+        if (expiresAt != null && expiresAt.isBefore(receivedAt)) {
+            throw new InvalidBatchDataException(
+                "expiresAt",
+                "expiresAt must not be before receivedAt"
+            );
+        }
+        return expiresAt;
     }
 
     private static <T> T requireNonNull(T value, String field) {
