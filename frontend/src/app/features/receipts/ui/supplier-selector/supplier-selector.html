@@ -42,15 +42,9 @@
       @if (currentState.suppliers.length === 0) {
         <p class="empty-results">No active suppliers match this search.</p>
       } @else {
-        <div class="results" role="list" aria-label="Active supplier search results">
+        <div class="results" aria-label="Active supplier search results">
           @for (supplier of currentState.suppliers; track supplier.id) {
-            <button
-              mat-stroked-button
-              type="button"
-              role="listitem"
-              [disabled]="disabled()"
-              (click)="choose(supplier)"
-            >
+            <button mat-stroked-button type="button" [disabled]="disabled()" (click)="choose(supplier)">
               <span>{{ supplier.name }}</span>
               <small>Active @if (supplier.identifier) { · {{ supplier.identifier }} }</small>
             </button>

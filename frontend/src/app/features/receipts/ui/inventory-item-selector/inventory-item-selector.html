@@ -41,15 +41,9 @@
       @if (currentState.items.length === 0) {
         <p class="empty-results">No active inventory items match this search.</p>
       } @else {
-        <div class="results" role="list" aria-label="Active inventory item search results">
+        <div class="results" aria-label="Active inventory item search results">
           @for (item of currentState.items; track item.id) {
-            <button
-              mat-stroked-button
-              type="button"
-              role="listitem"
-              [disabled]="disabled()"
-              (click)="choose(item)"
-            >
+            <button mat-stroked-button type="button" [disabled]="disabled()" (click)="choose(item)">
               <span>{{ item.name }}</span>
               <small>Active · {{ unitLabel(item.unitOfMeasure) }}</small>
             </button>

@@ -34,4 +34,11 @@ describe('ApplicationShell', () => {
 
     expect(suppliersLink?.getAttribute('href')).toBe('/suppliers');
   });
+
+  it('should link Receipts navigation to the stock receipt workflow', () => {
+    const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+    const receiptsLink = links.find((link) => link.textContent?.trim() === 'Receipts');
+
+    expect(receiptsLink?.getAttribute('href')).toBe('/receipts');
+  });
 });

@@ -16,7 +16,10 @@ import { InventoryItemApiService } from '../../../catalog/data-access/inventory-
 import { inventoryItemUnitLabel } from '../../../catalog/inventory-item-display';
 import { SupplierDto } from '../../../suppliers/data-access/supplier.dto';
 import { StockReceiptApiService } from '../../data-access/stock-receipt-api.service';
-import { RegisterStockReceiptDto, RegisterStockReceiptRequest } from '../../data-access/stock-receipt.dto';
+import {
+  RegisterStockReceiptDto,
+  RegisterStockReceiptRequest,
+} from '../../data-access/stock-receipt.dto';
 import { InventoryItemSelector } from '../../ui/inventory-item-selector/inventory-item-selector';
 import { SupplierSelector } from '../../ui/supplier-selector/supplier-selector';
 
@@ -99,8 +102,13 @@ export class StockReceiptPage {
       return error;
     }
 
+    const entries = Object.entries(error.fieldErrors);
+    if (entries.length === 0) {
+      return error;
+    }
+
     const remaining = Object.fromEntries(
-      Object.entries(error.fieldErrors).filter(([field]) => !INLINE_FIELDS.includes(field)),
+      entries.filter(([field]) => !INLINE_FIELDS.includes(field)),
     );
 
     return Object.keys(remaining).length > 0 ? { ...error, fieldErrors: remaining } : null;
@@ -209,7 +217,9 @@ export class StockReceiptPage {
     this.selectionError.set(null);
   }
 
-  protected backendFieldError(field: ReceiptField | 'inventoryItemId' | 'supplierId'): string | undefined {
+  protected backendFieldError(
+    field: ReceiptField | 'inventoryItemId' | 'supplierId',
+  ): string | undefined {
     return this.submissionError()?.fieldErrors?.[field];
   }
 }
@@ -219,7 +229,9 @@ function normalizeOptional(value: string): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
-function validateQuantity(rawValue: string): { readonly kind: string; readonly message: string } | undefined {
+function validateQuantity(
+  rawValue: string,
+): { readonly kind: string; readonly message: string } | undefined {
   const normalized = rawValue.trim();
   if (rawValue.length > 0 && normalized.length === 0) {
     return { kind: 'blank', message: 'Quantity is required.' };
