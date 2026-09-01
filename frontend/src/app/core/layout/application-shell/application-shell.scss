@@ -1,0 +1,23 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.shell-container {
+  height: calc(100% - 64px);
+}
+
+mat-sidenav {
+  width: 240px;
+}
+
+.shell-content {
+  padding: 24px;
+}
+
+@media (max-width: 599px) {
+  .shell-content {
+    padding: 16px;
+  }
+}
+
