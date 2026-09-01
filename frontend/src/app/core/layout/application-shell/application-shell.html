@@ -1,0 +1,46 @@
+<mat-toolbar>
+  @if (isHandset()) {
+    <button
+      mat-button
+      type="button"
+      aria-label="Open navigation"
+      (click)="sidenav.toggle()"
+    >
+      Menu
+    </button>
+  }
+
+  <strong>Lavanda Flow</strong>
+</mat-toolbar>
+
+<mat-sidenav-container class="shell-container">
+  <mat-sidenav
+    #sidenav
+    [mode]="isHandset() ? 'over' : 'side'"
+    [opened]="!isHandset()"
+    aria-label="Main navigation"
+  >
+    <mat-nav-list>
+      <a
+        mat-list-item
+        routerLink="/dashboard"
+        routerLinkActive="active-link"
+        (click)="isHandset() && sidenav.close()"
+      >
+        Dashboard
+      </a>
+
+      <span mat-list-item>Inventory</span>
+      <span mat-list-item>Suppliers</span>
+      <span mat-list-item>Receipts</span>
+      <span mat-list-item>Withdrawals</span>
+      <span mat-list-item>Alerts</span>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <main class="shell-content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
