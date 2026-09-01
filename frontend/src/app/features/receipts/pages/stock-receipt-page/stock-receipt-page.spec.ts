@@ -91,7 +91,7 @@ describe('StockReceiptPage', () => {
     fixture.detectChanges();
   });
 
-  it('should submit one valid receipt and lock the completed transaction behind an explicit new-receipt action', () => {
+  it('should submit one valid receipt and lock the completed transaction against repeat submission', () => {
     selectItem();
     selectSupplier();
     setValidForm();
@@ -121,12 +121,6 @@ describe('StockReceiptPage', () => {
       (link) => (link as HTMLAnchorElement).textContent?.includes('Open item operations'),
     ) as HTMLAnchorElement | undefined;
     expect(operationsLink?.getAttribute('href')).toBe(`/inventory/items/${item.id}`);
-
-    findButton('Register another receipt')?.click();
-    fixture.detectChanges();
-
-    expect(findButton('Register receipt')).toBeDefined();
-    expect(fixture.componentInstance.receiptModel().receivedAt).toBe('2026-09-01');
   });
 
   it('should submit without a supplier and normalize blank optional values to null', () => {
