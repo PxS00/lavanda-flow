@@ -1,0 +1,89 @@
+<section class="registration-page" aria-labelledby="supplier-registration-heading">
+  <header>
+    <a mat-button routerLink="/suppliers">Back to suppliers</a>
+    <h1 id="supplier-registration-heading">Register supplier</h1>
+    <p>Add a supplier that can be referenced by inventory receipts.</p>
+  </header>
+
+  @if (globalSubmissionError(); as error) {
+    <app-error-state [error]="error" />
+  }
+
+  <form (submit)="submit($event)" novalidate>
+    <mat-form-field appearance="outline">
+      <mat-label>Name</mat-label>
+      <input
+        matInput
+        [formField]="registrationForm.name"
+        autocomplete="organization"
+        [attr.aria-describedby]="backendFieldError('name') ? 'supplier-name-backend-error' : null"
+      />
+      <mat-hint align="end">{{ registrationForm.name().value().length }}/255</mat-hint>
+      @if (registrationForm.name().touched() && registrationForm.name().invalid()) {
+        <mat-error>{{ registrationForm.name().errors()[0].message }}</mat-error>
+      }
+    </mat-form-field>
+    @if (backendFieldError('name'); as error) {
+      <p id="supplier-name-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Identifier</mat-label>
+      <input
+        matInput
+        [formField]="registrationForm.identifier"
+        autocomplete="off"
+        [attr.aria-describedby]="
+          backendFieldError('identifier') ? 'supplier-identifier-backend-error' : null
+        "
+      />
+      <mat-hint>Optional</mat-hint>
+      @if (registrationForm.identifier().touched() && registrationForm.identifier().invalid()) {
+        <mat-error>{{ registrationForm.identifier().errors()[0].message }}</mat-error>
+      }
+    </mat-form-field>
+    @if (backendFieldError('identifier'); as error) {
+      <p id="supplier-identifier-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Contact</mat-label>
+      <input
+        matInput
+        [formField]="registrationForm.contact"
+        autocomplete="off"
+        [attr.aria-describedby]="
+          backendFieldError('contact') ? 'supplier-contact-backend-error' : null
+        "
+      />
+      <mat-hint>Optional</mat-hint>
+      @if (registrationForm.contact().touched() && registrationForm.contact().invalid()) {
+        <mat-error>{{ registrationForm.contact().errors()[0].message }}</mat-error>
+      }
+    </mat-form-field>
+    @if (backendFieldError('contact'); as error) {
+      <p id="supplier-contact-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Notes</mat-label>
+      <textarea
+        matInput
+        rows="4"
+        [formField]="registrationForm.notes"
+        [attr.aria-describedby]="backendFieldError('notes') ? 'supplier-notes-backend-error' : null"
+      ></textarea>
+      <mat-hint>Optional</mat-hint>
+    </mat-form-field>
+    @if (backendFieldError('notes'); as error) {
+      <p id="supplier-notes-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
+    <div class="form-actions">
+      <button mat-flat-button type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Registering...' : 'Register supplier' }}
+      </button>
+      <a mat-button routerLink="/suppliers">Cancel</a>
+    </div>
+  </form>
+</section>
