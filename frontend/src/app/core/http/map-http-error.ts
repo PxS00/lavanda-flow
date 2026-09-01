@@ -34,7 +34,9 @@ function mapApiError(error: HttpErrorResponse): UiError {
         kind: 'validation',
         message: apiError.message,
         code: apiError.code,
-        fieldErrors: apiError.details,
+        ...(apiError.details === undefined || apiError.details === null
+          ? {}
+          : { fieldErrors: apiError.details }),
       };
 
     case 404:
@@ -56,7 +58,9 @@ function mapApiError(error: HttpErrorResponse): UiError {
         kind: 'unprocessable',
         message: apiError.message,
         code: apiError.code,
-        fieldErrors: apiError.details,
+        ...(apiError.details === undefined || apiError.details === null
+          ? {}
+          : { fieldErrors: apiError.details }),
       };
 
     default:
@@ -128,12 +132,12 @@ function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
     typeof value['code'] === 'string' &&
     typeof value['message'] === 'string' &&
     typeof value['path'] === 'string' &&
-    isStringRecord(value['details'])
+    (value['details'] === undefined || value['details'] === null || isStringRecord(value['details']))
   );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {

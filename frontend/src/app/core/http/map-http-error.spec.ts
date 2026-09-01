@@ -73,6 +73,26 @@ describe('mapHttpError', () => {
     });
   });
 
+  it('should preserve a valid not-found API error when details are absent', () => {
+    const error = new HttpErrorResponse({
+      status: 404,
+      error: {
+        timestamp: '2026-09-01T20:30:00Z',
+        status: 404,
+        error: 'Not Found',
+        code: 'INVENTORY_ITEM_NOT_FOUND',
+        message: 'Inventory item not found: 123',
+        path: '/api/v1/inventory/items/123/withdrawals',
+      },
+    });
+
+    expect(mapHttpError(error)).toEqual({
+      kind: 'not-found',
+      code: 'INVENTORY_ITEM_NOT_FOUND',
+      message: 'Inventory item not found: 123',
+    });
+  });
+
   it('should fall back to the HTTP status when the backend payload is invalid', () => {
     const error = new HttpErrorResponse({ status: 404, error: { message: 'Malformed response' } });
 
@@ -122,6 +142,89 @@ describe('mapHttpError', () => {
       message: 'Inventory item must be active to receive stock.',
       code: 'INVENTORY_ITEM_INACTIVE',
       fieldErrors: {},
+    });
+  });
+
+  it('should preserve a valid unprocessable API error when details are null', () => {
+    const error = new HttpErrorResponse({
+      status: 422,
+      error: {
+        timestamp: '2026-09-01T20:30:00Z',
+        status: 422,
+        error: 'Unprocessable Content',
+        code: 'INACTIVE_INVENTORY_ITEM',
+        message: 'Inventory item is inactive: 123',
+        path: '/api/v1/inventory/items/123/withdrawals',
+        details: null,
+      },
+    });
+
+    expect(mapHttpError(error)).toEqual({
+      kind: 'unprocessable',
+      code: 'INACTIVE_INVENTORY_ITEM',
+      message: 'Inventory item is inactive: 123',
+    });
+  });
+
+  it('should preserve insufficient-stock details from a valid unprocessable API error', () => {
+    const error = new HttpErrorResponse({
+      status: 422,
+      error: {
+        timestamp: '2026-09-01T20:30:00Z',
+        status: 422,
+        error: 'Unprocessable Content',
+        code: 'INSUFFICIENT_ELIGIBLE_STOCK',
+        message: 'Insufficient eligible stock for inventory item 123',
+        path: '/api/v1/inventory/items/123/withdrawals',
+        details: { availableQuantity: '55.000000' },
+      },
+    });
+
+    expect(mapHttpError(error)).toEqual({
+      kind: 'unprocessable',
+      code: 'INSUFFICIENT_ELIGIBLE_STOCK',
+      message: 'Insufficient eligible stock for inventory item 123',
+      fieldErrors: { availableQuantity: '55.000000' },
+    });
+  });
+
+  it('should reject an API error with array details', () => {
+    const error = new HttpErrorResponse({
+      status: 422,
+      error: {
+        timestamp: '2026-09-01T20:30:00Z',
+        status: 422,
+        error: 'Unprocessable Content',
+        code: 'INSUFFICIENT_ELIGIBLE_STOCK',
+        message: 'Insufficient eligible stock.',
+        path: '/api/v1/inventory/items/123/withdrawals',
+        details: ['availableQuantity'],
+      },
+    });
+
+    expect(mapHttpError(error)).toEqual({
+      kind: 'unprocessable',
+      message: 'The request cannot be processed in the current resource state.',
+    });
+  });
+
+  it('should reject an API error with malformed non-string details', () => {
+    const error = new HttpErrorResponse({
+      status: 422,
+      error: {
+        timestamp: '2026-09-01T20:30:00Z',
+        status: 422,
+        error: 'Unprocessable Content',
+        code: 'INSUFFICIENT_ELIGIBLE_STOCK',
+        message: 'Insufficient eligible stock.',
+        path: '/api/v1/inventory/items/123/withdrawals',
+        details: { availableQuantity: 55 },
+      },
+    });
+
+    expect(mapHttpError(error)).toEqual({
+      kind: 'unprocessable',
+      message: 'The request cannot be processed in the current resource state.',
     });
   });
 
