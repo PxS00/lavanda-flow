@@ -1,0 +1,40 @@
+<section class="detail-page" aria-labelledby="detail-heading">
+  <a mat-button routerLink="/catalog">Back to catalog</a>
+  <h1 id="detail-heading">Inventory item details</h1>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Loading inventory item..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Try again</button>
+    }
+    @case ('loaded') {
+      <header>
+        <h2>{{ currentState.item.name }}</h2>
+        <p>{{ currentState.item.active ? 'Active' : 'Inactive' }}</p>
+      </header>
+
+      <mat-card appearance="outlined">
+        <mat-card-content>
+          <dl>
+            <div>
+              <dt>Category</dt>
+              <dd>{{ categoryLabel(currentState.item.category) }}</dd>
+            </div>
+            <div>
+              <dt>Unit of measure</dt>
+              <dd>{{ unitLabel(currentState.item.unitOfMeasure) }}</dd>
+            </div>
+            <div class="description">
+              <dt>Description</dt>
+              <dd>{{ currentState.item.description || 'No description provided.' }}</dd>
+            </div>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</section>

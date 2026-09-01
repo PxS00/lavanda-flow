@@ -1,0 +1,104 @@
+<section class="catalog-page" aria-labelledby="catalog-heading">
+  <header class="page-header">
+    <div>
+      <h1 id="catalog-heading">Inventory catalog</h1>
+      <p>Find and inspect the items controlled in inventory.</p>
+    </div>
+
+    <a mat-flat-button routerLink="/catalog/new">Register item</a>
+  </header>
+
+  <form class="filters" aria-label="Catalog filters" (submit)="applyFilters($event)">
+    <mat-form-field appearance="outline">
+      <mat-label>Name</mat-label>
+      <input matInput type="search" [formField]="filtersForm.name" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Category</mat-label>
+      <mat-select [formField]="filtersForm.category">
+        <mat-option value="">All categories</mat-option>
+        @for (option of categoryOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Active state</mat-label>
+      <mat-select [formField]="filtersForm.active">
+        <mat-option value="all">All</mat-option>
+        <mat-option value="active">Active</mat-option>
+        <mat-option value="inactive">Inactive</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="filter-actions">
+      <button mat-flat-button type="submit">Apply filters</button>
+      <button mat-button type="button" (click)="resetFilters()">Reset</button>
+    </div>
+  </form>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Loading inventory items..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Try again</button>
+    }
+    @case ('loaded') {
+      @if (currentState.page.content.length === 0) {
+        <app-empty-state
+          title="No inventory items found"
+          [message]="
+            hasAppliedFilters()
+              ? 'Try changing or resetting the filters.'
+              : 'Register an item to start building the catalog.'
+          "
+        />
+      } @else {
+        <p class="result-count" aria-live="polite">
+          {{ currentState.page.totalElements }} inventory items found
+        </p>
+
+        <ul class="item-list" aria-label="Inventory items">
+          @for (item of currentState.page.content; track item.id) {
+            <li>
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>
+                    <a [routerLink]="['/catalog', item.id]">{{ item.name }}</a>
+                  </mat-card-title>
+                  <mat-card-subtitle>{{ categoryLabel(item.category) }}</mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  <dl>
+                    <div>
+                      <dt>Unit</dt>
+                      <dd>{{ unitLabel(item.unitOfMeasure) }}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{{ item.active ? 'Active' : 'Inactive' }}</dd>
+                    </div>
+                  </dl>
+                </mat-card-content>
+              </mat-card>
+            </li>
+          }
+        </ul>
+
+        <mat-paginator
+          aria-label="Inventory catalog pages"
+          [length]="currentState.page.totalElements"
+          [pageIndex]="currentState.page.page"
+          [pageSize]="currentState.page.size"
+          [pageSizeOptions]="[20, 50, 100]"
+          (page)="changePage($event)"
+        />
+      }
+    }
+  }
+</section>

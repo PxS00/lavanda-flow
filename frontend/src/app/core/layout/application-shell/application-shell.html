@@ -30,7 +30,14 @@
         Dashboard
       </a>
 
-      <span mat-list-item>Inventory</span>
+      <a
+        mat-list-item
+        routerLink="/catalog"
+        routerLinkActive="active-link"
+        (click)="isHandset() && sidenav.close()"
+      >
+        Inventory
+      </a>
       <span mat-list-item>Suppliers</span>
       <span mat-list-item>Receipts</span>
       <span mat-list-item>Withdrawals</span>

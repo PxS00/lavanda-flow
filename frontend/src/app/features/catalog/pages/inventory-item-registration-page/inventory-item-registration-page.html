@@ -1,0 +1,93 @@
+<section class="registration-page" aria-labelledby="registration-heading">
+  <header>
+    <a mat-button routerLink="/catalog">Back to catalog</a>
+    <h1 id="registration-heading">Register inventory item</h1>
+    <p>Add an item that will be controlled in inventory.</p>
+  </header>
+
+  @if (globalSubmissionError(); as error) {
+    <app-error-state [error]="error" />
+  }
+
+  <form (submit)="submit($event)" novalidate>
+    <mat-form-field appearance="outline">
+      <mat-label>Name</mat-label>
+      <input
+        matInput
+        [formField]="registrationForm.name"
+        autocomplete="off"
+        [attr.aria-describedby]="backendFieldError('name') ? 'name-backend-error' : null"
+      />
+      <mat-hint align="end">{{ registrationForm.name().value().length }}/255</mat-hint>
+      @if (registrationForm.name().touched() && registrationForm.name().invalid()) {
+        <mat-error>{{ registrationForm.name().errors()[0].message }}</mat-error>
+      }
+    </mat-form-field>
+    @if (backendFieldError('name'); as error) {
+      <p id="name-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Description</mat-label>
+      <textarea
+        matInput
+        rows="4"
+        [formField]="registrationForm.description"
+        [attr.aria-describedby]="
+          backendFieldError('description') ? 'description-backend-error' : null
+        "
+      ></textarea>
+      <mat-hint>Optional</mat-hint>
+    </mat-form-field>
+    @if (backendFieldError('description'); as error) {
+      <p id="description-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Category</mat-label>
+      <mat-select
+        [formField]="registrationForm.category"
+        [attr.aria-describedby]="backendFieldError('category') ? 'category-backend-error' : null"
+      >
+        @for (option of categoryOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+      @if (registrationForm.category().touched() && registrationForm.category().invalid()) {
+        <mat-error>{{ registrationForm.category().errors()[0].message }}</mat-error>
+      }
+    </mat-form-field>
+    @if (backendFieldError('category'); as error) {
+      <p id="category-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Unit of measure</mat-label>
+      <mat-select
+        [formField]="registrationForm.unitOfMeasure"
+        [attr.aria-describedby]="
+          backendFieldError('unitOfMeasure') ? 'unit-of-measure-backend-error' : null
+        "
+      >
+        @for (option of unitOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+      @if (
+        registrationForm.unitOfMeasure().touched() && registrationForm.unitOfMeasure().invalid()
+      ) {
+        <mat-error>{{ registrationForm.unitOfMeasure().errors()[0].message }}</mat-error>
+      }
+    </mat-form-field>
+    @if (backendFieldError('unitOfMeasure'); as error) {
+      <p id="unit-of-measure-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
+    <div class="form-actions">
+      <button mat-flat-button type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Registering...' : 'Register item' }}
+      </button>
+      <a mat-button routerLink="/catalog">Cancel</a>
+    </div>
+  </form>
+</section>

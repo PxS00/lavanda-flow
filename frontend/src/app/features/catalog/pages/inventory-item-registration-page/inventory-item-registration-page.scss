@@ -1,0 +1,41 @@
+:host {
+  display: block;
+}
+
+.registration-page {
+  display: grid;
+  gap: 24px;
+  max-width: 720px;
+}
+
+header {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+h1,
+header p {
+  margin: 0;
+}
+
+header p {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+form {
+  display: grid;
+  gap: 8px;
+}
+
+.field-error {
+  margin: -8px 0 8px;
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
