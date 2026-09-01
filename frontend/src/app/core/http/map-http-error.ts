@@ -51,6 +51,14 @@ function mapApiError(error: HttpErrorResponse): UiError {
         code: apiError.code,
       };
 
+    case 422:
+      return {
+        kind: 'unprocessable',
+        message: apiError.message,
+        code: apiError.code,
+        fieldErrors: apiError.details,
+      };
+
     default:
       if (error.status >= 500) {
         return {
@@ -85,6 +93,12 @@ function mapByStatus(status: number): UiError {
       return {
         kind: 'conflict',
         message: 'The request conflicts with the current state.',
+      };
+
+    case 422:
+      return {
+        kind: 'unprocessable',
+        message: 'The request cannot be processed in the current resource state.',
       };
 
     default:

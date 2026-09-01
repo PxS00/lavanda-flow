@@ -39,21 +39,15 @@ describe('mapHttpError', () => {
         code: 'VALIDATION_ERROR',
         message: 'Request validation failed.',
         path: '/api/v1/suppliers',
-        details: {
-          name: 'must not be blank',
-        },
+        details: { name: 'must not be blank' },
       },
     });
 
-    const result = mapHttpError(error);
-
-    expect(result).toEqual({
+    expect(mapHttpError(error)).toEqual({
       kind: 'validation',
       message: 'Request validation failed.',
       code: 'VALIDATION_ERROR',
-      fieldErrors: {
-        name: 'must not be blank',
-      },
+      fieldErrors: { name: 'must not be blank' },
     });
   });
 
@@ -72,9 +66,7 @@ describe('mapHttpError', () => {
       },
     });
 
-    const result = mapHttpError(error);
-
-    expect(result).toEqual({
+    expect(mapHttpError(error)).toEqual({
       kind: 'not-found',
       message: 'Supplier not found.',
       code: 'SUPPLIER_NOT_FOUND',
@@ -82,17 +74,9 @@ describe('mapHttpError', () => {
   });
 
   it('should fall back to the HTTP status when the backend payload is invalid', () => {
-    const error = new HttpErrorResponse({
-      status: 404,
-      statusText: 'Not Found',
-      error: {
-        message: 'Malformed response',
-      },
-    });
+    const error = new HttpErrorResponse({ status: 404, error: { message: 'Malformed response' } });
 
-    const result = mapHttpError(error);
-
-    expect(result).toEqual({
+    expect(mapHttpError(error)).toEqual({
       kind: 'not-found',
       message: 'The requested resource was not found.',
     });
@@ -101,7 +85,6 @@ describe('mapHttpError', () => {
   it('should map a backend conflict error', () => {
     const error = new HttpErrorResponse({
       status: 409,
-      statusText: 'Conflict',
       error: {
         timestamp: '2026-08-31T23:30:00Z',
         status: 409,
@@ -113,19 +96,38 @@ describe('mapHttpError', () => {
       },
     });
 
-    const result = mapHttpError(error);
-
-    expect(result).toEqual({
+    expect(mapHttpError(error)).toEqual({
       kind: 'conflict',
       message: 'Supplier already exists.',
       code: 'SUPPLIER_ALREADY_EXISTS',
     });
   });
 
+  it('should map an unprocessable backend error with actionable details', () => {
+    const error = new HttpErrorResponse({
+      status: 422,
+      error: {
+        timestamp: '2026-09-01T20:30:00Z',
+        status: 422,
+        error: 'Unprocessable Content',
+        code: 'INVENTORY_ITEM_INACTIVE',
+        message: 'Inventory item must be active to receive stock.',
+        path: '/api/v1/inventory/receipts',
+        details: {},
+      },
+    });
+
+    expect(mapHttpError(error)).toEqual({
+      kind: 'unprocessable',
+      message: 'Inventory item must be active to receive stock.',
+      code: 'INVENTORY_ITEM_INACTIVE',
+      fieldErrors: {},
+    });
+  });
+
   it('should hide backend details for server errors', () => {
     const error = new HttpErrorResponse({
       status: 500,
-      statusText: 'Internal Server Error',
       error: {
         timestamp: '2026-08-31T23:30:00Z',
         status: 500,
@@ -137,9 +139,7 @@ describe('mapHttpError', () => {
       },
     });
 
-    const result = mapHttpError(error);
-
-    expect(result).toEqual({
+    expect(mapHttpError(error)).toEqual({
       kind: 'server',
       message: 'An unexpected server error occurred. Please try again.',
     });
