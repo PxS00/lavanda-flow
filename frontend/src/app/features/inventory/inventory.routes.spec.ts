@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 
 import { routes } from '../../app.routes';
 import { InventoryItemOperationsApiService } from './data-access/inventory-item-operations-api.service';
+import { FefoWithdrawalApiService } from './data-access/fefo-withdrawal-api.service';
 import { MovementHistoryApiService } from './data-access/movement-history-api.service';
 
 describe('inventory routes', () => {
@@ -47,6 +48,7 @@ describe('inventory routes', () => {
               of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }),
           },
         },
+        { provide: FefoWithdrawalApiService, useValue: { register: vi.fn() } },
       ],
     });
   });
