@@ -1,0 +1,55 @@
+<section class="selector" aria-labelledby="inventory-item-selector-heading">
+  <div class="selector-heading">
+    <div>
+      <h2 id="inventory-item-selector-heading">Inventory item</h2>
+      <p>Searches active catalog items only.</p>
+    </div>
+    @if (selected() !== null) {
+      <button mat-button type="button" [disabled]="disabled()" (click)="clear()">Clear</button>
+    }
+  </div>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Search inventory item</mat-label>
+    <input
+      matInput
+      type="search"
+      autocomplete="off"
+      [disabled]="disabled()"
+      [value]="query()"
+      (input)="search($event)"
+    />
+    <mat-hint>Results are limited to 10 active items</mat-hint>
+  </mat-form-field>
+
+  @if (selected(); as item) {
+    <p class="selected" aria-live="polite">
+      Selected: <strong>{{ item.name }}</strong> · Active · {{ unitLabel(item.unitOfMeasure) }}
+    </p>
+  }
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Searching active inventory items..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" [disabled]="disabled()" (click)="retry()">Try again</button>
+    }
+    @case ('loaded') {
+      @if (currentState.items.length === 0) {
+        <p class="empty-results">No active inventory items match this search.</p>
+      } @else {
+        <div class="results" aria-label="Active inventory item search results">
+          @for (item of currentState.items; track item.id) {
+            <button mat-stroked-button type="button" [disabled]="disabled()" (click)="choose(item)">
+              <span>{{ item.name }}</span>
+              <small>Active · {{ unitLabel(item.unitOfMeasure) }}</small>
+            </button>
+          }
+        </div>
+      }
+    }
+  }
+</section>

@@ -46,7 +46,14 @@
       >
         Suppliers
       </a>
-      <span mat-list-item>Receipts</span>
+      <a
+        mat-list-item
+        routerLink="/receipts"
+        routerLinkActive="active-link"
+        (click)="isHandset() && sidenav.close()"
+      >
+        Receipts
+      </a>
       <span mat-list-item>Withdrawals</span>
       <span mat-list-item>Alerts</span>
     </mat-nav-list>

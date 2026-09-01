@@ -1,5 +1,11 @@
 export type UiErrorKind =
-  'validation' | 'not-found' | 'conflict' | 'network' | 'server' | 'unknown';
+  | 'validation'
+  | 'not-found'
+  | 'conflict'
+  | 'unprocessable'
+  | 'network'
+  | 'server'
+  | 'unknown';
 
 export interface UiError {
   readonly kind: UiErrorKind;

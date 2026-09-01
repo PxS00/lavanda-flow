@@ -26,7 +26,18 @@
                 <h3>{{ overview.data.name }}</h3>
                 <p>{{ enumLabel(overview.data.category) }} · {{ enumLabel(overview.data.unitOfMeasure) }}</p>
               </div>
-              <strong>{{ overview.data.active ? 'Active' : 'Inactive' }}</strong>
+              <div class="item-actions">
+                <strong>{{ overview.data.active ? 'Active' : 'Inactive' }}</strong>
+                @if (overview.data.active) {
+                  <a
+                    mat-flat-button
+                    routerLink="/receipts"
+                    [queryParams]="{ inventoryItemId: overview.data.inventoryItemId }"
+                  >
+                    Receive stock
+                  </a>
+                }
+              </div>
             </header>
 
             <dl class="metric-grid">
