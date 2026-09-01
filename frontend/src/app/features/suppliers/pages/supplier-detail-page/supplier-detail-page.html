@@ -1,0 +1,40 @@
+<section class="detail-page" aria-labelledby="supplier-detail-heading">
+  <a mat-button routerLink="/suppliers">Back to suppliers</a>
+  <h1 id="supplier-detail-heading">Supplier details</h1>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Loading supplier..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Try again</button>
+    }
+    @case ('loaded') {
+      <header>
+        <h2>{{ currentState.supplier.name }}</h2>
+        <p>{{ currentState.supplier.active ? 'Active' : 'Inactive' }}</p>
+      </header>
+
+      <mat-card appearance="outlined">
+        <mat-card-content>
+          <dl>
+            <div>
+              <dt>Identifier</dt>
+              <dd>{{ currentState.supplier.identifier || 'Not provided' }}</dd>
+            </div>
+            <div>
+              <dt>Contact</dt>
+              <dd>{{ currentState.supplier.contact || 'Not provided' }}</dd>
+            </div>
+            <div class="notes">
+              <dt>Notes</dt>
+              <dd>{{ currentState.supplier.notes || 'No notes provided.' }}</dd>
+            </div>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</section>

@@ -27,4 +27,11 @@ describe('ApplicationShell', () => {
 
     expect(inventoryLink?.getAttribute('href')).toBe('/catalog');
   });
+
+  it('should link Suppliers navigation to the supplier workspace', () => {
+    const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+    const suppliersLink = links.find((link) => link.textContent?.trim() === 'Suppliers');
+
+    expect(suppliersLink?.getAttribute('href')).toBe('/suppliers');
+  });
 });

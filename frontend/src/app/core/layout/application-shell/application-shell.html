@@ -38,7 +38,14 @@
       >
         Inventory
       </a>
-      <span mat-list-item>Suppliers</span>
+      <a
+        mat-list-item
+        routerLink="/suppliers"
+        routerLinkActive="active-link"
+        (click)="isHandset() && sidenav.close()"
+      >
+        Suppliers
+      </a>
       <span mat-list-item>Receipts</span>
       <span mat-list-item>Withdrawals</span>
       <span mat-list-item>Alerts</span>
