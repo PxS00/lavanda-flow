@@ -1,0 +1,62 @@
+<section class="selector" aria-labelledby="supplier-selector-heading">
+  <div class="selector-heading">
+    <div>
+      <h2 id="supplier-selector-heading">Supplier <span>(optional)</span></h2>
+      <p>Searches active suppliers only.</p>
+    </div>
+    @if (selected() !== null) {
+      <button mat-button type="button" [disabled]="disabled()" (click)="clear()">Clear</button>
+    }
+  </div>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Search supplier</mat-label>
+    <input
+      matInput
+      type="search"
+      autocomplete="off"
+      [disabled]="disabled()"
+      [value]="query()"
+      (input)="search($event)"
+    />
+    <mat-hint>Leave unselected when the receipt has no supplier</mat-hint>
+  </mat-form-field>
+
+  @if (selected(); as supplier) {
+    <p class="selected" aria-live="polite">
+      Selected: <strong>{{ supplier.name }}</strong> · Active
+      @if (supplier.identifier) { · {{ supplier.identifier }} }
+    </p>
+  }
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Searching active suppliers..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" [disabled]="disabled()" (click)="retry()">Try again</button>
+    }
+    @case ('loaded') {
+      @if (currentState.suppliers.length === 0) {
+        <p class="empty-results">No active suppliers match this search.</p>
+      } @else {
+        <div class="results" role="list" aria-label="Active supplier search results">
+          @for (supplier of currentState.suppliers; track supplier.id) {
+            <button
+              mat-stroked-button
+              type="button"
+              role="listitem"
+              [disabled]="disabled()"
+              (click)="choose(supplier)"
+            >
+              <span>{{ supplier.name }}</span>
+              <small>Active @if (supplier.identifier) { · {{ supplier.identifier }} }</small>
+            </button>
+          }
+        </div>
+      }
+    }
+  }
+</section>

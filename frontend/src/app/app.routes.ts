@@ -33,6 +33,11 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/suppliers/suppliers.routes').then((m) => m.SUPPLIERS_ROUTES),
       },
+      {
+        path: 'receipts',
+        loadChildren: () =>
+          import('./features/receipts/receipts.routes').then((m) => m.RECEIPTS_ROUTES),
+      },
     ],
   },
 ];
