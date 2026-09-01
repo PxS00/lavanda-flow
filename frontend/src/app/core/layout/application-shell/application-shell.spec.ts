@@ -20,4 +20,11 @@ describe('ApplicationShell', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('should link Inventory navigation to the catalog workspace', () => {
+    const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
+    const inventoryLink = links.find((link) => link.textContent?.trim() === 'Inventory');
+
+    expect(inventoryLink?.getAttribute('href')).toBe('/catalog');
+  });
 });

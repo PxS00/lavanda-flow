@@ -18,6 +18,11 @@ export const routes: Routes = [
             (m) => m.DashboardPage,
           ),
       },
+      {
+        path: 'catalog',
+        loadChildren: () =>
+          import('./features/catalog/catalog.routes').then((m) => m.CATALOG_ROUTES),
+      },
     ],
   },
 ];
