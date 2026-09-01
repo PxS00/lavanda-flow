@@ -15,6 +15,9 @@
       <header>
         <h2>{{ currentState.item.name }}</h2>
         <p>{{ currentState.item.active ? 'Active' : 'Inactive' }}</p>
+        <a mat-flat-button [routerLink]="['/inventory/items', currentState.item.id]">
+          Open inventory operations
+        </a>
       </header>
 
       <mat-card appearance="outlined">
