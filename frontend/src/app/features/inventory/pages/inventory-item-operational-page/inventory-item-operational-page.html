@@ -1,0 +1,275 @@
+<section class="operational-page" aria-labelledby="operational-heading">
+  <header class="page-header">
+    <a mat-button routerLink="/catalog">Back to catalog</a>
+    <div>
+      <h1 id="operational-heading">Inventory operations</h1>
+      <p>Inspect stock, batches, minimum level, and immutable movement history.</p>
+    </div>
+  </header>
+
+  <section class="panel" aria-labelledby="overview-heading">
+    <h2 id="overview-heading">Overview</h2>
+    @let overview = overviewState();
+    @switch (overview.kind) {
+      @case ('loading') {
+        <app-loading-state message="Loading inventory overview..." />
+      }
+      @case ('error') {
+        <app-error-state [error]="overview.error" />
+        <button mat-stroked-button type="button" (click)="retryOverview()">Try again</button>
+      }
+      @case ('loaded') {
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <header class="item-identity">
+              <div>
+                <h3>{{ overview.data.name }}</h3>
+                <p>{{ enumLabel(overview.data.category) }} · {{ enumLabel(overview.data.unitOfMeasure) }}</p>
+              </div>
+              <strong>{{ overview.data.active ? 'Active' : 'Inactive' }}</strong>
+            </header>
+
+            <dl class="metric-grid">
+              <div>
+                <dt>Physical / current quantity</dt>
+                <dd>{{ overview.data.totalCurrentQuantity | number: '1.0-6' }}</dd>
+              </div>
+              <div>
+                <dt>Available quantity</dt>
+                <dd>{{ overview.data.availableQuantity | number: '1.0-6' }}</dd>
+              </div>
+              <div>
+                <dt>Stock status</dt>
+                <dd>{{ stockStatusLabel(overview.data) }}</dd>
+              </div>
+              <div>
+                <dt>Minimum quantity</dt>
+                <dd>
+                  @if (overview.data.minimumQuantity !== null) {
+                    {{ overview.data.minimumQuantity | number: '1.0-6' }}
+                  } @else {
+                    Not configured
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>Positive-balance batches</dt>
+                <dd>{{ overview.data.nonZeroBatchCount }}</dd>
+              </div>
+              <div>
+                <dt>Nearest expiration</dt>
+                <dd>{{ overview.data.nearestExpiration || 'None' }}</dd>
+              </div>
+              <div>
+                <dt>Expired batches</dt>
+                <dd>{{ overview.data.expiredBatchCount }}</dd>
+              </div>
+              <div>
+                <dt>Expiring soon</dt>
+                <dd>{{ overview.data.expiringSoonBatchCount }}</dd>
+              </div>
+            </dl>
+
+            <p class="semantics-note">
+              As of {{ overview.data.asOfDate }} · expiration window {{ overview.data.expirationWindowDays }} days.
+              Physical stock includes expired positive balances; available stock follows backend availability semantics.
+            </p>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+  </section>
+
+  <section class="panel" aria-labelledby="batches-heading">
+    <h2 id="batches-heading">Batches</h2>
+    @let batches = batchState();
+    @switch (batches.kind) {
+      @case ('loading') {
+        <app-loading-state message="Loading batches..." />
+      }
+      @case ('error') {
+        <app-error-state [error]="batches.error" />
+        <button mat-stroked-button type="button" (click)="retryBatches()">Try again</button>
+      }
+      @case ('loaded') {
+        @if (batches.data.batches.length === 0) {
+          <app-empty-state title="No batches found" message="This item has no persisted inventory batches." />
+        } @else {
+          <div class="table-scroll">
+            <table>
+              <caption>Batch inventory as of {{ batches.data.asOfDate }}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Status</th>
+                  <th scope="col">Lot code</th>
+                  <th scope="col">Supplier ID</th>
+                  <th scope="col">Received</th>
+                  <th scope="col">Expires</th>
+                  <th scope="col">Initial quantity</th>
+                  <th scope="col">Current quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (batch of batches.data.batches; track batch.batchId) {
+                  <tr>
+                    <td><strong>{{ batchStatusLabel(batch.status) }}</strong></td>
+                    <td>{{ batch.lotCode || '—' }}</td>
+                    <td>{{ batch.supplierId || '—' }}</td>
+                    <td>{{ batch.receivedAt }}</td>
+                    <td>{{ batch.expiresAt || '—' }}</td>
+                    <td>{{ batch.initialQuantity | number: '1.0-6' }}</td>
+                    <td>{{ batch.currentQuantity | number: '1.0-6' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    }
+  </section>
+
+  <section class="panel minimum-panel" aria-labelledby="minimum-heading">
+    <h2 id="minimum-heading">Minimum stock level</h2>
+    @let minimum = minimumState();
+    @switch (minimum.kind) {
+      @case ('loading') {
+        <app-loading-state message="Loading minimum stock level..." />
+      }
+      @case ('error') {
+        <app-error-state [error]="minimum.error" />
+        <button mat-stroked-button type="button" (click)="retryMinimumStock()">Try again</button>
+      }
+      @case ('loaded') {
+        <p class="current-minimum">
+          @if (minimum.data !== null) {
+            Current minimum: <strong>{{ minimum.data.minimumQuantity | number: '1.0-6' }}</strong>
+          } @else {
+            No minimum stock level configured.
+          }
+        </p>
+
+        @if (minimumGlobalActionError(); as error) {
+          <app-error-state [error]="error" />
+        }
+        @if (minimumNotice(); as notice) {
+          <p class="notice" aria-live="polite">{{ notice }}</p>
+        }
+
+        <form class="minimum-form" (submit)="saveMinimumStock($event)" novalidate>
+          <mat-form-field appearance="outline">
+            <mat-label>Minimum quantity</mat-label>
+            <input
+              matInput
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              [formField]="minimumStockForm.minimumQuantity"
+              [attr.aria-describedby]="backendMinimumError() ? 'minimum-backend-error' : null"
+            />
+            <mat-hint>Positive quantity, up to 6 decimal places</mat-hint>
+            @if (
+              minimumStockForm.minimumQuantity().touched() &&
+              minimumStockForm.minimumQuantity().invalid()
+            ) {
+              <mat-error>{{ minimumStockForm.minimumQuantity().errors()[0].message }}</mat-error>
+            }
+          </mat-form-field>
+          @if (backendMinimumError(); as error) {
+            <p id="minimum-backend-error" class="field-error" role="alert">{{ error }}</p>
+          }
+
+          <div class="minimum-actions">
+            <button mat-flat-button type="submit" [disabled]="isSavingMinimum() || isRemovingMinimum()">
+              {{ isSavingMinimum() ? 'Saving...' : minimum.data === null ? 'Set minimum' : 'Update minimum' }}
+            </button>
+
+            @if (minimum.data !== null && !confirmingMinimumRemoval()) {
+              <button
+                mat-button
+                type="button"
+                [disabled]="isSavingMinimum() || isRemovingMinimum()"
+                (click)="requestMinimumRemoval()"
+              >
+                Remove minimum
+              </button>
+            }
+          </div>
+        </form>
+
+        @if (minimum.data !== null && confirmingMinimumRemoval()) {
+          <div class="removal-confirmation" role="group" aria-label="Confirm minimum stock removal">
+            <p>Remove this minimum stock level?</p>
+            <button
+              mat-flat-button
+              type="button"
+              [disabled]="isRemovingMinimum()"
+              (click)="confirmMinimumRemoval()"
+            >
+              {{ isRemovingMinimum() ? 'Removing...' : 'Confirm removal' }}
+            </button>
+            <button mat-button type="button" [disabled]="isRemovingMinimum()" (click)="cancelMinimumRemoval()">
+              Cancel
+            </button>
+          </div>
+        }
+      }
+    }
+  </section>
+
+  <section class="panel" aria-labelledby="movements-heading">
+    <h2 id="movements-heading">Movement history</h2>
+    @let movements = movementState();
+    @switch (movements.kind) {
+      @case ('loading') {
+        <app-loading-state message="Loading movement history..." />
+      }
+      @case ('error') {
+        <app-error-state [error]="movements.error" />
+        <button mat-stroked-button type="button" (click)="retryMovements()">Try again</button>
+      }
+      @case ('loaded') {
+        @if (movements.data.content.length === 0) {
+          <app-empty-state title="No movements found" message="No immutable stock movements were recorded for this item." />
+        } @else {
+          <div class="table-scroll">
+            <table>
+              <caption>Immutable movement history, newest first</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Occurred at</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Quantity</th>
+                  <th scope="col">Lot code</th>
+                  <th scope="col">Batch ID</th>
+                  <th scope="col">Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (movement of movements.data.content; track movement.movementId) {
+                  <tr>
+                    <td>{{ movement.occurredAt }}</td>
+                    <td>{{ movementTypeLabel(movement.type) }}</td>
+                    <td>{{ movement.quantity | number: '1.0-6' }} {{ enumLabel(movement.unitOfMeasure) }}</td>
+                    <td>{{ movement.lotCode || '—' }}</td>
+                    <td>{{ movement.batchId }}</td>
+                    <td>{{ movement.reason || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <mat-paginator
+            aria-label="Inventory movement history pages"
+            [length]="movements.data.totalElements"
+            [pageIndex]="movements.data.page"
+            [pageSize]="movements.data.size"
+            [pageSizeOptions]="[20, 50, 100]"
+            (page)="changeMovementPage($event)"
+          />
+        }
+      }
+    }
+  </section>
+</section>

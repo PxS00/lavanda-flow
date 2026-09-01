@@ -51,13 +51,18 @@ describe('InventoryItemDetailPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Loading inventory item...');
   });
 
-  it('should render the returned inventory item', () => {
+  it('should render the returned inventory item with an operational workspace link', () => {
     response.next(item);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Lavender Essence');
     expect(fixture.nativeElement.textContent).toContain('Floral raw material');
     expect(fixture.nativeElement.textContent).toContain('Milliliter');
+
+    const operationLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find(
+      (link) => (link as HTMLAnchorElement).textContent?.includes('Open inventory operations'),
+    ) as HTMLAnchorElement | undefined;
+    expect(operationLink?.getAttribute('href')).toBe(`/inventory/items/${inventoryItemId}`);
   });
 
   it('should render the mapped not-found state', () => {
