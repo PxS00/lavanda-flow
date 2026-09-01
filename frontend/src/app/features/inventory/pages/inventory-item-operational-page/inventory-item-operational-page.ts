@@ -37,12 +37,21 @@ import {
   MovementHistoryPageDto,
 } from '../../data-access/inventory-operations.dto';
 import { MovementHistoryApiService } from '../../data-access/movement-history-api.service';
+import { FefoWithdrawalPanel } from '../../ui/fefo-withdrawal-panel/fefo-withdrawal-panel';
 
 const DEFAULT_MOVEMENT_PAGE_SIZE = 20;
 const MINIMUM_QUANTITY_PATTERN = /^\d+(?:\.\d{1,6})?$/;
 
 interface MinimumStockFormModel {
   readonly minimumQuantity: string;
+}
+
+interface WithdrawalContext {
+  readonly inventoryItemId: string;
+  readonly itemName: string;
+  readonly unitOfMeasure: InventoryItemOverviewDto['unitOfMeasure'];
+  readonly availableQuantity: number;
+  readonly active: boolean;
 }
 
 type PanelState<T> =
@@ -64,6 +73,7 @@ type PanelState<T> =
     MatInputModule,
     MatPaginatorModule,
     RouterLink,
+    FefoWithdrawalPanel,
   ],
   templateUrl: './inventory-item-operational-page.html',
   styleUrl: './inventory-item-operational-page.scss',
@@ -80,6 +90,7 @@ export class InventoryItemOperationalPage {
   private readonly currentMovementQuery = signal<InventoryItemMovementHistoryQuery | null>(null);
 
   readonly inventoryItemId = signal<string | null>(null);
+  protected readonly withdrawalContext = signal<WithdrawalContext | null>(null);
   readonly minimumStockModel = signal<MinimumStockFormModel>({ minimumQuantity: '' });
   protected readonly minimumStockForm = form(this.minimumStockModel, (minimum) => {
     required(minimum.minimumQuantity, { message: 'Minimum quantity is required.' });
@@ -184,6 +195,12 @@ export class InventoryItemOperationalPage {
     this.loadMovements({ ...query, page: event.pageIndex, size: event.pageSize });
   }
 
+  protected refreshAfterWithdrawal(): void {
+    this.retryOverview();
+    this.retryBatches();
+    this.retryMovements();
+  }
+
   protected saveMinimumStock(event: SubmitEvent): void {
     event.preventDefault();
     if (this.isSavingMinimum() || this.isRemovingMinimum()) {
@@ -280,6 +297,7 @@ export class InventoryItemOperationalPage {
 
   private loadInventoryItem(inventoryItemId: string): void {
     this.inventoryItemId.set(inventoryItemId);
+    this.withdrawalContext.set(null);
     this.minimumStockForm().reset({ minimumQuantity: '' });
     this.minimumActionError.set(null);
     this.minimumNotice.set(null);
@@ -322,7 +340,18 @@ export class InventoryItemOperationalPage {
         ),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((state) => this.overviewState.set(state));
+      .subscribe((state) => {
+        this.overviewState.set(state);
+        if (state.kind === 'loaded') {
+          this.withdrawalContext.set({
+            inventoryItemId: state.data.inventoryItemId,
+            itemName: state.data.name,
+            unitOfMeasure: state.data.unitOfMeasure,
+            availableQuantity: state.data.availableQuantity,
+            active: state.data.active,
+          });
+        }
+      });
   }
 
   private bindBatchRequests(): void {

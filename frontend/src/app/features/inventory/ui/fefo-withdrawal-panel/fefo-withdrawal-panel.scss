@@ -1,0 +1,44 @@
+:host { display: block; }
+
+.withdrawal-panel,
+.withdrawal-panel header,
+.withdrawal-form,
+.summary-list,
+.actions { display: grid; gap: 12px; }
+
+.withdrawal-panel h2,
+.withdrawal-panel h3,
+.withdrawal-panel h4,
+.withdrawal-panel p,
+.summary-list { margin: 0; }
+
+.withdrawal-panel header p,
+dt,
+caption { color: var(--mat-sys-on-surface-variant); }
+
+.withdrawal-form { max-width: 760px; }
+
+.summary-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+
+.warning { font-weight: 600; }
+
+.field-error { margin: -8px 0 8px; color: var(--mat-sys-error); font: var(--mat-sys-body-small); }
+
+.actions { display: flex; flex-wrap: wrap; align-items: center; }
+
+.table-scroll { max-width: 100%; overflow-x: auto; }
+
+table { width: 100%; min-width: 720px; border-collapse: collapse; }
+
+caption { padding: 0 0 10px; text-align: left; font: var(--mat-sys-body-small); }
+
+th,
+td { padding: 12px; border-bottom: 1px solid var(--mat-sys-outline-variant); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+
+th { font: var(--mat-sys-label-large); }
+
+@media (max-width: 599px) {
+  .summary-list { grid-template-columns: 1fr; }
+}

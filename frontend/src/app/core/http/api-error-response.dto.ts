@@ -5,5 +5,5 @@ export interface ApiErrorResponse {
   readonly code: string;
   readonly message: string;
   readonly path: string;
-  readonly details: Record<string, string>;
+  readonly details?: Record<string, string> | null;
 }

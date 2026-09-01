@@ -91,6 +91,17 @@
     }
   </section>
 
+  @if (withdrawalContext(); as withdrawal) {
+    <app-fefo-withdrawal-panel
+      [inventoryItemId]="withdrawal.inventoryItemId"
+      [itemName]="withdrawal.itemName"
+      [unitOfMeasure]="withdrawal.unitOfMeasure"
+      [availableQuantity]="withdrawal.availableQuantity"
+      [active]="withdrawal.active"
+      (withdrawalCompleted)="refreshAfterWithdrawal()"
+    />
+  }
+
   <section class="panel" aria-labelledby="batches-heading">
     <h2 id="batches-heading">Batches</h2>
     @let batches = batchState();
