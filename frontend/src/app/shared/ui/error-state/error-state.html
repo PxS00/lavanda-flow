@@ -1,0 +1,20 @@
+<section
+  class="error-state"
+  role="alert"
+  aria-live="assertive"
+>
+  <h2>Something went wrong</h2>
+
+  <p>{{ error().message }}</p>
+
+  @if (fieldErrors().length > 0) {
+    <ul>
+      @for (fieldError of fieldErrors(); track fieldError[0]) {
+        <li>
+          <strong>{{ fieldError[0] }}:</strong>
+          {{ fieldError[1] }}
+        </li>
+      }
+    </ul>
+  }
+</section>
