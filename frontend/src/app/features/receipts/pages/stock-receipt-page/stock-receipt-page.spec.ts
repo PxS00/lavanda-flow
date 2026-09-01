@@ -91,7 +91,7 @@ describe('StockReceiptPage', () => {
     fixture.detectChanges();
   });
 
-  it('should submit one valid receipt and render the committed identifiers', () => {
+  it('should submit one valid receipt and lock the completed transaction behind an explicit new-receipt action', () => {
     selectItem();
     selectSupplier();
     setValidForm();
@@ -115,10 +115,18 @@ describe('StockReceiptPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Receipt registered');
     expect(fixture.nativeElement.textContent).toContain(receipt.batchId);
     expect(fixture.nativeElement.textContent).toContain(receipt.movementId);
+    expect(findButton('Register receipt')).toBeUndefined();
+
     const operationsLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find(
       (link) => (link as HTMLAnchorElement).textContent?.includes('Open item operations'),
     ) as HTMLAnchorElement | undefined;
     expect(operationsLink?.getAttribute('href')).toBe(`/inventory/items/${item.id}`);
+
+    findButton('Register another receipt')?.click();
+    fixture.detectChanges();
+
+    expect(findButton('Register receipt')).toBeDefined();
+    expect(fixture.componentInstance.receiptModel().receivedAt).toBe('2026-09-01');
   });
 
   it('should submit without a supplier and normalize blank optional values to null', () => {
@@ -235,11 +243,14 @@ describe('StockReceiptPage', () => {
   }
 
   function submit(): void {
-    const button = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
-      (candidate) => (candidate as HTMLButtonElement).textContent?.includes('Register receipt'),
-    ) as HTMLButtonElement | undefined;
-    button?.click();
+    findButton('Register receipt')?.click();
     fixture.detectChanges();
+  }
+
+  function findButton(text: string): HTMLButtonElement | undefined {
+    return Array.from(fixture.nativeElement.querySelectorAll('button')).find(
+      (candidate) => (candidate as HTMLButtonElement).textContent?.includes(text),
+    ) as HTMLButtonElement | undefined;
   }
 
   function apiError(status: number, code: string, message: string): HttpErrorResponse {
@@ -248,7 +259,8 @@ describe('StockReceiptPage', () => {
       error: {
         timestamp: '2026-09-01T20:30:00Z',
         status,
-        error: status === 400 ? 'Bad Request' : status === 404 ? 'Not Found' : 'Unprocessable Content',
+        error:
+          status === 400 ? 'Bad Request' : status === 404 ? 'Not Found' : 'Unprocessable Content',
         code,
         message,
         path: '/api/v1/inventory/receipts',
