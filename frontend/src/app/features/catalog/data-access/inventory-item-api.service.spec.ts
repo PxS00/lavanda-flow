@@ -52,9 +52,7 @@ describe('InventoryItemApiService', () => {
   it('should request the paginated inventory-item list with page and size', () => {
     service.search({ page: 2, size: 10 }).subscribe();
 
-    const request = httpTesting.expectOne(
-      `${inventoryItemsUrl}?page=2&size=10`,
-    );
+    const request = httpTesting.expectOne(`${inventoryItemsUrl}?page=2&size=10`);
 
     expect(request.request.method).toBe('GET');
     request.flush(page);
@@ -63,9 +61,7 @@ describe('InventoryItemApiService', () => {
   it('should trim a name filter before sending it', () => {
     service.search({ name: '  lavender  ', page: 0, size: 20 }).subscribe();
 
-    const request = httpTesting.expectOne(
-      `${inventoryItemsUrl}?page=0&size=20&name=lavender`,
-    );
+    const request = httpTesting.expectOne(`${inventoryItemsUrl}?page=0&size=20&name=lavender`);
 
     request.flush(page);
   });
@@ -73,9 +69,7 @@ describe('InventoryItemApiService', () => {
   it('should omit a blank name filter', () => {
     service.search({ name: '   ', page: 0, size: 20 }).subscribe();
 
-    const request = httpTesting.expectOne(
-      `${inventoryItemsUrl}?page=0&size=20`,
-    );
+    const request = httpTesting.expectOne(`${inventoryItemsUrl}?page=0&size=20`);
 
     expect(request.request.params.has('name')).toBe(false);
     request.flush(page);
@@ -94,9 +88,7 @@ describe('InventoryItemApiService', () => {
   it('should include an active false filter', () => {
     service.search({ active: false, page: 0, size: 20 }).subscribe();
 
-    const request = httpTesting.expectOne(
-      `${inventoryItemsUrl}?page=0&size=20&active=false`,
-    );
+    const request = httpTesting.expectOne(`${inventoryItemsUrl}?page=0&size=20&active=false`);
 
     request.flush(page);
   });
@@ -106,9 +98,7 @@ describe('InventoryItemApiService', () => {
       .search({ name: undefined, category: undefined, active: undefined, page: 0, size: 20 })
       .subscribe();
 
-    const request = httpTesting.expectOne(
-      `${inventoryItemsUrl}?page=0&size=20`,
-    );
+    const request = httpTesting.expectOne(`${inventoryItemsUrl}?page=0&size=20`);
 
     expect(request.request.params.keys()).toEqual(['page', 'size']);
     request.flush(page);

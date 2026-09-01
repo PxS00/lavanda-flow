@@ -1,23 +1,29 @@
-export type InventoryItemCategory =
-  | 'ESSENCE'
-  | 'CHEMICAL_INPUT'
-  | 'BASE'
-  | 'ALCOHOL'
-  | 'COLORANT'
-  | 'FIXATIVE'
-  | 'BOTTLE'
-  | 'VALVE'
-  | 'CAP'
-  | 'LABEL'
-  | 'PACKAGING'
-  | 'OTHER';
+export const INVENTORY_ITEM_CATEGORIES = [
+  'ESSENCE',
+  'CHEMICAL_INPUT',
+  'BASE',
+  'ALCOHOL',
+  'COLORANT',
+  'FIXATIVE',
+  'BOTTLE',
+  'VALVE',
+  'CAP',
+  'LABEL',
+  'PACKAGING',
+  'OTHER',
+] as const;
 
-export type InventoryItemUnitOfMeasure =
-  | 'MILLILITER'
-  | 'LITER'
-  | 'GRAM'
-  | 'KILOGRAM'
-  | 'UNIT';
+export type InventoryItemCategory = (typeof INVENTORY_ITEM_CATEGORIES)[number];
+
+export const INVENTORY_ITEM_UNITS_OF_MEASURE = [
+  'MILLILITER',
+  'LITER',
+  'GRAM',
+  'KILOGRAM',
+  'UNIT',
+] as const;
+
+export type InventoryItemUnitOfMeasure = (typeof INVENTORY_ITEM_UNITS_OF_MEASURE)[number];
 
 /** Transport representation of an inventory item returned by the catalog API. */
 export interface InventoryItemDto {
