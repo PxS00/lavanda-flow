@@ -1,16 +1,16 @@
 <section class="selector" aria-labelledby="supplier-selector-heading">
   <div class="selector-heading">
     <div>
-      <h2 id="supplier-selector-heading">Supplier <span>(optional)</span></h2>
-      <p>Searches active suppliers only.</p>
+      <h2 id="supplier-selector-heading">Fornecedor <span>(opcional)</span></h2>
+      <p>Busca apenas fornecedores ativos.</p>
     </div>
     @if (selected() !== null) {
-      <button mat-button type="button" [disabled]="disabled()" (click)="clear()">Clear</button>
+      <button mat-button type="button" [disabled]="disabled()" (click)="clear()">Limpar</button>
     }
   </div>
 
   <mat-form-field appearance="outline">
-    <mat-label>Search supplier</mat-label>
+    <mat-label>Buscar fornecedor</mat-label>
     <input
       matInput
       type="search"
@@ -19,12 +19,12 @@
       [value]="query()"
       (input)="search($event)"
     />
-    <mat-hint>Leave unselected when the receipt has no supplier</mat-hint>
+    <mat-hint>Deixe sem seleção quando a entrada não tiver fornecedor</mat-hint>
   </mat-form-field>
 
   @if (selected(); as supplier) {
     <p class="selected" aria-live="polite">
-      Selected: <strong>{{ supplier.name }}</strong> · Active
+      Selecionado: <strong>{{ supplier.name }}</strong> · Ativo
       @if (supplier.identifier) { · {{ supplier.identifier }} }
     </p>
   }
@@ -32,21 +32,21 @@
   @let currentState = state();
   @switch (currentState.kind) {
     @case ('loading') {
-      <app-loading-state message="Searching active suppliers..." />
+      <app-loading-state message="Buscando fornecedores ativos..." />
     }
     @case ('error') {
       <app-error-state [error]="currentState.error" />
-      <button mat-stroked-button type="button" [disabled]="disabled()" (click)="retry()">Try again</button>
+      <button mat-stroked-button type="button" [disabled]="disabled()" (click)="retry()">Tentar novamente</button>
     }
     @case ('loaded') {
       @if (currentState.suppliers.length === 0) {
-        <p class="empty-results">No active suppliers match this search.</p>
+        <p class="empty-results">Nenhum fornecedor ativo corresponde à busca.</p>
       } @else {
-        <div class="results" aria-label="Active supplier search results">
+        <div class="results" aria-label="Resultados da busca de fornecedores ativos">
           @for (supplier of currentState.suppliers; track supplier.id) {
             <button mat-stroked-button type="button" [disabled]="disabled()" (click)="choose(supplier)">
               <span>{{ supplier.name }}</span>
-              <small>Active @if (supplier.identifier) { · {{ supplier.identifier }} }</small>
+              <small>Ativo @if (supplier.identifier) { · {{ supplier.identifier }} }</small>
             </button>
           }
         </div>

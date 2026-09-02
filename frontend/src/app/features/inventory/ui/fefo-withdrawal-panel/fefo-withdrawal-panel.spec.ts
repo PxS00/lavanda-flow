@@ -49,18 +49,15 @@ describe('FefoWithdrawalPanel', () => {
   });
 
   it.each([
-    ['', 'Quantity is required.'],
-    ['0', 'positive quantity'],
-    ['-1', 'positive quantity'],
-    ['1e3', 'positive quantity'],
-    ['10000000000000', 'at most 13 integer digits'],
-    ['1.1234567', 'up to 6 decimal places'],
-    ['9007199254740.000001', 'cannot be represented safely'],
-    ['9999999999999.999999', 'cannot be represented safely'],
+    ['', 'Quantidade é obrigatória.'],
+    ['0', 'quantidade positiva'], ['-1', 'quantidade positiva'], ['1e3', 'quantidade positiva'],
+    ['10000000000000', 'no máximo 13 dígitos inteiros'], ['1.1234567', 'até 6 casas decimais'],
+    ['9007199254740.000001', 'não pode ser representada com segurança'],
+    ['9999999999999.999999', 'não pode ser representada com segurança'],
   ])('should reject invalid quantity %s before confirmation', (quantity, message) => {
     setForm(quantity, '');
 
-    click('Review withdrawal');
+    click('Revisar saída');
 
     expect(register).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain(message);
@@ -76,8 +73,7 @@ describe('FefoWithdrawalPanel', () => {
   ])('should accept a JSON-safe decimal quantity %s', (quantity, expectedQuantity) => {
     setForm(quantity, 'Production');
 
-    click('Review withdrawal');
-    click('Confirm withdrawal');
+    click('Revisar saída'); click('Confirmar saída');
 
     expect(register).toHaveBeenCalledWith(inventoryItemId, {
       quantity: expectedQuantity,
@@ -88,41 +84,41 @@ describe('FefoWithdrawalPanel', () => {
   it('should reject a reason longer than 255 characters', () => {
     setForm('1', 'a'.repeat(256));
 
-    click('Review withdrawal');
+    click('Revisar saída');
 
     expect(register).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('Reason must be 255 characters or fewer.');
+    expect(fixture.nativeElement.textContent).toContain('Motivo deve ter no máximo 255 caracteres.');
   });
 
   it('should require explicit confirmation and normalize a whitespace reason to null', () => {
     setForm('1.000001', '   ');
 
-    click('Review withdrawal');
+    click('Revisar saída');
 
     expect(register).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('Confirm stock withdrawal');
+    expect(fixture.nativeElement.textContent).toContain('Confirmar saída de estoque');
 
-    click('Confirm withdrawal');
+    click('Confirmar saída');
 
     expect(register).toHaveBeenCalledWith(inventoryItemId, { quantity: 1.000001, reason: null });
   });
 
   it('should return from confirmation to editing without posting', () => {
     setForm('25.500000', 'Production');
-    click('Review withdrawal');
+    click('Revisar saída');
 
-    click('Back to editing');
+    click('Voltar à edição');
 
     expect(register).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('Review withdrawal');
+    expect(fixture.nativeElement.textContent).toContain('Revisar saída');
   });
 
   it('should not present an enabled withdrawal action for a known inactive item', () => {
     fixture.componentRef.setInput('active', false);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('inactive');
-    expect(findButton('Review withdrawal')).toBeUndefined();
+    expect(fixture.nativeElement.textContent).toContain('inativo');
+    expect(findButton('Revisar saída')).toBeUndefined();
   });
 
   it('should lock the transaction after an inactive backend response and reset the lock for another item', () => {
@@ -133,19 +129,18 @@ describe('FefoWithdrawalPanel', () => {
     );
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Inventory item is inactive: item-a');
-    expect(fixture.nativeElement.textContent).toContain('Backend code: INACTIVE_INVENTORY_ITEM');
-    expect(findButton('Confirm withdrawal')).toBeUndefined();
+    expect(fixture.nativeElement.textContent).toContain('Este item de estoque está inativo.');
+    expect(findButton('Confirmar saída')).toBeUndefined();
     (fixture.componentInstance as unknown as { confirmWithdrawal(): void }).confirmWithdrawal();
     expect(register).toHaveBeenCalledTimes(1);
-    expect(fixture.nativeElement.textContent).not.toContain('Withdrawal committed');
+    expect(fixture.nativeElement.textContent).not.toContain('Saída registrada');
 
     fixture.componentRef.setInput('inventoryItemId', '5184d508-35eb-42de-a2a0-44c4f6c9b9ae');
     fixture.componentRef.setInput('itemName', 'Lavender Base');
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Lavender Base');
-    expect(fixture.nativeElement.textContent).toContain('Review withdrawal');
+    expect(fixture.nativeElement.textContent).toContain('Revisar saída');
     expect(fixture.nativeElement.textContent).not.toContain('Inventory item is inactive: item-a');
   });
 
@@ -161,24 +156,22 @@ describe('FefoWithdrawalPanel', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Lavender Base');
-    expect(fixture.nativeElement.textContent).toContain('Review withdrawal');
+    expect(fixture.nativeElement.textContent).toContain('Revisar saída');
     expect(fixture.nativeElement.textContent).not.toContain('Inventory item is inactive: item-a');
   });
 
   it('should allow a locally valid quantity above displayed available stock to reach the backend', () => {
     setForm('3', 'Production');
-    click('Review withdrawal');
-    click('Confirm withdrawal');
+    click('Revisar saída'); click('Confirmar saída');
 
     expect(register).toHaveBeenCalledWith(inventoryItemId, { quantity: 3, reason: 'Production' });
-    expect(fixture.nativeElement.textContent).toContain('Available stock: 2 Milliliter');
+    expect(fixture.nativeElement.textContent).toContain('Estoque disponível: 2 Mililitro');
     expect(completed).not.toHaveBeenCalled();
   });
 
   it('should submit exactly once while a request is in flight', () => {
     setForm('25.5', 'Production');
-    click('Review withdrawal');
-    click('Confirm withdrawal');
+    click('Revisar saída'); click('Confirmar saída');
     (fixture.componentInstance as unknown as { confirmWithdrawal(): void }).confirmWithdrawal();
 
     expect(register).toHaveBeenCalledTimes(1);
@@ -186,27 +179,26 @@ describe('FefoWithdrawalPanel', () => {
 
   it('should render one committed allocation and require an explicit new transaction', () => {
     setForm('25.5', 'Production');
-    click('Review withdrawal');
-    click('Confirm withdrawal');
+    click('Revisar saída'); click('Confirmar saída');
     response.next(singleAllocation);
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
     expect(completed).toHaveBeenCalledTimes(1);
-    expect(text).toContain('Withdrawal committed');
+    expect(text).toContain('Saída registrada');
     expect(text).toContain(singleAllocation.allocations[0].batchId);
     expect(text).toContain(singleAllocation.allocations[0].movementId);
-    expect(findButton('Confirm withdrawal')).toBeUndefined();
+    expect(findButton('Confirmar saída')).toBeUndefined();
 
-    click('Start another withdrawal');
+    click('Registrar outra saída');
 
-    expect(fixture.nativeElement.textContent).toContain('Review withdrawal');
+    expect(fixture.nativeElement.textContent).toContain('Revisar saída');
   });
 
   it('should render every committed allocation in a multi-batch result', () => {
     setForm('25.5', 'Production');
-    click('Review withdrawal');
-    click('Confirm withdrawal');
+    click('Revisar saída');
+    click('Confirmar saída');
     response.next({
       ...singleAllocation,
       allocations: [
@@ -234,8 +226,8 @@ describe('FefoWithdrawalPanel', () => {
     response.error(apiError(status, code, message, details));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain(message);
-    expect(fixture.nativeElement.textContent).not.toContain('Withdrawal committed');
+    expect(fixture.nativeElement.textContent).toContain(code === 'VALIDATION_ERROR' ? 'Revise os dados informados.' : code === 'INVENTORY_ITEM_NOT_FOUND' ? 'Item de estoque não encontrado.' : 'Este item de estoque está inativo.');
+    expect(fixture.nativeElement.textContent).not.toContain('Saída registrada');
   });
 
   it('should return backend validation field errors to the editable controls', () => {
@@ -244,15 +236,15 @@ describe('FefoWithdrawalPanel', () => {
     response.error(apiError(400, 'VALIDATION_ERROR', 'Request validation failed', { quantity: 'must be positive' }));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Review withdrawal');
-    expect(fixture.nativeElement.textContent).toContain('must be positive');
-    expect(findButton('Confirm withdrawal')).toBeUndefined();
+    expect(fixture.nativeElement.textContent).toContain('Revisar saída');
+    expect(fixture.nativeElement.textContent).toContain('Verifique o valor informado.');
+    expect(findButton('Confirmar saída')).toBeUndefined();
   });
 
   it('should show insufficient eligible stock details without changing the requested quantity', () => {
     setForm('80', 'Production');
-    click('Review withdrawal');
-    click('Confirm withdrawal');
+    click('Revisar saída');
+    click('Confirmar saída');
 
     response.error(
       apiError(422, 'INSUFFICIENT_ELIGIBLE_STOCK', 'Insufficient eligible stock for inventory item 123', {
@@ -262,10 +254,10 @@ describe('FefoWithdrawalPanel', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('No partial withdrawal was committed.');
-    expect(text).toContain('55.000000 Milliliter');
-    expect(text).toContain('80 Milliliter');
-    expect(text).not.toContain('Withdrawal committed');
+    expect(text).toContain('Nenhuma saída parcial foi registrada.');
+    expect(text).toContain('55.000000 Mililitro');
+    expect(text).toContain('80 Mililitro');
+    expect(text).not.toContain('Saída registrada');
   });
 
   function setForm(quantity: string, reason: string): void {
@@ -275,8 +267,7 @@ describe('FefoWithdrawalPanel', () => {
 
   function submitValidWithdrawal(): void {
     setForm('25.5', 'Production');
-    click('Review withdrawal');
-    click('Confirm withdrawal');
+    click('Revisar saída'); click('Confirmar saída');
   }
 
   function click(label: string): void {

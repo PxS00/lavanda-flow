@@ -112,13 +112,13 @@ describe('StockReceiptPage', () => {
     response.next(receipt);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Receipt registered');
+    expect(fixture.nativeElement.textContent).toContain('Entrada cadastrada');
     expect(fixture.nativeElement.textContent).toContain(receipt.batchId);
     expect(fixture.nativeElement.textContent).toContain(receipt.movementId);
-    expect(findButton('Register receipt')).toBeUndefined();
+    expect(findButton('Cadastrar entrada')).toBeUndefined();
 
     const operationsLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find(
-      (link) => (link as HTMLAnchorElement).textContent?.includes('Open item operations'),
+      (link) => (link as HTMLAnchorElement).textContent?.includes('Abrir operações do item'),
     ) as HTMLAnchorElement | undefined;
     expect(operationsLink?.getAttribute('href')).toBe(`/inventory/items/${item.id}`);
   });
@@ -162,8 +162,8 @@ describe('StockReceiptPage', () => {
     fixture.detectChanges();
 
     expect(register).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('positive quantity');
-    expect(fixture.nativeElement.textContent).toContain('Received date is required.');
+    expect(fixture.nativeElement.textContent).toContain('quantidade positiva');
+    expect(fixture.nativeElement.textContent).toContain('Data de entrada é obrigatória.');
   });
 
   it('should not impose a client-side ordering rule on expiration and received dates', () => {
@@ -208,7 +208,9 @@ describe('StockReceiptPage', () => {
     response.error(apiError(status, code, message));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain(message);
+    expect(fixture.nativeElement.textContent).toContain(
+      status === 400 ? 'Revise os dados informados.' : status === 404 ? 'Fornecedor não encontrado.' : 'Não foi possível concluir a operação no estado atual.',
+    );
   });
 
   function selectItem(): void {
@@ -237,7 +239,7 @@ describe('StockReceiptPage', () => {
   }
 
   function submit(): void {
-    findButton('Register receipt')?.click();
+    findButton('Cadastrar entrada')?.click();
     fixture.detectChanges();
   }
 

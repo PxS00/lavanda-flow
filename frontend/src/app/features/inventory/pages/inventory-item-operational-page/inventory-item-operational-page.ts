@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormField, form, required, validate } from '@angular/forms/signals';
@@ -22,6 +22,8 @@ import {
 } from 'rxjs';
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
+import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/localize-ui-error';
+import { formatLocalDate } from '../../../../core/i18n/local-date';
 import { UiError } from '../../../../core/http/ui-error';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
@@ -63,6 +65,7 @@ type PanelState<T> =
   selector: 'app-inventory-item-operational-page',
   imports: [
     DecimalPipe,
+    DatePipe,
     EmptyState,
     ErrorState,
     FormField,
@@ -93,13 +96,13 @@ export class InventoryItemOperationalPage {
   protected readonly withdrawalContext = signal<WithdrawalContext | null>(null);
   readonly minimumStockModel = signal<MinimumStockFormModel>({ minimumQuantity: '' });
   protected readonly minimumStockForm = form(this.minimumStockModel, (minimum) => {
-    required(minimum.minimumQuantity, { message: 'Minimum quantity is required.' });
+    required(minimum.minimumQuantity, { message: 'Quantidade mínima é obrigatória.' });
     validate(minimum.minimumQuantity, ({ value }) => {
       const rawValue = value();
       const normalized = rawValue.trim();
 
       if (rawValue.length > 0 && normalized.length === 0) {
-        return { kind: 'blank', message: 'Minimum quantity is required.' };
+        return { kind: 'blank', message: 'Quantidade mínima é obrigatória.' };
       }
 
       if (normalized.length === 0) {
@@ -109,7 +112,7 @@ export class InventoryItemOperationalPage {
       if (!MINIMUM_QUANTITY_PATTERN.test(normalized) || Number(normalized) <= 0) {
         return {
           kind: 'positive-decimal',
-          message: 'Use a positive number with up to 6 decimal places.',
+          message: 'Use um número positivo com até 6 casas decimais.',
         };
       }
 
@@ -134,19 +137,14 @@ export class InventoryItemOperationalPage {
   protected readonly confirmingMinimumRemoval = signal(false);
   protected readonly minimumGlobalActionError = computed(() => {
     const error = this.minimumActionError();
-    if (error === null || error.fieldErrors?.['minimumQuantity'] === undefined) {
+    if (error === null || error.details?.['minimumQuantity'] === undefined) {
       return error;
     }
 
-    const remainingFieldErrors = Object.fromEntries(
-      Object.entries(error.fieldErrors).filter(([field]) => field !== 'minimumQuantity'),
-    );
-
-    return Object.keys(remainingFieldErrors).length > 0
-      ? { ...error, fieldErrors: remainingFieldErrors }
-      : null;
+    return hasUnhandledDetails(error, ['minimumQuantity']) ? error : null;
   });
   protected readonly enumLabel = formatEnumLabel;
+  protected readonly formatLocalDate = formatLocalDate;
   protected readonly batchStatusLabel = batchStatusLabel;
   protected readonly movementTypeLabel = movementTypeLabel;
   protected readonly stockStatusLabel = stockStatusLabel;
@@ -238,7 +236,7 @@ export class InventoryItemOperationalPage {
           this.minimumState.set({ kind: 'loaded', data: level });
           this.minimumStockForm().reset({ minimumQuantity: String(level.minimumQuantity) });
           this.confirmingMinimumRemoval.set(false);
-          this.minimumNotice.set('Minimum stock level saved.');
+          this.minimumNotice.set('Estoque mínimo salvo.');
           this.overviewRequests.next(inventoryItemId);
         },
         error: (error: unknown) => this.minimumActionError.set(mapHttpError(error)),
@@ -284,7 +282,7 @@ export class InventoryItemOperationalPage {
           this.minimumState.set({ kind: 'loaded', data: null });
           this.minimumStockForm().reset({ minimumQuantity: '' });
           this.confirmingMinimumRemoval.set(false);
-          this.minimumNotice.set('Minimum stock level removed.');
+          this.minimumNotice.set('Estoque mínimo removido.');
           this.overviewRequests.next(inventoryItemId);
         },
         error: (error: unknown) => this.minimumActionError.set(mapHttpError(error)),
@@ -292,7 +290,7 @@ export class InventoryItemOperationalPage {
   }
 
   protected backendMinimumError(): string | undefined {
-    return this.minimumActionError()?.fieldErrors?.['minimumQuantity'];
+    return localizeFieldError(this.minimumActionError(), 'minimumQuantity');
   }
 
   private loadInventoryItem(inventoryItemId: string): void {
@@ -445,26 +443,34 @@ export class InventoryItemOperationalPage {
 }
 
 function formatEnumLabel(value: string): string {
-  const normalized = value.toLowerCase().replace(/_/g, ' ');
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  const labels: Readonly<Record<string, string>> = {
+    ESSENCE: 'Essência', CHEMICAL_INPUT: 'Insumo químico', BASE: 'Base', ALCOHOL: 'Álcool',
+    COLORANT: 'Corante', FIXATIVE: 'Fixador', BOTTLE: 'Frasco', VALVE: 'Válvula', CAP: 'Tampa',
+    LABEL: 'Rótulo', PACKAGING: 'Embalagem', OTHER: 'Outros', MILLILITER: 'Mililitro',
+    LITER: 'Litro', GRAM: 'Grama', KILOGRAM: 'Quilograma', UNIT: 'Unidade',
+  };
+  return labels[value] ?? value;
 }
 
 function batchStatusLabel(status: BatchOperationalStatus): string {
-  return formatEnumLabel(status);
+  return { AVAILABLE: 'Disponível', EXPIRED: 'Vencido', ZERO_BALANCE: 'Saldo zerado' }[status];
 }
 
 function movementTypeLabel(type: InventoryMovementType): string {
-  return formatEnumLabel(type);
+  return {
+    ENTRY: 'Entrada', CONSUMPTION: 'Consumo', ADJUSTMENT_IN: 'Ajuste de entrada',
+    ADJUSTMENT_OUT: 'Ajuste de saída', LOSS: 'Perda', EXPIRED_DISPOSAL: 'Descarte por vencimento',
+  }[type];
 }
 
 function stockStatusLabel(overview: InventoryItemOverviewDto): string {
   if (overview.outOfStock) {
-    return 'Out of stock';
+    return 'Sem estoque';
   }
 
   if (overview.lowStock) {
-    return 'Low stock';
+    return 'Estoque baixo';
   }
 
-  return 'Stock available';
+  return 'Estoque disponível';
 }
