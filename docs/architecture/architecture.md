@@ -33,12 +33,9 @@ The interface is mobile-first and may evolve into a PWA when operational require
 ├─────────────────────────────┤
 │ catalog                     │
 │ inventory                   │
+│ production                  │
 │ suppliers                   │
 │ shared                      │
-│                             │
-│ V1 capabilities also cover │
-│ formulas, production, and   │
-│ recursive traceability      │
 └──────────────┬──────────────┘
                │
                ▼
@@ -48,16 +45,17 @@ The interface is mobile-first and may evolve into a PWA when operational require
 └─────────────────────────────┘
 ```
 
-## Current module boundaries
+## V1 module boundaries
 
-The current Spring Modulith modules remain:
+The V1 Spring Modulith modules are:
 
 - `catalog`: item registration, classification, unit of measure, and active state;
 - `inventory`: batches, balances, movements, FEFO, expiration, and stock alerts;
+- `production`: formulas, production executions and consumptions, internal lot-code allocation, and recursive genealogy;
 - `suppliers`: supplier registration and association with externally supplied batches;
 - `shared`: strictly cross-cutting configuration, errors, and security concerns.
 
-Formula, production, and recursive traceability are approved V1 capabilities, but this product decision does not establish new modules. Their concrete ownership and interactions require implementation specifications and, if module boundaries materially change, an ADR. Do not create speculative `formulas`, `production`, or `traceability` modules solely because the concepts now belong to V1.
+ADR [0009](decisions/0009-define-v1-production-module-boundaries.md) establishes `production` as one cohesive module. Formula and traceability responsibilities remain inside it; separate `formulas` and `traceability` modules are not justified for V1. `inventory` retains ownership of batches and every stock invariant.
 
 The package-by-feature convention, internal `domain`/`application`/`infrastructure` responsibilities, and current dependency rules remain defined in `backend-structure.md`.
 
@@ -69,9 +67,11 @@ A formula describes required inventory items and proportions. A production execu
 
 Lot codes are human operational identifiers, not database identities or genealogy storage. Genealogy must come from explicit production, consumption, source-batch, and output-batch relationships.
 
+`production` depends on the public APIs of `catalog` and `inventory`; it never accesses their domain or infrastructure internals. `catalog` owns stable inventory-item metadata, including stable essence references. `inventory` creates the internally produced output batch and applies every stock effect through a production-facing public contract. Cross-module references use stable identifiers and public contract values rather than direct JPA entity relationships.
+
 ## Application and transaction boundaries
 
-Application use cases orchestrate domain behavior and own transaction boundaries. Business rules such as negative-stock prevention, FEFO, expiration eligibility, source-batch allocation, production atomicity, and generated lot-code sequencing do not belong in controllers or frontend components.
+Application use cases orchestrate domain behavior and own transaction boundaries. The production application use case owns the complete production transaction and synchronously invokes inventory's public contract inside that transaction. Business rules such as negative-stock prevention, FEFO, expiration eligibility, source-batch allocation, production atomicity, and generated lot-code sequencing do not belong in controllers or frontend components.
 
 Registering production is one atomic business operation:
 
@@ -128,7 +128,6 @@ Initial observability consists of useful structured logs, health checks, and dis
 
 Future implementation issues or ADRs must decide, when required:
 
-- whether formula, production, and traceability responsibilities fit current modules or justify new module boundaries;
 - exact REST endpoints, DTOs, and authorization rules;
 - persistence entities and physical schema details;
 - concurrency and automatic lot-sequence allocation mechanisms;
