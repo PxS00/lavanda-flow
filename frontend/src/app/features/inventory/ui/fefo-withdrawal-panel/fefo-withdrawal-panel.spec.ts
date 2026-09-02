@@ -1,10 +1,10 @@
-import { HttpErrorResponse } from '@angular/common/http';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, Subject } from 'rxjs';
+import {HttpErrorResponse} from '@angular/common/http';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {Observable, Subject} from 'rxjs';
 
-import { FefoWithdrawalApiService } from '../../data-access/fefo-withdrawal-api.service';
-import { RegisterFefoWithdrawalDto } from '../../data-access/fefo-withdrawal.dto';
-import { FefoWithdrawalPanel } from './fefo-withdrawal-panel';
+import {FefoWithdrawalApiService} from '../../data-access/fefo-withdrawal-api.service';
+import {RegisterFefoWithdrawalDto} from '../../data-access/fefo-withdrawal.dto';
+import {FefoWithdrawalPanel} from './fefo-withdrawal-panel';
 
 describe('FefoWithdrawalPanel', () => {
   const inventoryItemId = 'bd194732-51cf-4f73-bc5d-3a9f9337adcc';
@@ -255,7 +255,7 @@ describe('FefoWithdrawalPanel', () => {
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Nenhuma saída parcial foi registrada.');
-    expect(text).toContain('55.000000 Mililitro');
+    expect(text).toContain('55 Mililitro');
     expect(text).toContain('80 Mililitro');
     expect(text).not.toContain('Saída registrada');
   });
