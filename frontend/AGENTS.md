@@ -1,62 +1,45 @@
-You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
+# Frontend agent instructions
 
-## TypeScript Best Practices
+Apply the root `AGENTS.md` first. This file contains Angular-specific guidance only.
 
-- Use strict type checking
-- Prefer type inference when the type is obvious
-- Avoid the `any` type; use `unknown` when type is uncertain
+## Stack and architecture
 
-## Angular Best Practices
+- Use Angular 22, TypeScript, Angular Material/CDK, Angular Router, native `HttpClient`, Signals, RxJS when justified, and Vitest.
+- Use standalone architecture. Do not set `standalone: true` or `ChangeDetectionStrategy.OnPush` explicitly: both are Angular 22 defaults.
+- Feature routes may use lazy loading.
+- Keep HTTP and data-access logic outside presentation components. Business and inventory rules remain backend-authoritative.
+- Keep components small and focused. Prefer `input()`, `output()`, `model()`, and `inject()` over the corresponding decorators or constructor injection.
+- Prefer inline templates for small components and use `linkedSignal()` only when multiple reactive sources must stay synchronized.
+- Use `host` metadata instead of `@HostBinding` or `@HostListener`.
+- Use `NgOptimizedImage` for static images when applicable; it does not support inline base64 images.
 
-- Always use standalone components over NgModules
-- Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
-- Do NOT set `changeDetection: ChangeDetectionStrategy.OnPush` explicitly. `OnPush` is the default in Angular v22+.
-- Use signals for state management
-- Implement lazy loading for feature routes
-- Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead
-- Use `NgOptimizedImage` for all static images.
-  - `NgOptimizedImage` does not work for inline base64 images.
+## TypeScript, templates, and state
 
-## Accessibility Requirements
+- Use strict typing, infer obvious types, and prefer `unknown` to `any`.
+- Use Signals for appropriate local or derived state and `computed()` for derived values. Keep transformations pure; use `set()` or `update()`, never `mutate()`.
+- Use RxJS for asynchronous composition when justified, and the async pipe for observable templates.
+- Do not duplicate backend-authoritative inventory logic in frontend state or apply incorrect optimistic state to stock-changing operations.
+- Prefer native control flow (`@if`, `@for`, `@switch`), `class` bindings over `ngClass`, and `style` bindings over `ngStyle`.
+- Keep templates simple. Do not assume globals such as `new Date()` are available in templates.
+- For external templates or styles, use paths relative to the component TypeScript file.
+- Keep services single-purpose. For new singleton services, use `providedIn: 'root'` and prefer `@Service` over `@Injectable({ providedIn: 'root' })`.
 
-- It MUST pass all AXE checks.
-- It MUST follow all WCAG AA minimums, including focus management, color contrast, and ARIA attributes.
+## Forms
 
-## Operator language
+- Reactive Forms are the project default.
+- Do not introduce Signal Forms unless the current issue explicitly approves or adopts them.
+- Do not opportunistically migrate existing forms.
+- Do not use Template-driven Forms unless there is a concrete approved reason.
 
-All operator-facing UI copy, accessibility text, user-facing metadata, and frontend error presentation must be written in pt-BR. Engineering artifacts, identifiers, routes, API contracts, wire values, comments, and test descriptions remain in English.
+## UX, accessibility, and language
 
-### Components
+- Make loading, error, and empty states explicit.
+- Meet WCAG AA and AXE requirements, including focus management, contrast, and appropriate ARIA.
+- All operator-facing UI copy, accessibility text, user-visible metadata, and frontend errors are pt-BR.
+- Code, identifiers, routes, DTOs, API contracts, wire values, comments, and test descriptions remain English.
 
-- Keep components small and focused on a single responsibility
-- Use `input()` and `output()` functions instead of decorators
-- Use `model()` for two-way bound properties with `[(prop)]` syntax instead of pairing `input()` with `output()`
-- Use `computed()` for derived state
-- Use `linkedSignal()` for state derived from multiple reactive sources that must stay synchronized
-- Prefer inline templates for small components
-- Prefer Signal Forms (`@angular/forms/signals`) for new forms. They are stable in Angular v22+ and provide signal-based state, type-safe field access, and schema-based validation
-- When not using Signal Forms, prefer Reactive forms instead of Template-driven ones
-- Do NOT use `ngClass`, use `class` bindings instead
-- Do NOT use `ngStyle`, use `style` bindings instead
-- When using external templates/styles, use paths relative to the component TS file.
+## Dependencies and validation
 
-## State Management
-
-- Use signals for local component state
-- Use `computed()` for derived state
-- Keep state transformations pure and predictable
-- Do NOT use `mutate` on signals, use `update` or `set` instead
-
-## Templates
-
-- Keep templates simple and avoid complex logic
-- Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
-- Use the async pipe to handle observables
-- Do not assume globals like (`new Date()`) are available.
-
-## Services
-
-- Design services around a single responsibility
-- Use the `providedIn: 'root'` option for singleton services
-- Prefer the `@Service` decorator over `@Injectable({providedIn: 'root'})` for new singleton services (Angular v22+)
-- Use the `inject()` function instead of constructor injection
+- Do not add dependencies that duplicate Angular capabilities. In particular, do not add NgRx, Axios, external forms or routing libraries, Tailwind alongside Angular Material, or `@angular/animations` for new code. Prefer CSS and `animate.enter` / `animate.leave` for new animations.
+- Do not force `pnpm test -- --run`; use the configured `pnpm test` script.
+- Run `pnpm lint`, `pnpm test`, and `pnpm build` for frontend changes.
