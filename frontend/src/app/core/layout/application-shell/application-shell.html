@@ -55,7 +55,14 @@
         Entradas
       </a>
       <span mat-list-item>Saídas</span>
-      <span mat-list-item>Alertas</span>
+      <a
+        mat-list-item
+        routerLink="/inventory/alerts"
+        routerLinkActive="active-link"
+        (click)="isHandset() && sidenav.close()"
+      >
+        Alertas
+      </a>
     </mat-nav-list>
   </mat-sidenav>
 
