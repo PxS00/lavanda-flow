@@ -8,5 +8,5 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   styleUrl: './loading-state.scss',
 })
 export class LoadingState {
-  readonly message = input('Loading...');
+  readonly message = input('Carregando...');
 }

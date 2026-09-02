@@ -1,23 +1,23 @@
 <section class="catalog-page" aria-labelledby="catalog-heading">
   <header class="page-header">
     <div>
-      <h1 id="catalog-heading">Inventory catalog</h1>
-      <p>Find and inspect the items controlled in inventory.</p>
+      <h1 id="catalog-heading">Catálogo de estoque</h1>
+      <p>Consulte os itens controlados no estoque.</p>
     </div>
 
-    <a mat-flat-button routerLink="/catalog/new">Register item</a>
+    <a mat-flat-button routerLink="/catalog/new">Cadastrar item</a>
   </header>
 
-  <form class="filters" aria-label="Catalog filters" (submit)="applyFilters($event)">
+  <form class="filters" aria-label="Filtros do catálogo" (submit)="applyFilters($event)">
     <mat-form-field appearance="outline">
-      <mat-label>Name</mat-label>
+      <mat-label>Nome</mat-label>
       <input matInput type="search" [formField]="filtersForm.name" />
     </mat-form-field>
 
     <mat-form-field appearance="outline">
-      <mat-label>Category</mat-label>
+      <mat-label>Categoria</mat-label>
       <mat-select [formField]="filtersForm.category">
-        <mat-option value="">All categories</mat-option>
+        <mat-option value="">Todas as categorias</mat-option>
         @for (option of categoryOptions; track option.value) {
           <mat-option [value]="option.value">{{ option.label }}</mat-option>
         }
@@ -25,45 +25,45 @@
     </mat-form-field>
 
     <mat-form-field appearance="outline">
-      <mat-label>Active state</mat-label>
+      <mat-label>Status</mat-label>
       <mat-select [formField]="filtersForm.active">
-        <mat-option value="all">All</mat-option>
-        <mat-option value="active">Active</mat-option>
-        <mat-option value="inactive">Inactive</mat-option>
+        <mat-option value="all">Todos</mat-option>
+        <mat-option value="active">Ativo</mat-option>
+        <mat-option value="inactive">Inativo</mat-option>
       </mat-select>
     </mat-form-field>
 
     <div class="filter-actions">
-      <button mat-flat-button type="submit">Apply filters</button>
-      <button mat-button type="button" (click)="resetFilters()">Reset</button>
+      <button mat-flat-button type="submit">Aplicar filtros</button>
+      <button mat-button type="button" (click)="resetFilters()">Redefinir filtros</button>
     </div>
   </form>
 
   @let currentState = state();
   @switch (currentState.kind) {
     @case ('loading') {
-      <app-loading-state message="Loading inventory items..." />
+      <app-loading-state message="Carregando itens de estoque..." />
     }
     @case ('error') {
       <app-error-state [error]="currentState.error" />
-      <button mat-stroked-button type="button" (click)="retry()">Try again</button>
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
     }
     @case ('loaded') {
       @if (currentState.page.content.length === 0) {
         <app-empty-state
-          title="No inventory items found"
+          title="Nenhum item de estoque encontrado"
           [message]="
             hasAppliedFilters()
-              ? 'Try changing or resetting the filters.'
-              : 'Register an item to start building the catalog.'
+              ? 'Tente alterar ou redefinir os filtros.'
+              : 'Cadastre um item para começar a montar o catálogo.'
           "
         />
       } @else {
         <p class="result-count" aria-live="polite">
-          {{ currentState.page.totalElements }} inventory items found
+          {{ currentState.page.totalElements }} itens de estoque encontrados
         </p>
 
-        <ul class="item-list" aria-label="Inventory items">
+        <ul class="item-list" aria-label="Itens de estoque">
           @for (item of currentState.page.content; track item.id) {
             <li>
               <mat-card appearance="outlined">
@@ -76,12 +76,12 @@
                 <mat-card-content>
                   <dl>
                     <div>
-                      <dt>Unit</dt>
+                      <dt>Unidade</dt>
                       <dd>{{ unitLabel(item.unitOfMeasure) }}</dd>
                     </div>
                     <div>
                       <dt>Status</dt>
-                      <dd>{{ item.active ? 'Active' : 'Inactive' }}</dd>
+                      <dd>{{ item.active ? 'Ativo' : 'Inativo' }}</dd>
                     </div>
                   </dl>
                 </mat-card-content>
@@ -91,7 +91,7 @@
         </ul>
 
         <mat-paginator
-          aria-label="Inventory catalog pages"
+          aria-label="Páginas do catálogo de estoque"
           [length]="currentState.page.totalElements"
           [pageIndex]="currentState.page.page"
           [pageSize]="currentState.page.size"

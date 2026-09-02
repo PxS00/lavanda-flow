@@ -9,6 +9,7 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
+import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/localize-ui-error';
 import { UiError } from '../../../../core/http/ui-error';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import {
@@ -66,15 +67,15 @@ export class InventoryItemRegistrationPage {
 
   readonly registrationModel = signal<RegistrationModel>({ ...EMPTY_REGISTRATION });
   protected readonly registrationForm = form(this.registrationModel, (item) => {
-    required(item.name, { message: 'Name is required.' });
-    maxLength(item.name, 255, { message: 'Name must be 255 characters or fewer.' });
+    required(item.name, { message: 'Nome é obrigatório.' });
+    maxLength(item.name, 255, { message: 'Nome deve ter no máximo 255 caracteres.' });
     validate(item.name, ({ value }) =>
       value().length > 0 && value().trim().length === 0
-        ? { kind: 'blank', message: 'Name is required.' }
+        ? { kind: 'blank', message: 'Nome é obrigatório.' }
         : undefined,
     );
-    required(item.category, { message: 'Category is required.' });
-    required(item.unitOfMeasure, { message: 'Unit of measure is required.' });
+    required(item.category, { message: 'Categoria é obrigatória.' });
+    required(item.unitOfMeasure, { message: 'Unidade de medida é obrigatória.' });
   });
   protected readonly categoryOptions = INVENTORY_ITEM_CATEGORY_OPTIONS;
   protected readonly unitOptions = INVENTORY_ITEM_UNIT_OPTIONS;
@@ -82,24 +83,16 @@ export class InventoryItemRegistrationPage {
   protected readonly submissionError = signal<UiError | null>(null);
   protected readonly globalSubmissionError = computed(() => {
     const error = this.submissionError();
-    if (error === null || error.fieldErrors === undefined) {
+    if (error === null || error.details === undefined) {
       return error;
     }
 
-    const errorFields = Object.keys(error.fieldErrors);
+    const errorFields = Object.keys(error.details);
     if (errorFields.length === 0) {
       return error;
     }
 
-    const unmappedFieldErrors = Object.fromEntries(
-      Object.entries(error.fieldErrors).filter(
-        ([field]) => !INLINE_ERROR_FIELDS.includes(field as RegistrationField),
-      ),
-    );
-
-    return Object.keys(unmappedFieldErrors).length > 0
-      ? { ...error, fieldErrors: unmappedFieldErrors }
-      : null;
+    return hasUnhandledDetails(error, INLINE_ERROR_FIELDS) ? error : null;
   });
 
   protected submit(event: SubmitEvent): void {
@@ -142,7 +135,7 @@ export class InventoryItemRegistrationPage {
   }
 
   protected backendFieldError(field: RegistrationField): string | undefined {
-    return this.submissionError()?.fieldErrors?.[field];
+    return localizeFieldError(this.submissionError(), field);
   }
 }
 

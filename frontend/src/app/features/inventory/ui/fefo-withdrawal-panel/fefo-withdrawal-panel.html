@@ -1,7 +1,7 @@
 <section class="withdrawal-panel" aria-labelledby="withdrawal-heading">
   <header>
-    <h2 id="withdrawal-heading">Withdraw stock</h2>
-    <p>{{ itemName() }} · Available stock: {{ availableQuantity() | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</p>
+    <h2 id="withdrawal-heading">Retirada por validade (FEFO)</h2>
+    <p>{{ itemName() }} · Estoque disponível: {{ availableQuantity() | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</p>
   </header>
 
   @if (state() === 'success') {
@@ -9,18 +9,18 @@
     @if (withdrawal !== null) {
       <mat-card appearance="outlined" class="success-card" aria-live="polite">
         <mat-card-content>
-          <h3>Withdrawal committed</h3>
-          <p>The backend completed the automatic FEFO allocation.</p>
+          <h3>Saída registrada</h3>
+          <p>A alocação automática por FEFO foi concluída.</p>
           <dl class="summary-list">
-            <div><dt>Requested quantity</dt><dd>{{ withdrawal.requestedQuantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
-            <div><dt>Allocated quantity</dt><dd>{{ withdrawal.allocatedQuantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
+            <div><dt>Quantidade solicitada</dt><dd>{{ withdrawal.requestedQuantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
+            <div><dt>Quantidade alocada</dt><dd>{{ withdrawal.allocatedQuantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
           </dl>
-          <h4>Committed allocations</h4>
+          <h4>Alocações registradas</h4>
           <div class="table-scroll">
             <table>
-              <caption>Every batch and immutable movement committed by the backend</caption>
+              <caption>Lotes e movimentações registrados na saída</caption>
               <thead>
-                <tr><th scope="col">Batch ID</th><th scope="col">Movement ID</th><th scope="col">Quantity</th></tr>
+                <tr><th scope="col">ID do lote</th><th scope="col">ID da movimentação</th><th scope="col">Quantidade</th></tr>
               </thead>
               <tbody>
                 @for (allocation of withdrawal.allocations; track allocation.movementId) {
@@ -33,18 +33,17 @@
               </tbody>
             </table>
           </div>
-          <button mat-stroked-button type="button" (click)="startAnotherWithdrawal()">Start another withdrawal</button>
+          <button mat-stroked-button type="button" (click)="startAnotherWithdrawal()">Registrar outra saída</button>
         </mat-card-content>
       </mat-card>
     }
   } @else if (!effectivelyActive()) {
     <mat-card appearance="outlined">
       <mat-card-content>
-        <p>This inventory item is inactive and cannot be withdrawn from.</p>
+        <p>Este item de estoque está inativo e não pode ter saídas.</p>
         @if (serverConfirmedInactive()) {
-          <p>The backend reported this item as inactive. No withdrawal was committed.</p>
+          <p>Este item foi informado como inativo. Nenhuma saída foi registrada.</p>
           @if (submissionError(); as error) {
-            <p class="field-error" role="alert">Backend code: {{ error.code }}</p>
             <app-error-state [error]="error" />
           }
         }
@@ -53,9 +52,9 @@
   } @else if (state() === 'editing') {
     <form class="withdrawal-form" (submit)="requestConfirmation($event)" novalidate>
       <mat-form-field appearance="outline">
-        <mat-label>Quantity</mat-label>
+        <mat-label>Quantidade</mat-label>
         <input matInput type="text" inputmode="decimal" autocomplete="off" [formField]="withdrawalForm.quantity" [attr.aria-describedby]="backendFieldError('quantity') ? 'withdrawal-quantity-error' : null" />
-        <mat-hint>Positive value, up to 13 integer digits and 6 decimals · {{ unitLabel(unitOfMeasure()) }}</mat-hint>
+        <mat-hint>Valor positivo, com até 13 dígitos inteiros e 6 casas decimais · {{ unitLabel(unitOfMeasure()) }}</mat-hint>
         @if (withdrawalForm.quantity().touched() && withdrawalForm.quantity().invalid()) {
           <mat-error>{{ withdrawalForm.quantity().errors()[0].message }}</mat-error>
         }
@@ -65,9 +64,9 @@
       }
 
       <mat-form-field appearance="outline">
-        <mat-label>Reason</mat-label>
+        <mat-label>Motivo</mat-label>
         <textarea matInput rows="3" [formField]="withdrawalForm.reason" [attr.aria-describedby]="backendFieldError('reason') ? 'withdrawal-reason-error' : null"></textarea>
-        <mat-hint>Optional · maximum 255 characters</mat-hint>
+        <mat-hint>Opcional · máximo de 255 caracteres</mat-hint>
         @if (withdrawalForm.reason().touched() && withdrawalForm.reason().invalid()) {
           <mat-error>{{ withdrawalForm.reason().errors()[0].message }}</mat-error>
         }
@@ -79,19 +78,19 @@
       @if (globalSubmissionError(); as error) {
         <app-error-state [error]="error" />
       }
-      <button mat-flat-button type="submit">Review withdrawal</button>
+      <button mat-flat-button type="submit">Revisar saída</button>
     </form>
   } @else {
     @let withdrawal = pendingWithdrawal();
     @if (withdrawal !== null) {
       <mat-card appearance="outlined" class="confirmation-card" role="group" aria-labelledby="withdrawal-confirmation-heading">
         <mat-card-content>
-          <h3 id="withdrawal-confirmation-heading">Confirm stock withdrawal</h3>
-          <p class="warning">This action consumes stock. The backend will choose eligible batches using FEFO and may allocate more than one batch.</p>
+          <h3 id="withdrawal-confirmation-heading">Confirmar saída de estoque</h3>
+          <p class="warning">Esta ação consome estoque. Os lotes elegíveis serão selecionados por FEFO e mais de um lote pode ser usado.</p>
           <dl class="summary-list">
             <div><dt>Item</dt><dd>{{ itemName() }}</dd></div>
-            <div><dt>Requested quantity</dt><dd>{{ withdrawal.quantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
-            <div><dt>Reason</dt><dd>{{ withdrawal.reason || '—' }}</dd></div>
+            <div><dt>Quantidade solicitada</dt><dd>{{ withdrawal.quantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
+            <div><dt>Motivo</dt><dd>{{ withdrawal.reason || '—' }}</dd></div>
           </dl>
           @if (globalSubmissionError(); as error) {
             <app-error-state [error]="error" />
@@ -101,9 +100,9 @@
           }
           <div class="actions">
             <button mat-flat-button type="button" [disabled]="state() === 'submitting' || !effectivelyActive()" (click)="confirmWithdrawal()">
-              {{ state() === 'submitting' ? 'Withdrawing...' : 'Confirm withdrawal' }}
+              {{ state() === 'submitting' ? 'Registrando saída...' : 'Confirmar saída' }}
             </button>
-            <button mat-button type="button" [disabled]="state() === 'submitting'" (click)="returnToEditing()">Back to editing</button>
+            <button mat-button type="button" [disabled]="state() === 'submitting'" (click)="returnToEditing()">Voltar à edição</button>
           </div>
         </mat-card-content>
       </mat-card>

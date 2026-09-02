@@ -1,11 +1,12 @@
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, input, output } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
-import { ActivatedRoute, ParamMap, convertToParamMap, provideRouter } from '@angular/router';
-import { Observable, Subject } from 'rxjs';
+import {HttpErrorResponse} from '@angular/common/http';
+import {Component, input, output} from '@angular/core';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {MatPaginatorIntl} from '@angular/material/paginator';
+import {By} from '@angular/platform-browser';
+import {ActivatedRoute, convertToParamMap, ParamMap, provideRouter} from '@angular/router';
+import {Observable, Subject} from 'rxjs';
 
-import { InventoryItemOperationsApiService } from '../../data-access/inventory-item-operations-api.service';
+import {InventoryItemOperationsApiService} from '../../data-access/inventory-item-operations-api.service';
 import {
   BatchInventoryDto,
   ConfigureMinimumStockLevelRequest,
@@ -15,9 +16,10 @@ import {
   MinimumStockLevelDto,
   MovementHistoryPageDto,
 } from '../../data-access/inventory-operations.dto';
-import { MovementHistoryApiService } from '../../data-access/movement-history-api.service';
-import { FefoWithdrawalPanel } from '../../ui/fefo-withdrawal-panel/fefo-withdrawal-panel';
-import { InventoryItemOperationalPage } from './inventory-item-operational-page';
+import {MovementHistoryApiService} from '../../data-access/movement-history-api.service';
+import {FefoWithdrawalPanel} from '../../ui/fefo-withdrawal-panel/fefo-withdrawal-panel';
+import {createPtBrPaginatorIntl} from '../../../../core/i18n/pt-br-paginator-intl';
+import {InventoryItemOperationalPage} from './inventory-item-operational-page';
 
 @Component({ selector: 'app-fefo-withdrawal-panel', template: 'withdrawal panel' })
 class FefoWithdrawalPanelStub {
@@ -114,6 +116,7 @@ describe('InventoryItemOperationalPage', () => {
     TestBed.configureTestingModule({
       imports: [InventoryItemOperationalPage],
       providers: [
+        { provide: MatPaginatorIntl, useFactory: createPtBrPaginatorIntl },
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { paramMap: routeParams } },
         {
@@ -148,9 +151,9 @@ describe('InventoryItemOperationalPage', () => {
     expect(getBatches).toHaveBeenCalledWith(inventoryItemId);
     expect(getMinimumStockLevel).toHaveBeenCalledWith(inventoryItemId);
     expect(searchMovements).toHaveBeenCalledWith({ inventoryItemId, page: 0, size: 20 });
-    expect(fixture.nativeElement.textContent).toContain('Loading inventory overview...');
-    expect(fixture.nativeElement.textContent).toContain('Loading batches...');
-    expect(fixture.nativeElement.textContent).toContain('Loading movement history...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando visão geral do estoque...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando lotes...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando histórico de movimentações...');
   });
 
   it('should render backend overview semantics without conflating physical and available stock', () => {
@@ -159,13 +162,13 @@ describe('InventoryItemOperationalPage', () => {
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Lavender Essence');
-    expect(text).toContain('Physical / current quantity');
+    expect(text).toContain('Quantidade física atual');
     expect(text).toContain('120');
-    expect(text).toContain('Available quantity');
+    expect(text).toContain('Estoque disponível');
     expect(text).toContain('80');
-    expect(text).toContain('Low stock');
-    expect(text).toContain('2026-09-20');
-    expect(text).toContain('expiration window 30 days');
+    expect(text).toContain('Estoque baixo');
+    expect(text).toContain('20/09/2026');
+    expect(text).toContain('janela de validade de 30 dias');
   });
 
   it('should pass concrete active item context to the withdrawal panel and refresh authoritative panels after completion', () => {
@@ -254,9 +257,9 @@ describe('InventoryItemOperationalPage', () => {
       expect.stringContaining('LOT-B'),
       expect.stringContaining('LOT-C'),
     ]);
-    expect(rows[0].textContent).toContain('Available');
-    expect(rows[1].textContent).toContain('Expired');
-    expect(rows[2].textContent).toContain('Zero balance');
+    expect(rows[0].textContent).toContain('Disponível');
+    expect(rows[1].textContent).toContain('Vencido');
+    expect(rows[2].textContent).toContain('Saldo zerado');
     expect(rows[0].textContent).toContain('supplier-1');
     expect(rows[0].textContent).toContain('100');
     expect(rows[0].textContent).toContain('40');
@@ -268,7 +271,7 @@ describe('InventoryItemOperationalPage', () => {
     );
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('No minimum stock level configured.');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum estoque mínimo configurado.');
     expect(fixture.nativeElement.textContent).not.toContain('Minimum stock level not found.');
   });
 
@@ -282,7 +285,7 @@ describe('InventoryItemOperationalPage', () => {
 
     expect(configureMinimumStockLevel).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain(
-      'Use a positive number with up to 6 decimal places.',
+      'Use um número positivo com até 6 casas decimais.',
     );
 
     fixture.componentInstance.minimumStockModel.set({ minimumQuantity: '25.123456' });
@@ -296,7 +299,7 @@ describe('InventoryItemOperationalPage', () => {
     configureResponse.next({ inventoryItemId, minimumQuantity: 25.123456 });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Minimum stock level saved.');
+    expect(fixture.nativeElement.textContent).toContain('Estoque mínimo salvo.');
     expect(getOverview).toHaveBeenCalledTimes(2);
   });
 
@@ -304,18 +307,18 @@ describe('InventoryItemOperationalPage', () => {
     minimumResponse.next(minimum);
     fixture.detectChanges();
 
-    clickButton('Remove minimum');
+    clickButton('Remover mínimo');
     expect(deleteMinimumStockLevel).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('Remove this minimum stock level?');
+    expect(fixture.nativeElement.textContent).toContain('Remover este estoque mínimo?');
 
-    clickButton('Confirm removal');
+    clickButton('Confirmar remoção');
     expect(deleteMinimumStockLevel).toHaveBeenCalledWith(inventoryItemId);
 
     deleteResponse.next(undefined);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Minimum stock level removed.');
-    expect(fixture.nativeElement.textContent).toContain('No minimum stock level configured.');
+    expect(fixture.nativeElement.textContent).toContain('Estoque mínimo removido.');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum estoque mínimo configurado.');
     expect(getOverview).toHaveBeenCalledTimes(2);
   });
 
@@ -324,14 +327,23 @@ describe('InventoryItemOperationalPage', () => {
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Consumption');
+    expect(text).toContain('Consumo');
     expect(text).toContain('5.25');
     expect(text).toContain('LOT-A');
     expect(text).toContain('Perfume production');
-    expect(text).toContain('2026-09-01T15:00:00Z');
+    const expectedOccurredAt = new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(new Date(populatedMovements.content[0].occurredAt));
+
+    expect(text).toContain(expectedOccurredAt);
 
     const nextButton = fixture.nativeElement.querySelector(
-      'button[aria-label="Next page"]',
+      'button[aria-label="Próxima página"]',
     ) as HTMLButtonElement;
     nextButton.click();
     fixture.detectChanges();
@@ -344,8 +356,8 @@ describe('InventoryItemOperationalPage', () => {
     movementResponse.next({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('No batches found');
-    expect(fixture.nativeElement.textContent).toContain('No movements found');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum lote encontrado');
+    expect(fixture.nativeElement.textContent).toContain('Nenhuma movimentação encontrada');
   });
 
   it('should keep usable overview data visible when a secondary panel fails', () => {
@@ -355,7 +367,7 @@ describe('InventoryItemOperationalPage', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Lavender Essence');
     expect(fixture.nativeElement.textContent).toContain(
-      'An unexpected server error occurred. Please try again.',
+      'Ocorreu um erro no servidor. Tente novamente.',
     );
   });
 

@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormField, form, maxLength, required, validate } from '@angular/forms/signals';
@@ -9,6 +10,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, finalize, map, of, switchMap } from 'rxjs';
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
+import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/localize-ui-error';
+import { formatLocalDate } from '../../../../core/i18n/local-date';
 import { UiError } from '../../../../core/http/ui-error';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
@@ -60,6 +63,7 @@ type PreselectionResult =
 @Component({
   selector: 'app-stock-receipt-page',
   imports: [
+    DecimalPipe,
     ErrorState,
     FormField,
     InventoryItemSelector,
@@ -81,11 +85,11 @@ export class StockReceiptPage {
 
   readonly receiptModel = signal<ReceiptFormModel>({ ...EMPTY_FORM });
   protected readonly receiptForm = form(this.receiptModel, (receipt) => {
-    maxLength(receipt.lotCode, 255, { message: 'Lot code must be 255 characters or fewer.' });
-    required(receipt.quantity, { message: 'Quantity is required.' });
+    maxLength(receipt.lotCode, 255, { message: 'Código do lote deve ter no máximo 255 caracteres.' });
+    required(receipt.quantity, { message: 'Quantidade é obrigatória.' });
     validate(receipt.quantity, ({ value }) => validateQuantity(value()));
-    required(receipt.receivedAt, { message: 'Received date is required.' });
-    maxLength(receipt.reason, 255, { message: 'Reason must be 255 characters or fewer.' });
+    required(receipt.receivedAt, { message: 'Data de entrada é obrigatória.' });
+    maxLength(receipt.reason, 255, { message: 'Motivo deve ter no máximo 255 caracteres.' });
   });
 
   protected readonly selectedItem = signal<InventoryItemDto | null>(null);
@@ -96,22 +100,19 @@ export class StockReceiptPage {
   protected readonly isSubmitting = signal(false);
   protected readonly createdReceipt = signal<RegisterStockReceiptDto | null>(null);
   protected readonly unitLabel = inventoryItemUnitLabel;
+  protected readonly formatLocalDate = formatLocalDate;
   protected readonly globalSubmissionError = computed(() => {
     const error = this.submissionError();
-    if (error === null || error.fieldErrors === undefined) {
+    if (error === null || error.details === undefined) {
       return error;
     }
 
-    const entries = Object.entries(error.fieldErrors);
+    const entries = Object.entries(error.details);
     if (entries.length === 0) {
       return error;
     }
 
-    const remaining = Object.fromEntries(
-      entries.filter(([field]) => !INLINE_FIELDS.includes(field)),
-    );
-
-    return Object.keys(remaining).length > 0 ? { ...error, fieldErrors: remaining } : null;
+    return hasUnhandledDetails(error, INLINE_FIELDS) ? error : null;
   });
 
   constructor() {
@@ -141,7 +142,7 @@ export class StockReceiptPage {
             this.selectionError.set(null);
           } else {
             this.selectedItem.set(null);
-            this.selectionError.set('This inventory item is inactive and cannot receive stock.');
+            this.selectionError.set('Este item de estoque está inativo e não pode receber entradas.');
           }
         } else if (result.kind === 'error') {
           this.preselectionError.set(result.error);
@@ -169,7 +170,7 @@ export class StockReceiptPage {
     this.receiptForm().markAsTouched();
     const item = this.selectedItem();
     if (item === null) {
-      this.selectionError.set('Select an active inventory item before registering the receipt.');
+      this.selectionError.set('Selecione um item de estoque ativo antes de cadastrar a entrada.');
     }
 
     if (this.receiptForm().invalid() || item === null) {
@@ -220,7 +221,7 @@ export class StockReceiptPage {
   protected backendFieldError(
     field: ReceiptField | 'inventoryItemId' | 'supplierId',
   ): string | undefined {
-    return this.submissionError()?.fieldErrors?.[field];
+    return localizeFieldError(this.submissionError(), field);
   }
 }
 
@@ -234,7 +235,7 @@ function validateQuantity(
 ): { readonly kind: string; readonly message: string } | undefined {
   const normalized = rawValue.trim();
   if (rawValue.length > 0 && normalized.length === 0) {
-    return { kind: 'blank', message: 'Quantity is required.' };
+    return { kind: 'blank', message: 'Quantidade é obrigatória.' };
   }
 
   if (normalized.length === 0) {
@@ -242,7 +243,7 @@ function validateQuantity(
   }
 
   if (!DECIMAL_PATTERN.test(normalized)) {
-    return { kind: 'decimal', message: 'Use a positive quantity with up to 6 decimal places.' };
+    return { kind: 'decimal', message: 'Use uma quantidade positiva com até 6 casas decimais.' };
   }
 
   const [integerPart] = normalized.split('.');
@@ -250,7 +251,7 @@ function validateQuantity(
   if (significantIntegerDigits > 13 || Number(normalized) <= 0) {
     return {
       kind: 'quantity-range',
-      message: 'Use a positive quantity with at most 13 integer digits and 6 decimal places.',
+      message: 'Use uma quantidade positiva com no máximo 13 dígitos inteiros e 6 casas decimais.',
     };
   }
 

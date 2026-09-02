@@ -1,59 +1,59 @@
 <section class="supplier-page" aria-labelledby="supplier-heading">
   <header class="page-header">
     <div>
-      <h1 id="supplier-heading">Suppliers</h1>
-      <p>Find and inspect suppliers used for inventory receipts.</p>
+      <h1 id="supplier-heading">Fornecedores</h1>
+      <p>Consulte os fornecedores usados nas entradas de estoque.</p>
     </div>
 
-    <a mat-flat-button routerLink="/suppliers/new">Register supplier</a>
+    <a mat-flat-button routerLink="/suppliers/new">Cadastrar fornecedor</a>
   </header>
 
-  <form class="filters" aria-label="Supplier filters" (submit)="applyFilters($event)">
+  <form class="filters" aria-label="Filtros de fornecedores" (submit)="applyFilters($event)">
     <mat-form-field appearance="outline">
-      <mat-label>Name</mat-label>
+      <mat-label>Nome</mat-label>
       <input matInput type="search" [formField]="filtersForm.name" />
     </mat-form-field>
 
     <mat-form-field appearance="outline">
-      <mat-label>Active state</mat-label>
+      <mat-label>Status</mat-label>
       <mat-select [formField]="filtersForm.active">
-        <mat-option value="all">All</mat-option>
-        <mat-option value="active">Active</mat-option>
-        <mat-option value="inactive">Inactive</mat-option>
+        <mat-option value="all">Todos</mat-option>
+        <mat-option value="active">Ativo</mat-option>
+        <mat-option value="inactive">Inativo</mat-option>
       </mat-select>
     </mat-form-field>
 
     <div class="filter-actions">
-      <button mat-flat-button type="submit">Apply filters</button>
-      <button mat-button type="button" (click)="resetFilters()">Reset</button>
+      <button mat-flat-button type="submit">Aplicar filtros</button>
+      <button mat-button type="button" (click)="resetFilters()">Redefinir filtros</button>
     </div>
   </form>
 
   @let currentState = state();
   @switch (currentState.kind) {
     @case ('loading') {
-      <app-loading-state message="Loading suppliers..." />
+      <app-loading-state message="Carregando fornecedores..." />
     }
     @case ('error') {
       <app-error-state [error]="currentState.error" />
-      <button mat-stroked-button type="button" (click)="retry()">Try again</button>
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
     }
     @case ('loaded') {
       @if (currentState.page.content.length === 0) {
         <app-empty-state
-          title="No suppliers found"
+          title="Nenhum fornecedor encontrado"
           [message]="
             hasAppliedFilters()
-              ? 'Try changing or resetting the filters.'
-              : 'Register a supplier to make receipt traceability available.'
+              ? 'Tente alterar ou redefinir os filtros.'
+              : 'Cadastre um fornecedor para vincular às entradas de estoque.'
           "
         />
       } @else {
         <p class="result-count" aria-live="polite">
-          {{ currentState.page.totalElements }} suppliers found
+          {{ currentState.page.totalElements }} fornecedores encontrados
         </p>
 
-        <ul class="supplier-list" aria-label="Suppliers">
+        <ul class="supplier-list" aria-label="Fornecedores">
           @for (supplier of currentState.page.content; track supplier.id) {
             <li>
               <mat-card appearance="outlined">
@@ -61,17 +61,17 @@
                   <mat-card-title>
                     <a [routerLink]="['/suppliers', supplier.id]">{{ supplier.name }}</a>
                   </mat-card-title>
-                  <mat-card-subtitle>{{ supplier.active ? 'Active' : 'Inactive' }}</mat-card-subtitle>
+                  <mat-card-subtitle>{{ supplier.active ? 'Ativo' : 'Inativo' }}</mat-card-subtitle>
                 </mat-card-header>
                 <mat-card-content>
                   <dl>
                     <div>
-                      <dt>Identifier</dt>
-                      <dd>{{ supplier.identifier || 'Not provided' }}</dd>
+                      <dt>Identificador</dt>
+                      <dd>{{ supplier.identifier || 'Não informado' }}</dd>
                     </div>
                     <div>
-                      <dt>Contact</dt>
-                      <dd>{{ supplier.contact || 'Not provided' }}</dd>
+                      <dt>Contato</dt>
+                      <dd>{{ supplier.contact || 'Não informado' }}</dd>
                     </div>
                   </dl>
                 </mat-card-content>
@@ -81,7 +81,7 @@
         </ul>
 
         <mat-paginator
-          aria-label="Supplier pages"
+          aria-label="Páginas de fornecedores"
           [length]="currentState.page.totalElements"
           [pageIndex]="currentState.page.page"
           [pageSize]="currentState.page.size"

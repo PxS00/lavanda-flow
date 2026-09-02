@@ -1,10 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatPaginatorIntl } from '@angular/material/paginator';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 
 import { SupplierPageDto, SupplierSearchQuery } from '../../data-access/supplier.dto';
 import { SupplierApiService } from '../../data-access/supplier-api.service';
+import { createPtBrPaginatorIntl } from '../../../../core/i18n/pt-br-paginator-intl';
 import { SupplierListPage } from './supplier-list-page';
 
 describe('SupplierListPage', () => {
@@ -34,7 +36,7 @@ describe('SupplierListPage', () => {
 
     await TestBed.configureTestingModule({
       imports: [SupplierListPage],
-      providers: [provideRouter([]), { provide: SupplierApiService, useValue: { search } }],
+      providers: [provideRouter([]), { provide: SupplierApiService, useValue: { search } }, { provide: MatPaginatorIntl, useFactory: createPtBrPaginatorIntl }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SupplierListPage);
@@ -43,7 +45,7 @@ describe('SupplierListPage', () => {
 
   it('should issue the initial request and show loading feedback', () => {
     expect(search).toHaveBeenCalledWith({ page: 0, size: 20 });
-    expect(fixture.nativeElement.textContent).toContain('Loading suppliers...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando fornecedores...');
   });
 
   it('should render suppliers with detail and registration links', () => {
@@ -62,7 +64,7 @@ describe('SupplierListPage', () => {
     response.next({ ...populatedPage, content: [], totalElements: 0, totalPages: 0 });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('No suppliers found');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum fornecedor encontrado');
   });
 
   it('should correct an empty out-of-range page once and render the last valid page', () => {
@@ -70,7 +72,7 @@ describe('SupplierListPage', () => {
     fixture.detectChanges();
 
     const nextButton = fixture.nativeElement.querySelector(
-      'button[aria-label="Next page"]',
+      'button[aria-label="Próxima página"]',
     ) as HTMLButtonElement;
     nextButton.click();
     fixture.detectChanges();
@@ -80,7 +82,7 @@ describe('SupplierListPage', () => {
 
     expect(search).toHaveBeenLastCalledWith({ page: 0, size: 20 });
     expect(search).toHaveBeenCalledTimes(3);
-    expect(fixture.nativeElement.textContent).toContain('Loading suppliers...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando fornecedores...');
     expect(fixture.nativeElement.textContent).not.toContain('No suppliers found');
 
     response.next({ ...populatedPage, page: 0, totalElements: 20, totalPages: 1 });
@@ -94,11 +96,11 @@ describe('SupplierListPage', () => {
     response.error(new HttpErrorResponse({ status: 0 }));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Unable to connect to the server.');
+    expect(fixture.nativeElement.textContent).toContain('Não foi possível conectar ao servidor.');
 
     response = new Subject<SupplierPageDto>();
     search.mockReturnValue(response);
-    clickButton('Try again');
+    clickButton('Tentar novamente');
 
     expect(search).toHaveBeenLastCalledWith({ page: 0, size: 20 });
   });
@@ -134,7 +136,7 @@ describe('SupplierListPage', () => {
     fixture.detectChanges();
     submitFilters();
 
-    clickButton('Reset');
+    clickButton('Redefinir filtros');
 
     expect(fixture.componentInstance.filtersModel()).toEqual({ name: '', active: 'all' });
     expect(search).toHaveBeenLastCalledWith({ page: 0, size: 20 });
@@ -145,7 +147,7 @@ describe('SupplierListPage', () => {
     fixture.detectChanges();
 
     const nextButton = fixture.nativeElement.querySelector(
-      'button[aria-label="Next page"]',
+      'button[aria-label="Próxima página"]',
     ) as HTMLButtonElement;
     nextButton.click();
     fixture.detectChanges();
@@ -163,7 +165,7 @@ describe('SupplierListPage', () => {
     response.next(populatedPage);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Loading suppliers...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando fornecedores...');
 
     newerResponse.next({
       ...populatedPage,

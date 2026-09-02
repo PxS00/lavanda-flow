@@ -1,8 +1,8 @@
 <section class="receipt-page" aria-labelledby="receipt-heading">
   <header class="page-header">
     <div>
-      <h1 id="receipt-heading">Receive stock</h1>
-      <p>Create one new batch and its immutable initial entry movement in a single transaction.</p>
+      <h1 id="receipt-heading">Entrada de estoque</h1>
+      <p>Crie um novo lote e sua movimentação inicial de entrada em uma única operação.</p>
     </div>
   </header>
 
@@ -13,20 +13,20 @@
   @if (createdReceipt(); as receipt) {
     <mat-card appearance="outlined" class="success-card" aria-live="polite">
       <mat-card-content>
-        <h2>Receipt registered</h2>
-        <p>The backend committed the new batch and initial movement.</p>
+        <h2>Entrada cadastrada</h2>
+        <p>O novo lote e a movimentação inicial foram registrados.</p>
         <dl>
-          <div><dt>Batch ID</dt><dd>{{ receipt.batchId }}</dd></div>
-          <div><dt>Movement ID</dt><dd>{{ receipt.movementId }}</dd></div>
-          <div><dt>Quantity</dt><dd>{{ receipt.quantity }}</dd></div>
-          <div><dt>Received</dt><dd>{{ receipt.receivedAt }}</dd></div>
+          <div><dt>ID do lote</dt><dd>{{ receipt.batchId }}</dd></div>
+          <div><dt>ID da movimentação</dt><dd>{{ receipt.movementId }}</dd></div>
+          <div><dt>Quantidade</dt><dd>{{ receipt.quantity | number: '1.0-6' }}</dd></div>
+          <div><dt>Entrada em</dt><dd>{{ formatLocalDate(receipt.receivedAt) }}</dd></div>
           @if (receipt.expiresAt) {
-            <div><dt>Expires</dt><dd>{{ receipt.expiresAt }}</dd></div>
+            <div><dt>Validade</dt><dd>{{ formatLocalDate(receipt.expiresAt) }}</dd></div>
           }
         </dl>
         <div class="success-actions">
-          <a mat-flat-button [routerLink]="['/inventory/items', receipt.inventoryItemId]">Open item operations</a>
-          <button mat-stroked-button type="button" (click)="registerAnother()">Register another receipt</button>
+          <a mat-flat-button [routerLink]="['/inventory/items', receipt.inventoryItemId]">Abrir operações do item</a>
+          <button mat-stroked-button type="button" (click)="registerAnother()">Cadastrar outra entrada</button>
         </div>
       </mat-card-content>
     </mat-card>
@@ -60,7 +60,7 @@
       <mat-card appearance="outlined">
         <mat-card-content class="fields-grid">
           <mat-form-field appearance="outline">
-            <mat-label>Quantity</mat-label>
+            <mat-label>Quantidade</mat-label>
             <input
               matInput
               type="text"
@@ -70,7 +70,7 @@
               [attr.aria-describedby]="backendFieldError('quantity') ? 'receipt-quantity-backend-error' : null"
             />
             <mat-hint>
-              Positive value, up to 13 integer digits and 6 decimals
+              Valor positivo, com até 13 dígitos inteiros e 6 casas decimais
               @if (selectedItem(); as item) { · {{ unitLabel(item.unitOfMeasure) }} }
             </mat-hint>
             @if (receiptForm.quantity().touched() && receiptForm.quantity().invalid()) {
@@ -82,14 +82,14 @@
           }
 
           <mat-form-field appearance="outline">
-            <mat-label>Lot code</mat-label>
+            <mat-label>Código do lote</mat-label>
             <input
               matInput
               autocomplete="off"
               [formField]="receiptForm.lotCode"
               [attr.aria-describedby]="backendFieldError('lotCode') ? 'receipt-lot-backend-error' : null"
             />
-            <mat-hint>Optional · maximum 255 characters</mat-hint>
+            <mat-hint>Opcional · máximo de 255 caracteres</mat-hint>
             @if (receiptForm.lotCode().touched() && receiptForm.lotCode().invalid()) {
               <mat-error>{{ receiptForm.lotCode().errors()[0].message }}</mat-error>
             }
@@ -99,7 +99,7 @@
           }
 
           <mat-form-field appearance="outline">
-            <mat-label>Received date</mat-label>
+            <mat-label>Data de entrada</mat-label>
             <input
               matInput
               type="date"
@@ -115,28 +115,28 @@
           }
 
           <mat-form-field appearance="outline">
-            <mat-label>Expiration date</mat-label>
+            <mat-label>Data de validade</mat-label>
             <input
               matInput
               type="date"
               [formField]="receiptForm.expiresAt"
               [attr.aria-describedby]="backendFieldError('expiresAt') ? 'receipt-expiration-backend-error' : null"
             />
-            <mat-hint>Optional; backend date rules remain authoritative</mat-hint>
+            <mat-hint>Opcional; as regras de data do sistema permanecem válidas</mat-hint>
           </mat-form-field>
           @if (backendFieldError('expiresAt'); as error) {
             <p id="receipt-expiration-backend-error" class="field-error" role="alert">{{ error }}</p>
           }
 
           <mat-form-field appearance="outline" class="reason-field">
-            <mat-label>Reason</mat-label>
+            <mat-label>Motivo</mat-label>
             <textarea
               matInput
               rows="3"
               [formField]="receiptForm.reason"
               [attr.aria-describedby]="backendFieldError('reason') ? 'receipt-reason-backend-error' : null"
             ></textarea>
-            <mat-hint>Optional · maximum 255 characters</mat-hint>
+            <mat-hint>Opcional · máximo de 255 caracteres</mat-hint>
             @if (receiptForm.reason().touched() && receiptForm.reason().invalid()) {
               <mat-error>{{ receiptForm.reason().errors()[0].message }}</mat-error>
             }
@@ -153,7 +153,7 @@
 
       <div class="submit-row">
         <button mat-flat-button type="submit" [disabled]="isSubmitting()">
-          {{ isSubmitting() ? 'Registering receipt...' : 'Register receipt' }}
+          {{ isSubmitting() ? 'Cadastrando entrada...' : 'Cadastrar entrada' }}
         </button>
       </div>
     </form>

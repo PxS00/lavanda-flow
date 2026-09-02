@@ -41,7 +41,7 @@ describe('SupplierRegistrationPage', () => {
   it('should show required validation and avoid submitting an invalid form', () => {
     submitForm();
 
-    expect(fixture.nativeElement.textContent).toContain('Name is required.');
+    expect(fixture.nativeElement.textContent).toContain('Nome é obrigatório.');
     expect(register).not.toHaveBeenCalled();
   });
 
@@ -51,7 +51,7 @@ describe('SupplierRegistrationPage', () => {
     submitForm();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Identifier must be 255 characters or fewer.',
+      'Identificador deve ter no máximo 255 caracteres.',
     );
     expect(register).not.toHaveBeenCalled();
   });
@@ -103,7 +103,7 @@ describe('SupplierRegistrationPage', () => {
     const nameError = fixture.nativeElement.querySelector('#supplier-name-backend-error') as Element | null;
 
     expect(nameInput.getAttribute('aria-describedby')).toContain('supplier-name-backend-error');
-    expect(nameError?.textContent).toContain('must not be blank');
+    expect(nameError?.textContent).toContain('Verifique o valor informado.');
   });
 
   it('should prevent duplicate submissions while the request is pending', () => {

@@ -1,16 +1,16 @@
 <section class="selector" aria-labelledby="inventory-item-selector-heading">
   <div class="selector-heading">
     <div>
-      <h2 id="inventory-item-selector-heading">Inventory item</h2>
-      <p>Searches active catalog items only.</p>
+      <h2 id="inventory-item-selector-heading">Item de estoque</h2>
+      <p>Busca apenas itens ativos do catálogo.</p>
     </div>
     @if (selected() !== null) {
-      <button mat-button type="button" [disabled]="disabled()" (click)="clear()">Clear</button>
+      <button mat-button type="button" [disabled]="disabled()" (click)="clear()">Limpar</button>
     }
   </div>
 
   <mat-form-field appearance="outline">
-    <mat-label>Search inventory item</mat-label>
+    <mat-label>Buscar item de estoque</mat-label>
     <input
       matInput
       type="search"
@@ -19,33 +19,33 @@
       [value]="query()"
       (input)="search($event)"
     />
-    <mat-hint>Results are limited to 10 active items</mat-hint>
+    <mat-hint>Os resultados são limitados a 10 itens ativos</mat-hint>
   </mat-form-field>
 
   @if (selected(); as item) {
     <p class="selected" aria-live="polite">
-      Selected: <strong>{{ item.name }}</strong> · Active · {{ unitLabel(item.unitOfMeasure) }}
+      Selecionado: <strong>{{ item.name }}</strong> · Ativo · {{ unitLabel(item.unitOfMeasure) }}
     </p>
   }
 
   @let currentState = state();
   @switch (currentState.kind) {
     @case ('loading') {
-      <app-loading-state message="Searching active inventory items..." />
+      <app-loading-state message="Buscando itens de estoque ativos..." />
     }
     @case ('error') {
       <app-error-state [error]="currentState.error" />
-      <button mat-stroked-button type="button" [disabled]="disabled()" (click)="retry()">Try again</button>
+      <button mat-stroked-button type="button" [disabled]="disabled()" (click)="retry()">Tentar novamente</button>
     }
     @case ('loaded') {
       @if (currentState.items.length === 0) {
-        <p class="empty-results">No active inventory items match this search.</p>
+        <p class="empty-results">Nenhum item de estoque ativo corresponde à busca.</p>
       } @else {
-        <div class="results" aria-label="Active inventory item search results">
+        <div class="results" aria-label="Resultados da busca de itens de estoque ativos">
           @for (item of currentState.items; track item.id) {
             <button mat-stroked-button type="button" [disabled]="disabled()" (click)="choose(item)">
               <span>{{ item.name }}</span>
-              <small>Active · {{ unitLabel(item.unitOfMeasure) }}</small>
+              <small>Ativo · {{ unitLabel(item.unitOfMeasure) }}</small>
             </button>
           }
         </div>

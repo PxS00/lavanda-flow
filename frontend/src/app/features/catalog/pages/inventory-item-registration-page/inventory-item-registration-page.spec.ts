@@ -44,9 +44,9 @@ describe('InventoryItemRegistrationPage', () => {
   it('should show required validation and avoid submitting an invalid form', () => {
     submitForm();
 
-    expect(fixture.nativeElement.textContent).toContain('Name is required.');
-    expect(fixture.nativeElement.textContent).toContain('Category is required.');
-    expect(fixture.nativeElement.textContent).toContain('Unit of measure is required.');
+    expect(fixture.nativeElement.textContent).toContain('Nome é obrigatório.');
+    expect(fixture.nativeElement.textContent).toContain('Categoria é obrigatória.');
+    expect(fixture.nativeElement.textContent).toContain('Unidade de medida é obrigatória.');
     expect(register).not.toHaveBeenCalled();
   });
 
@@ -55,7 +55,7 @@ describe('InventoryItemRegistrationPage', () => {
 
     submitForm();
 
-    expect(fixture.nativeElement.textContent).toContain('Name must be 255 characters or fewer.');
+    expect(fixture.nativeElement.textContent).toContain('Nome deve ter no máximo 255 caracteres.');
     expect(register).not.toHaveBeenCalled();
   });
 
@@ -106,8 +106,8 @@ describe('InventoryItemRegistrationPage', () => {
     const nameError = fixture.nativeElement.querySelector('#name-backend-error') as Element | null;
 
     expect(nameInput.getAttribute('aria-describedby')).toContain('name-backend-error');
-    expect(nameError?.textContent).toContain('must not be blank');
-    expect(fixture.nativeElement.textContent).not.toContain('Something went wrong');
+    expect(nameError?.textContent).toContain('Verifique o valor informado.');
+    expect(fixture.nativeElement.textContent).not.toContain('Ocorreu um problema');
   });
 
   it('should retain global validation errors that do not identify a field', () => {
@@ -130,8 +130,8 @@ describe('InventoryItemRegistrationPage', () => {
     );
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Request validation failed.');
-    expect(fixture.nativeElement.textContent).toContain('Something went wrong');
+    expect(fixture.nativeElement.textContent).toContain('Revise os dados informados.');
+    expect(fixture.nativeElement.textContent).toContain('Ocorreu um problema');
   });
 
   it('should prevent duplicate submissions while the request is pending', () => {

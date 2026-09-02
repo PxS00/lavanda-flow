@@ -47,7 +47,7 @@ describe('mapHttpError', () => {
       kind: 'validation',
       message: 'Request validation failed.',
       code: 'VALIDATION_ERROR',
-      fieldErrors: { name: 'must not be blank' },
+      details: { name: 'must not be blank' },
     });
   });
 
@@ -141,7 +141,7 @@ describe('mapHttpError', () => {
       kind: 'unprocessable',
       message: 'Inventory item must be active to receive stock.',
       code: 'INVENTORY_ITEM_INACTIVE',
-      fieldErrors: {},
+      details: {},
     });
   });
 
@@ -184,7 +184,7 @@ describe('mapHttpError', () => {
       kind: 'unprocessable',
       code: 'INSUFFICIENT_ELIGIBLE_STOCK',
       message: 'Insufficient eligible stock for inventory item 123',
-      fieldErrors: { availableQuantity: '55.000000' },
+      details: { availableQuantity: '55.000000' },
     });
   });
 

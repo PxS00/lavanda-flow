@@ -63,7 +63,7 @@ describe('inventory routes', () => {
   it('should resolve a stable operational item route', async () => {
     const harness = await RouterTestingHarness.create(`/inventory/items/${inventoryItemId}`);
 
-    expect(harness.routeNativeElement?.textContent).toContain('Inventory operations');
+    expect(harness.routeNativeElement?.textContent).toContain('Operações de estoque');
     expect(harness.routeNativeElement?.textContent).toContain('Lavender Essence');
   });
 });

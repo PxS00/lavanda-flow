@@ -36,7 +36,7 @@ function mapApiError(error: HttpErrorResponse): UiError {
         code: apiError.code,
         ...(apiError.details === undefined || apiError.details === null
           ? {}
-          : { fieldErrors: apiError.details }),
+          : { details: apiError.details }),
       };
 
     case 404:
@@ -60,7 +60,7 @@ function mapApiError(error: HttpErrorResponse): UiError {
         code: apiError.code,
         ...(apiError.details === undefined || apiError.details === null
           ? {}
-          : { fieldErrors: apiError.details }),
+          : { details: apiError.details }),
       };
 
     default:

@@ -8,7 +8,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
+import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/localize-ui-error';
 import { UiError } from '../../../../core/http/ui-error';
+import { formatDecimalString } from '../../../../core/i18n/decimal-string';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { inventoryItemUnitLabel } from '../../../catalog/inventory-item-display';
 import { InventoryUnitOfMeasure } from '../../data-access/inventory-operations.dto';
@@ -62,9 +64,9 @@ export class FefoWithdrawalPanel {
     return { ...EMPTY_FORM };
   });
   protected readonly withdrawalForm = form(this.withdrawalModel, (withdrawal) => {
-    required(withdrawal.quantity, { message: 'Quantity is required.' });
+    required(withdrawal.quantity, { message: 'Quantidade é obrigatória.' });
     validate(withdrawal.quantity, ({ value }) => validateQuantity(value()));
-    maxLength(withdrawal.reason, 255, { message: 'Reason must be 255 characters or fewer.' });
+    maxLength(withdrawal.reason, 255, { message: 'Motivo deve ter no máximo 255 caracteres.' });
   });
 
   protected readonly state = linkedSignal((): WithdrawalState => {
@@ -93,14 +95,11 @@ export class FefoWithdrawalPanel {
   );
   protected readonly globalSubmissionError = computed(() => {
     const error = this.submissionError();
-    if (error === null || error.fieldErrors === undefined || this.state() !== 'editing') {
+    if (error === null || error.details === undefined || this.state() !== 'editing') {
       return error;
     }
 
-    const remaining = Object.fromEntries(
-      Object.entries(error.fieldErrors).filter(([field]) => !INLINE_FIELDS.includes(field)),
-    );
-    return Object.keys(remaining).length > 0 ? { ...error, fieldErrors: remaining } : null;
+    return hasUnhandledDetails(error, INLINE_FIELDS) ? error : null;
   });
   protected readonly insufficientStockMessage = computed(() => {
     const error = this.submissionError();
@@ -108,10 +107,10 @@ export class FefoWithdrawalPanel {
       return null;
     }
 
-    const available = error.fieldErrors?.['availableQuantity'];
+    const available = error.details?.['availableQuantity'];
     return available === undefined
-      ? 'No partial withdrawal was committed. Review the quantity and try again when eligible stock is available.'
-      : `No partial withdrawal was committed. The backend reported ${available} ${this.unitLabel(this.unitOfMeasure())} of eligible stock.`;
+      ? 'Nenhuma saída parcial foi registrada. Revise a quantidade e tente novamente quando houver estoque elegível.'
+      : `Nenhuma saída parcial foi registrada. Há ${formatDecimalString(available)} ${this.unitLabel(this.unitOfMeasure())} de estoque elegível.`;
   });
 
   protected requestConfirmation(event: SubmitEvent): void {
@@ -201,7 +200,7 @@ export class FefoWithdrawalPanel {
   }
 
   protected backendFieldError(field: 'quantity' | 'reason'): string | undefined {
-    return this.submissionError()?.fieldErrors?.[field];
+    return localizeFieldError(this.submissionError(), field);
   }
 }
 
@@ -215,7 +214,7 @@ function validateQuantity(
 ): { readonly kind: string; readonly message: string } | undefined {
   const normalized = rawValue.trim();
   if (rawValue.length > 0 && normalized.length === 0) {
-    return { kind: 'blank', message: 'Quantity is required.' };
+    return { kind: 'blank', message: 'Quantidade é obrigatória.' };
   }
 
   if (normalized.length === 0) {
@@ -223,14 +222,14 @@ function validateQuantity(
   }
 
   if (!DECIMAL_PATTERN.test(normalized)) {
-    return { kind: 'decimal', message: 'Use a positive quantity with up to 6 decimal places.' };
+    return { kind: 'decimal', message: 'Use uma quantidade positiva com até 6 casas decimais.' };
   }
 
   const [integerPart] = normalized.split('.');
   if (integerPart.replace(/^0+/, '').length > 13 || Number(normalized) <= 0) {
     return {
       kind: 'quantity-range',
-      message: 'Use a positive quantity with at most 13 integer digits and 6 decimal places.',
+      message: 'Use uma quantidade positiva com no máximo 13 dígitos inteiros e 6 casas decimais.',
     };
   }
 
@@ -238,7 +237,7 @@ function validateQuantity(
   if (!Number.isFinite(quantity) || normalizeDecimal(JSON.stringify(quantity)) !== normalizeDecimal(normalized)) {
     return {
       kind: 'unsafe-number',
-      message: 'This quantity cannot be represented safely by the current numeric API contract.',
+      message: 'Esta quantidade não pode ser representada com segurança pelo contrato numérico atual.',
     };
   }
 
@@ -253,5 +252,5 @@ function normalizeDecimal(value: string): string {
 }
 
 function hasEditableFieldError(error: UiError): boolean {
-  return error.fieldErrors?.['quantity'] !== undefined || error.fieldErrors?.['reason'] !== undefined;
+  return error.details?.['quantity'] !== undefined || error.details?.['reason'] !== undefined;
 }

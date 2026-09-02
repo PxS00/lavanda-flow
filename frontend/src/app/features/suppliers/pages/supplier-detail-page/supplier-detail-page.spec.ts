@@ -45,7 +45,7 @@ describe('SupplierDetailPage', () => {
 
   it('should use the direct route ID and show loading feedback', () => {
     expect(getById).toHaveBeenCalledWith(supplierId);
-    expect(fixture.nativeElement.textContent).toContain('Loading supplier...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando fornecedor...');
   });
 
   it('should render the returned supplier', () => {
@@ -61,7 +61,7 @@ describe('SupplierDetailPage', () => {
     response.error(apiError(404, 'SUPPLIER_NOT_FOUND', 'Supplier not found.'));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Supplier not found.');
+    expect(fixture.nativeElement.textContent).toContain('Fornecedor não encontrado.');
   });
 
   it('should render a generic server error and retry', () => {
@@ -69,13 +69,13 @@ describe('SupplierDetailPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'An unexpected server error occurred. Please try again.',
+      'Ocorreu um erro no servidor. Tente novamente.',
     );
 
     response = new Subject<SupplierDto>();
     getById.mockReturnValue(response);
     const retryButton = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
-      (button) => (button as HTMLButtonElement).textContent?.trim() === 'Try again',
+      (button) => (button as HTMLButtonElement).textContent?.trim() === 'Tentar novamente',
     ) as HTMLButtonElement | undefined;
 
     retryButton?.click();
@@ -101,7 +101,7 @@ describe('SupplierDetailPage', () => {
     fixture.detectChanges();
 
     expect(getById).toHaveBeenLastCalledWith(secondSupplier.id);
-    expect(fixture.nativeElement.textContent).toContain('Loading supplier...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando fornecedor...');
 
     secondResponse.next(secondSupplier);
     fixture.detectChanges();

@@ -11,5 +11,5 @@ export interface UiError {
   readonly kind: UiErrorKind;
   readonly message: string;
   readonly code?: string;
-  readonly fieldErrors?: Readonly<Record<string, string>>;
+  readonly details?: Readonly<Record<string, string>>;
 }

@@ -21,6 +21,6 @@ describe('LoadingState', () => {
   });
 
   it('should render the default loading message', () => {
-    expect(fixture.nativeElement.textContent).toContain('Loading...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando...');
   });
 });
