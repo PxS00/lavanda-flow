@@ -11,23 +11,19 @@ export interface InventoryItemDisplayOption<T extends string> {
 }
 
 export const INVENTORY_ITEM_CATEGORY_OPTIONS: readonly InventoryItemDisplayOption<InventoryItemCategory>[] =
-  INVENTORY_ITEM_CATEGORIES.map((value) => ({ value, label: formatWireValue(value) }));
+  INVENTORY_ITEM_CATEGORIES.map((value) => ({ value, label: inventoryItemCategoryLabel(value) }));
 
 export const INVENTORY_ITEM_UNIT_OPTIONS: readonly InventoryItemDisplayOption<InventoryItemUnitOfMeasure>[] =
-  INVENTORY_ITEM_UNITS_OF_MEASURE.map((value) => ({ value, label: formatWireValue(value) }));
+  INVENTORY_ITEM_UNITS_OF_MEASURE.map((value) => ({ value, label: inventoryItemUnitLabel(value) }));
 
 export function inventoryItemCategoryLabel(category: InventoryItemCategory): string {
-  return formatWireValue(category);
+  return {
+    ESSENCE: 'Essência', CHEMICAL_INPUT: 'Insumo químico', BASE: 'Base', ALCOHOL: 'Álcool',
+    COLORANT: 'Corante', FIXATIVE: 'Fixador', BOTTLE: 'Frasco', VALVE: 'Válvula', CAP: 'Tampa',
+    LABEL: 'Rótulo', PACKAGING: 'Embalagem', OTHER: 'Outros',
+  }[category];
 }
 
 export function inventoryItemUnitLabel(unit: InventoryItemUnitOfMeasure): string {
-  return formatWireValue(unit);
-}
-
-function formatWireValue(value: string): string {
-  return value
-    .toLowerCase()
-    .split('_')
-    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
-    .join(' ');
+  return { MILLILITER: 'Mililitro', LITER: 'Litro', GRAM: 'Grama', KILOGRAM: 'Quilograma', UNIT: 'Unidade' }[unit];
 }

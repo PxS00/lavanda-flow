@@ -44,7 +44,7 @@ describe('supplier routes', () => {
   it('should resolve /suppliers/new as registration rather than a supplier ID', async () => {
     const harness = await RouterTestingHarness.create('/suppliers/new');
 
-    expect(harness.routeNativeElement?.textContent).toContain('Register supplier');
+    expect(harness.routeNativeElement?.textContent).toContain('Cadastrar fornecedor');
   });
 
   it('should resolve a stable detail route using its route ID', async () => {

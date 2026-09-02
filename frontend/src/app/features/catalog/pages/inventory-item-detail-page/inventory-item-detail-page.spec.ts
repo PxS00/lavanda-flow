@@ -48,7 +48,7 @@ describe('InventoryItemDetailPage', () => {
 
   it('should use the direct route ID and show loading feedback', () => {
     expect(getById).toHaveBeenCalledWith(inventoryItemId);
-    expect(fixture.nativeElement.textContent).toContain('Loading inventory item...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando item de estoque...');
   });
 
   it('should render the returned inventory item with an operational workspace link', () => {
@@ -57,10 +57,10 @@ describe('InventoryItemDetailPage', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Lavender Essence');
     expect(fixture.nativeElement.textContent).toContain('Floral raw material');
-    expect(fixture.nativeElement.textContent).toContain('Milliliter');
+    expect(fixture.nativeElement.textContent).toContain('Mililitro');
 
     const operationLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find(
-      (link) => (link as HTMLAnchorElement).textContent?.includes('Open inventory operations'),
+      (link) => (link as HTMLAnchorElement).textContent?.includes('Abrir operações de estoque'),
     ) as HTMLAnchorElement | undefined;
     expect(operationLink?.getAttribute('href')).toBe(`/inventory/items/${inventoryItemId}`);
   });
@@ -69,7 +69,7 @@ describe('InventoryItemDetailPage', () => {
     response.error(apiError(404, 'INVENTORY_ITEM_NOT_FOUND', 'Inventory item not found.'));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Inventory item not found.');
+    expect(fixture.nativeElement.textContent).toContain('Item de estoque não encontrado.');
   });
 
   it('should render a generic server error and retry', () => {
@@ -77,13 +77,13 @@ describe('InventoryItemDetailPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'An unexpected server error occurred. Please try again.',
+      'Ocorreu um erro no servidor. Tente novamente.',
     );
 
     response = new Subject<InventoryItemDto>();
     getById.mockReturnValue(response);
     const retryButton = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
-      (button) => (button as HTMLButtonElement).textContent?.trim() === 'Try again',
+      (button) => (button as HTMLButtonElement).textContent?.trim() === 'Tentar novamente',
     ) as HTMLButtonElement | undefined;
 
     retryButton?.click();
@@ -105,7 +105,7 @@ describe('InventoryItemDetailPage', () => {
     fixture.detectChanges();
 
     expect(getById).toHaveBeenLastCalledWith(secondItem.id);
-    expect(fixture.nativeElement.textContent).toContain('Loading inventory item...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando item de estoque...');
 
     secondResponse.next(secondItem);
     fixture.detectChanges();

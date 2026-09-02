@@ -1,8 +1,8 @@
 <section class="registration-page" aria-labelledby="supplier-registration-heading">
   <header>
-    <a mat-button routerLink="/suppliers">Back to suppliers</a>
-    <h1 id="supplier-registration-heading">Register supplier</h1>
-    <p>Add a supplier that can be referenced by inventory receipts.</p>
+    <a mat-button routerLink="/suppliers">Voltar aos fornecedores</a>
+    <h1 id="supplier-registration-heading">Cadastrar fornecedor</h1>
+    <p>Adicione um fornecedor que poderá ser vinculado às entradas de estoque.</p>
   </header>
 
   @if (globalSubmissionError(); as error) {
@@ -11,7 +11,7 @@
 
   <form (submit)="submit($event)" novalidate>
     <mat-form-field appearance="outline">
-      <mat-label>Name</mat-label>
+      <mat-label>Nome</mat-label>
       <input
         matInput
         [formField]="registrationForm.name"
@@ -28,7 +28,7 @@
     }
 
     <mat-form-field appearance="outline">
-      <mat-label>Identifier</mat-label>
+      <mat-label>Identificador</mat-label>
       <input
         matInput
         [formField]="registrationForm.identifier"
@@ -37,7 +37,7 @@
           backendFieldError('identifier') ? 'supplier-identifier-backend-error' : null
         "
       />
-      <mat-hint>Optional</mat-hint>
+      <mat-hint>Opcional</mat-hint>
       @if (registrationForm.identifier().touched() && registrationForm.identifier().invalid()) {
         <mat-error>{{ registrationForm.identifier().errors()[0].message }}</mat-error>
       }
@@ -47,7 +47,7 @@
     }
 
     <mat-form-field appearance="outline">
-      <mat-label>Contact</mat-label>
+      <mat-label>Contato</mat-label>
       <input
         matInput
         [formField]="registrationForm.contact"
@@ -56,7 +56,7 @@
           backendFieldError('contact') ? 'supplier-contact-backend-error' : null
         "
       />
-      <mat-hint>Optional</mat-hint>
+      <mat-hint>Opcional</mat-hint>
       @if (registrationForm.contact().touched() && registrationForm.contact().invalid()) {
         <mat-error>{{ registrationForm.contact().errors()[0].message }}</mat-error>
       }
@@ -66,14 +66,14 @@
     }
 
     <mat-form-field appearance="outline">
-      <mat-label>Notes</mat-label>
+      <mat-label>Observações</mat-label>
       <textarea
         matInput
         rows="4"
         [formField]="registrationForm.notes"
         [attr.aria-describedby]="backendFieldError('notes') ? 'supplier-notes-backend-error' : null"
       ></textarea>
-      <mat-hint>Optional</mat-hint>
+      <mat-hint>Opcional</mat-hint>
     </mat-form-field>
     @if (backendFieldError('notes'); as error) {
       <p id="supplier-notes-backend-error" class="field-error" role="alert">{{ error }}</p>
@@ -81,9 +81,9 @@
 
     <div class="form-actions">
       <button mat-flat-button type="submit" [disabled]="isSubmitting()">
-        {{ isSubmitting() ? 'Registering...' : 'Register supplier' }}
+        {{ isSubmitting() ? 'Cadastrando...' : 'Cadastrar fornecedor' }}
       </button>
-      <a mat-button routerLink="/suppliers">Cancel</a>
+      <a mat-button routerLink="/suppliers">Cancelar</a>
     </div>
   </form>
 </section>

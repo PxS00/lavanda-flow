@@ -8,6 +8,7 @@ import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
+import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/localize-ui-error';
 import { UiError } from '../../../../core/http/ui-error';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { RegisterSupplierRequest } from '../../data-access/supplier.dto';
@@ -49,40 +50,32 @@ export class SupplierRegistrationPage {
 
   readonly registrationModel = signal<SupplierRegistrationModel>({ ...EMPTY_REGISTRATION });
   protected readonly registrationForm = form(this.registrationModel, (supplier) => {
-    required(supplier.name, { message: 'Name is required.' });
-    maxLength(supplier.name, 255, { message: 'Name must be 255 characters or fewer.' });
+    required(supplier.name, { message: 'Nome é obrigatório.' });
+    maxLength(supplier.name, 255, { message: 'Nome deve ter no máximo 255 caracteres.' });
     validate(supplier.name, ({ value }) =>
       value().length > 0 && value().trim().length === 0
-        ? { kind: 'blank', message: 'Name is required.' }
+        ? { kind: 'blank', message: 'Nome é obrigatório.' }
         : undefined,
     );
     maxLength(supplier.identifier, 255, {
-      message: 'Identifier must be 255 characters or fewer.',
+      message: 'Identificador deve ter no máximo 255 caracteres.',
     });
-    maxLength(supplier.contact, 255, { message: 'Contact must be 255 characters or fewer.' });
+    maxLength(supplier.contact, 255, { message: 'Contato deve ter no máximo 255 caracteres.' });
   });
   protected readonly isSubmitting = signal(false);
   protected readonly submissionError = signal<UiError | null>(null);
   protected readonly globalSubmissionError = computed(() => {
     const error = this.submissionError();
-    if (error === null || error.fieldErrors === undefined) {
+    if (error === null || error.details === undefined) {
       return error;
     }
 
-    const errorFields = Object.keys(error.fieldErrors);
+    const errorFields = Object.keys(error.details);
     if (errorFields.length === 0) {
       return error;
     }
 
-    const unmappedFieldErrors = Object.fromEntries(
-      Object.entries(error.fieldErrors).filter(
-        ([field]) => !INLINE_ERROR_FIELDS.includes(field as SupplierRegistrationField),
-      ),
-    );
-
-    return Object.keys(unmappedFieldErrors).length > 0
-      ? { ...error, fieldErrors: unmappedFieldErrors }
-      : null;
+    return hasUnhandledDetails(error, INLINE_ERROR_FIELDS) ? error : null;
   });
 
   protected submit(event: SubmitEvent): void {
@@ -121,7 +114,7 @@ export class SupplierRegistrationPage {
   }
 
   protected backendFieldError(field: SupplierRegistrationField): string | undefined {
-    return this.submissionError()?.fieldErrors?.[field];
+    return localizeFieldError(this.submissionError(), field);
   }
 }
 

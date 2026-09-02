@@ -44,7 +44,7 @@ describe('catalog routes', () => {
   it('should resolve /catalog/new as registration rather than an item ID', async () => {
     const harness = await RouterTestingHarness.create('/catalog/new');
 
-    expect(harness.routeNativeElement?.textContent).toContain('Register inventory item');
+    expect(harness.routeNativeElement?.textContent).toContain('Cadastrar item de estoque');
   });
 
   it('should resolve a stable detail route using its route ID', async () => {

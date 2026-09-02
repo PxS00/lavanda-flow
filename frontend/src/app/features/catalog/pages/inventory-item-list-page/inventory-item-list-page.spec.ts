@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatPaginatorIntl } from '@angular/material/paginator';
 import { provideRouter } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 
@@ -8,6 +9,7 @@ import {
   InventoryItemSearchQuery,
 } from '../../data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
+import { createPtBrPaginatorIntl } from '../../../../core/i18n/pt-br-paginator-intl';
 import { InventoryItemListPage } from './inventory-item-list-page';
 
 describe('InventoryItemListPage', () => {
@@ -39,7 +41,7 @@ describe('InventoryItemListPage', () => {
 
     await TestBed.configureTestingModule({
       imports: [InventoryItemListPage],
-      providers: [provideRouter([]), { provide: InventoryItemApiService, useValue: { search } }],
+      providers: [provideRouter([]), { provide: InventoryItemApiService, useValue: { search } }, { provide: MatPaginatorIntl, useFactory: createPtBrPaginatorIntl }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(InventoryItemListPage);
@@ -48,7 +50,7 @@ describe('InventoryItemListPage', () => {
 
   it('should issue the initial request and show loading feedback', () => {
     expect(search).toHaveBeenCalledWith({ page: 0, size: 20 });
-    expect(fixture.nativeElement.textContent).toContain('Loading inventory items...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando itens de estoque...');
   });
 
   it('should render returned items with detail and registration links', () => {
@@ -67,7 +69,7 @@ describe('InventoryItemListPage', () => {
     response.next({ ...populatedPage, content: [], totalElements: 0, totalPages: 0 });
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('No inventory items found');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum item de estoque encontrado');
   });
 
   it('should correct an empty out-of-range page once and render the last valid page', () => {
@@ -75,7 +77,7 @@ describe('InventoryItemListPage', () => {
     fixture.detectChanges();
 
     const nextButton = fixture.nativeElement.querySelector(
-      'button[aria-label="Next page"]',
+      'button[aria-label="Próxima página"]',
     ) as HTMLButtonElement;
     nextButton.click();
     fixture.detectChanges();
@@ -91,7 +93,7 @@ describe('InventoryItemListPage', () => {
 
     expect(search).toHaveBeenLastCalledWith({ page: 0, size: 20 });
     expect(search).toHaveBeenCalledTimes(3);
-    expect(fixture.nativeElement.textContent).toContain('Loading inventory items...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando itens de estoque...');
     expect(fixture.nativeElement.textContent).not.toContain('No inventory items found');
 
     response.next({ ...populatedPage, page: 0, totalElements: 20, totalPages: 1 });
@@ -105,11 +107,11 @@ describe('InventoryItemListPage', () => {
     response.error(new HttpErrorResponse({ status: 0 }));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Unable to connect to the server.');
+    expect(fixture.nativeElement.textContent).toContain('Não foi possível conectar ao servidor.');
 
     response = new Subject<InventoryItemPageDto>();
     search.mockReturnValue(response);
-    clickButton('Try again');
+    clickButton('Tentar novamente');
 
     expect(search).toHaveBeenLastCalledWith({ page: 0, size: 20 });
   });
@@ -154,7 +156,7 @@ describe('InventoryItemListPage', () => {
     fixture.detectChanges();
     submitFilters();
 
-    clickButton('Reset');
+    clickButton('Redefinir filtros');
 
     expect(fixture.componentInstance.filtersModel()).toEqual({
       name: '',
@@ -169,7 +171,7 @@ describe('InventoryItemListPage', () => {
     fixture.detectChanges();
 
     const nextButton = fixture.nativeElement.querySelector(
-      'button[aria-label="Next page"]',
+      'button[aria-label="Próxima página"]',
     ) as HTMLButtonElement;
     nextButton.click();
     fixture.detectChanges();
@@ -187,7 +189,7 @@ describe('InventoryItemListPage', () => {
     response.next(populatedPage);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Loading inventory items...');
+    expect(fixture.nativeElement.textContent).toContain('Carregando itens de estoque...');
 
     newerResponse.next({
       ...populatedPage,
