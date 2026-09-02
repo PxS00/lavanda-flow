@@ -331,9 +331,16 @@ describe('InventoryItemOperationalPage', () => {
     expect(text).toContain('5.25');
     expect(text).toContain('LOT-A');
     expect(text).toContain('Perfume production');
-    expect(text).toContain(
-      formatDate(populatedMovements.content[0].occurredAt, 'dd/MM/yyyy, HH:mm', 'pt-BR'),
-    );
+    const expectedOccurredAt = new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(new Date(populatedMovements.content[0].occurredAt));
+
+    expect(text).toContain(expectedOccurredAt);
 
     const nextButton = fixture.nativeElement.querySelector(
       'button[aria-label="Próxima página"]',
