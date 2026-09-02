@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,11 +39,15 @@ class RegisterFefoWithdrawalIntegrationTest {
     @Autowired
     private BatchRepository batchRepository;
 
+    @Autowired
+    private Clock clock;
+
     @MockitoBean
     private StockMovementRepository stockMovementRepository;
 
     @Test
     void shouldRollbackAllBatchBalancesWhenMovementPersistenceFailsDuringMultiBatchWithdrawal() {
+        var today = LocalDate.now(clock);
         var inventoryItem = inventoryItemRepository.save(InventoryItem.create(
             "FEFO rollback essence",
             null,
@@ -54,16 +59,16 @@ class RegisterFefoWithdrawalIntegrationTest {
             null,
             "FEFO-ROLLBACK-1",
             new BigDecimal("15.000"),
-            LocalDate.of(2026, 8, 20),
-            LocalDate.of(2026, 9, 1)
+            today.minusDays(2),
+            today.plusDays(30)
         ));
         var secondBatch = batchRepository.save(Batch.create(
             inventoryItem.getId(),
             null,
             "FEFO-ROLLBACK-2",
             new BigDecimal("25.000"),
-            LocalDate.of(2026, 8, 21),
-            LocalDate.of(2026, 9, 2)
+            today.minusDays(1),
+            today.plusDays(60)
         ));
 
         when(stockMovementRepository.save(any(StockMovement.class)))
