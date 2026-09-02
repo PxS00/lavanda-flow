@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { mapHttpError } from '../../../../core/http/map-http-error';
 import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/localize-ui-error';
 import { UiError } from '../../../../core/http/ui-error';
+import { formatDecimalString } from '../../../../core/i18n/decimal-string';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { inventoryItemUnitLabel } from '../../../catalog/inventory-item-display';
 import { InventoryUnitOfMeasure } from '../../data-access/inventory-operations.dto';
@@ -109,7 +110,7 @@ export class FefoWithdrawalPanel {
     const available = error.details?.['availableQuantity'];
     return available === undefined
       ? 'Nenhuma saída parcial foi registrada. Revise a quantidade e tente novamente quando houver estoque elegível.'
-      : `Nenhuma saída parcial foi registrada. Há ${available} ${this.unitLabel(this.unitOfMeasure())} de estoque elegível.`;
+      : `Nenhuma saída parcial foi registrada. Há ${formatDecimalString(available)} ${this.unitLabel(this.unitOfMeasure())} de estoque elegível.`;
   });
 
   protected requestConfirmation(event: SubmitEvent): void {
