@@ -6,6 +6,7 @@ import { of } from 'rxjs';
 import { routes } from '../../app.routes';
 import { InventoryItemOperationsApiService } from './data-access/inventory-item-operations-api.service';
 import { FefoWithdrawalApiService } from './data-access/fefo-withdrawal-api.service';
+import { InventoryAlertApiService } from './data-access/inventory-alert-api.service';
 import { MovementHistoryApiService } from './data-access/movement-history-api.service';
 
 describe('inventory routes', () => {
@@ -49,6 +50,13 @@ describe('inventory routes', () => {
           },
         },
         { provide: FefoWithdrawalApiService, useValue: { register: vi.fn() } },
+        {
+          provide: InventoryAlertApiService,
+          useValue: {
+            getLowStockAlerts: () => of({ asOfDate: '2026-09-01', alerts: [] }),
+            getExpirationAlerts: () => of({ asOfDate: '2026-09-01', windowDays: 30, alerts: [] }),
+          },
+        },
       ],
     });
   });
@@ -65,5 +73,11 @@ describe('inventory routes', () => {
 
     expect(harness.routeNativeElement?.textContent).toContain('Operações de estoque');
     expect(harness.routeNativeElement?.textContent).toContain('Lavender Essence');
+  });
+
+  it('should resolve the operational alerts route', async () => {
+    const harness = await RouterTestingHarness.create('/inventory/alerts');
+
+    expect(harness.routeNativeElement?.textContent).toContain('Alertas operacionais');
   });
 });
