@@ -22,6 +22,10 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - It MUST pass all AXE checks.
 - It MUST follow all WCAG AA minimums, including focus management, color contrast, and ARIA attributes.
 
+## Operator language
+
+All operator-facing UI copy, accessibility text, user-facing metadata, and frontend error presentation must be written in pt-BR. Engineering artifacts, identifiers, routes, API contracts, wire values, comments, and test descriptions remain in English.
+
 ### Components
 
 - Keep components small and focused on a single responsibility
