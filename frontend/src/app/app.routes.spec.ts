@@ -22,9 +22,9 @@ describe('application routes', () => {
   it('should render the dashboard route', async () => {
     const harness = await RouterTestingHarness.create('/dashboard');
 
-    expect(harness.routeNativeElement?.textContent).toContain('Dashboard');
+    expect(harness.routeNativeElement?.textContent).toContain('Painel');
     expect(harness.routeNativeElement?.textContent).toContain(
-      'Operational overview will be available here.',
+      'O resumo operacional estará disponível aqui.',
     );
   });
 });

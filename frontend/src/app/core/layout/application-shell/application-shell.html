@@ -3,7 +3,7 @@
     <button
       mat-button
       type="button"
-      aria-label="Open navigation"
+      aria-label="Abrir navegação"
       (click)="sidenav.toggle()"
     >
       Menu
@@ -18,7 +18,7 @@
     #sidenav
     [mode]="isHandset() ? 'over' : 'side'"
     [opened]="!isHandset()"
-    aria-label="Main navigation"
+    aria-label="Navegação principal"
   >
     <mat-nav-list>
       <a
@@ -27,7 +27,7 @@
         routerLinkActive="active-link"
         (click)="isHandset() && sidenav.close()"
       >
-        Dashboard
+        Painel
       </a>
 
       <a
@@ -36,7 +36,7 @@
         routerLinkActive="active-link"
         (click)="isHandset() && sidenav.close()"
       >
-        Inventory
+        Estoque
       </a>
       <a
         mat-list-item
@@ -44,7 +44,7 @@
         routerLinkActive="active-link"
         (click)="isHandset() && sidenav.close()"
       >
-        Suppliers
+        Fornecedores
       </a>
       <a
         mat-list-item
@@ -52,10 +52,10 @@
         routerLinkActive="active-link"
         (click)="isHandset() && sidenav.close()"
       >
-        Receipts
+        Entradas
       </a>
-      <span mat-list-item>Withdrawals</span>
-      <span mat-list-item>Alerts</span>
+      <span mat-list-item>Saídas</span>
+      <span mat-list-item>Alertas</span>
     </mat-nav-list>
   </mat-sidenav>
 
