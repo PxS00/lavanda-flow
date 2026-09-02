@@ -1,0 +1,125 @@
+<section class="alerts-page">
+  <header class="page-header">
+    <div>
+      <h1>Alertas operacionais</h1>
+      <p>Priorize reposições e lotes que exigem atenção.</p>
+    </div>
+    <button mat-stroked-button type="button" (click)="refreshLowStock(); refreshExpiration()">
+      Atualizar alertas
+    </button>
+  </header>
+
+  <section class="panel" aria-labelledby="low-stock-heading">
+    <div class="panel-heading">
+      <div>
+        <h2 id="low-stock-heading">Estoque baixo</h2>
+        @if (lowStockState(); as lowStock) {
+          @if (lowStock.kind === 'loaded') {
+            <p>{{ lowStock.data.alerts.length }} alerta(s) em {{ formatLocalDate(lowStock.data.asOfDate) }}.</p>
+          }
+        }
+      </div>
+      <button mat-button type="button" (click)="refreshLowStock()">Atualizar</button>
+    </div>
+
+    @let lowStock = lowStockState();
+    @switch (lowStock.kind) {
+      @case ('loading') {
+        <app-loading-state message="Carregando alertas de estoque baixo..." />
+      }
+      @case ('error') {
+        <app-error-state [error]="lowStock.error" />
+        <button mat-stroked-button type="button" (click)="refreshLowStock()">Tentar novamente</button>
+      }
+      @case ('loaded') {
+        @if (lowStock.data.alerts.length === 0) {
+          <app-empty-state title="Nenhum alerta de estoque baixo" message="Os itens com mínimo configurado têm estoque disponível suficiente." />
+        } @else {
+          <div class="table-scroll">
+            <table>
+              <caption>Itens com estoque disponível abaixo do mínimo configurado</caption>
+              <thead>
+                <tr><th scope="col">Item</th><th scope="col">Disponível</th><th scope="col">Mínimo</th><th scope="col">Falta</th><th scope="col">Ação</th></tr>
+              </thead>
+              <tbody>
+                @for (alert of lowStock.data.alerts; track alert.inventoryItemId) {
+                  <tr>
+                    <td><strong>{{ alert.name }}</strong><span class="identifier">ID: {{ alert.inventoryItemId }}</span></td>
+                    <td>{{ alert.availableQuantity | number: '1.0-6' }} {{ alert.unitOfMeasure }}</td>
+                    <td>{{ alert.minimumQuantity | number: '1.0-6' }} {{ alert.unitOfMeasure }}</td>
+                    <td>{{ alert.deficitQuantity | number: '1.0-6' }} {{ alert.unitOfMeasure }}</td>
+                    <td><a mat-button [routerLink]="['/inventory/items', alert.inventoryItemId]" [attr.aria-label]="'Abrir operação do item ' + alert.name">Abrir item</a></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    }
+  </section>
+
+  <section class="panel" aria-labelledby="expiration-heading">
+    <div class="panel-heading">
+      <div>
+        <h2 id="expiration-heading">Validade</h2>
+        @if (expirationState(); as expiration) {
+          @if (expiration.kind === 'loaded') {
+            <p>{{ expiration.data.alerts.length }} alerta(s) em {{ formatLocalDate(expiration.data.asOfDate) }}.</p>
+          }
+        }
+      </div>
+      <button mat-button type="button" (click)="refreshExpiration()">Atualizar</button>
+    </div>
+
+    <form class="window-form" (submit)="applyExpirationWindow($event)" novalidate>
+      <mat-form-field appearance="outline">
+        <mat-label>Janela de validade em dias</mat-label>
+        <input matInput type="text" inputmode="numeric" autocomplete="off" [formField]="expirationWindowForm.windowDays" />
+        <mat-hint>Use 0 para mostrar somente lotes vencidos.</mat-hint>
+        @if (expirationWindowForm.windowDays().touched() && expirationWindowForm.windowDays().invalid()) {
+          <mat-error>{{ expirationWindowForm.windowDays().errors()[0].message }}</mat-error>
+        }
+      </mat-form-field>
+      <button mat-flat-button type="submit">Aplicar janela</button>
+    </form>
+
+    @let expiration = expirationState();
+    @switch (expiration.kind) {
+      @case ('loading') {
+        <app-loading-state message="Carregando alertas de validade..." />
+      }
+      @case ('error') {
+        <app-error-state [error]="expiration.error" />
+        <button mat-stroked-button type="button" (click)="refreshExpiration()">Tentar novamente</button>
+      }
+      @case ('loaded') {
+        @if (expiration.data.alerts.length === 0) {
+          <app-empty-state title="Nenhum alerta de validade" message="Não há lotes com saldo positivo vencidos ou próximos do vencimento nesta janela." />
+        } @else {
+          <div class="table-scroll">
+            <table>
+              <caption>Janela de {{ expiration.data.windowDays }} dia(s); vencidos e próximos do vencimento são classificados pelo sistema.</caption>
+              <thead>
+                <tr><th scope="col">Status</th><th scope="col">Validade</th><th scope="col">Dias</th><th scope="col">Quantidade</th><th scope="col">Lote</th><th scope="col">Item</th><th scope="col">Ação</th></tr>
+              </thead>
+              <tbody>
+                @for (alert of expiration.data.alerts; track alert.batchId) {
+                  <tr>
+                    <td><span class="status" [class.status-expired]="alert.status === 'EXPIRED'" [class.status-expiring]="alert.status === 'EXPIRING_SOON'">{{ expirationStatusLabel(alert.status) }}</span></td>
+                    <td>{{ formatLocalDate(alert.expiresAt) }}</td>
+                    <td>{{ alert.daysUntilExpiration }}</td>
+                    <td>{{ alert.currentQuantity | number: '1.0-6' }}</td>
+                    <td>{{ alert.lotCode || '—' }}<span class="identifier">ID: {{ alert.batchId }}</span></td>
+                    <td><span class="identifier">ID: {{ alert.inventoryItemId }}</span></td>
+                    <td><a mat-button [routerLink]="['/inventory/items', alert.inventoryItemId]" [attr.aria-label]="'Abrir operação do item ' + alert.inventoryItemId">Abrir item</a></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    }
+  </section>
+</section>

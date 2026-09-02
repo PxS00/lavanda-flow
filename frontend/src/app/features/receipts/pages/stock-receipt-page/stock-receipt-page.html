@@ -1,0 +1,161 @@
+<section class="receipt-page" aria-labelledby="receipt-heading">
+  <header class="page-header">
+    <div>
+      <h1 id="receipt-heading">Entrada de estoque</h1>
+      <p>Crie um novo lote e sua movimentação inicial de entrada em uma única operação.</p>
+    </div>
+  </header>
+
+  @if (preselectionError(); as error) {
+    <app-error-state [error]="error" />
+  }
+
+  @if (createdReceipt(); as receipt) {
+    <mat-card appearance="outlined" class="success-card" aria-live="polite">
+      <mat-card-content>
+        <h2>Entrada cadastrada</h2>
+        <p>O novo lote e a movimentação inicial foram registrados.</p>
+        <dl>
+          <div><dt>ID do lote</dt><dd>{{ receipt.batchId }}</dd></div>
+          <div><dt>ID da movimentação</dt><dd>{{ receipt.movementId }}</dd></div>
+          <div><dt>Quantidade</dt><dd>{{ receipt.quantity | number: '1.0-6' }}</dd></div>
+          <div><dt>Entrada em</dt><dd>{{ formatLocalDate(receipt.receivedAt) }}</dd></div>
+          @if (receipt.expiresAt) {
+            <div><dt>Validade</dt><dd>{{ formatLocalDate(receipt.expiresAt) }}</dd></div>
+          }
+        </dl>
+        <div class="success-actions">
+          <a mat-flat-button [routerLink]="['/inventory/items', receipt.inventoryItemId]">Abrir operações do item</a>
+          <button mat-stroked-button type="button" (click)="registerAnother()">Cadastrar outra entrada</button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <form class="receipt-form" (submit)="submit($event)" novalidate>
+      <mat-card appearance="outlined">
+        <mat-card-content class="selection-grid">
+          <app-inventory-item-selector
+            [selected]="selectedItem()"
+            [disabled]="isSubmitting()"
+            (selectionChange)="selectItem($event)"
+          />
+          @if (selectionError(); as error) {
+            <p class="field-error" role="alert">{{ error }}</p>
+          }
+          @if (backendFieldError('inventoryItemId'); as error) {
+            <p class="field-error" role="alert">{{ error }}</p>
+          }
+
+          <app-supplier-selector
+            [selected]="selectedSupplier()"
+            [disabled]="isSubmitting()"
+            (selectionChange)="selectSupplier($event)"
+          />
+          @if (backendFieldError('supplierId'); as error) {
+            <p class="field-error" role="alert">{{ error }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card appearance="outlined">
+        <mat-card-content class="fields-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Quantidade</mat-label>
+            <input
+              matInput
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              [formField]="receiptForm.quantity"
+              [attr.aria-describedby]="backendFieldError('quantity') ? 'receipt-quantity-backend-error' : null"
+            />
+            <mat-hint>
+              Valor positivo, com até 13 dígitos inteiros e 6 casas decimais
+              @if (selectedItem(); as item) { · {{ unitLabel(item.unitOfMeasure) }} }
+            </mat-hint>
+            @if (receiptForm.quantity().touched() && receiptForm.quantity().invalid()) {
+              <mat-error>{{ receiptForm.quantity().errors()[0].message }}</mat-error>
+            }
+          </mat-form-field>
+          @if (backendFieldError('quantity'); as error) {
+            <p id="receipt-quantity-backend-error" class="field-error" role="alert">{{ error }}</p>
+          }
+
+          <mat-form-field appearance="outline">
+            <mat-label>Código do lote</mat-label>
+            <input
+              matInput
+              autocomplete="off"
+              [formField]="receiptForm.lotCode"
+              [attr.aria-describedby]="backendFieldError('lotCode') ? 'receipt-lot-backend-error' : null"
+            />
+            <mat-hint>Opcional · máximo de 255 caracteres</mat-hint>
+            @if (receiptForm.lotCode().touched() && receiptForm.lotCode().invalid()) {
+              <mat-error>{{ receiptForm.lotCode().errors()[0].message }}</mat-error>
+            }
+          </mat-form-field>
+          @if (backendFieldError('lotCode'); as error) {
+            <p id="receipt-lot-backend-error" class="field-error" role="alert">{{ error }}</p>
+          }
+
+          <mat-form-field appearance="outline">
+            <mat-label>Data de entrada</mat-label>
+            <input
+              matInput
+              type="date"
+              [formField]="receiptForm.receivedAt"
+              [attr.aria-describedby]="backendFieldError('receivedAt') ? 'receipt-received-backend-error' : null"
+            />
+            @if (receiptForm.receivedAt().touched() && receiptForm.receivedAt().invalid()) {
+              <mat-error>{{ receiptForm.receivedAt().errors()[0].message }}</mat-error>
+            }
+          </mat-form-field>
+          @if (backendFieldError('receivedAt'); as error) {
+            <p id="receipt-received-backend-error" class="field-error" role="alert">{{ error }}</p>
+          }
+
+          <mat-form-field appearance="outline">
+            <mat-label>Data de validade</mat-label>
+            <input
+              matInput
+              type="date"
+              [formField]="receiptForm.expiresAt"
+              [attr.aria-describedby]="backendFieldError('expiresAt') ? 'receipt-expiration-backend-error' : null"
+            />
+            <mat-hint>Opcional; as regras de data do sistema permanecem válidas</mat-hint>
+          </mat-form-field>
+          @if (backendFieldError('expiresAt'); as error) {
+            <p id="receipt-expiration-backend-error" class="field-error" role="alert">{{ error }}</p>
+          }
+
+          <mat-form-field appearance="outline" class="reason-field">
+            <mat-label>Motivo</mat-label>
+            <textarea
+              matInput
+              rows="3"
+              [formField]="receiptForm.reason"
+              [attr.aria-describedby]="backendFieldError('reason') ? 'receipt-reason-backend-error' : null"
+            ></textarea>
+            <mat-hint>Opcional · máximo de 255 caracteres</mat-hint>
+            @if (receiptForm.reason().touched() && receiptForm.reason().invalid()) {
+              <mat-error>{{ receiptForm.reason().errors()[0].message }}</mat-error>
+            }
+          </mat-form-field>
+          @if (backendFieldError('reason'); as error) {
+            <p id="receipt-reason-backend-error" class="field-error" role="alert">{{ error }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      @if (globalSubmissionError(); as error) {
+        <app-error-state [error]="error" />
+      }
+
+      <div class="submit-row">
+        <button mat-flat-button type="submit" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Cadastrando entrada...' : 'Cadastrar entrada' }}
+        </button>
+      </div>
+    </form>
+  }
+</section>

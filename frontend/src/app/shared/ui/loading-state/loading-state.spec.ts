@@ -1,0 +1,26 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { LoadingState } from './loading-state';
+
+describe('LoadingState', () => {
+  let component: LoadingState;
+  let fixture: ComponentFixture<LoadingState>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [LoadingState],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LoadingState);
+    component = fixture.componentInstance;
+    await fixture.whenStable();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should render the default loading message', () => {
+    expect(fixture.nativeElement.textContent).toContain('Carregando...');
+  });
+});

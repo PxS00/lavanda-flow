@@ -1,0 +1,153 @@
+:host {
+  display: block;
+}
+
+.operational-page {
+  display: grid;
+  gap: 32px;
+}
+
+.page-header,
+.panel,
+.item-identity {
+  display: grid;
+  gap: 12px;
+}
+
+.page-header {
+  justify-items: start;
+}
+
+.page-header h1,
+.page-header p,
+.panel h2,
+.item-identity h3,
+.item-identity p,
+.current-minimum,
+.removal-confirmation p,
+.notice,
+.semantics-note {
+  margin: 0;
+}
+
+.page-header p,
+.item-identity p,
+.semantics-note,
+dt,
+caption {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.panel {
+  min-width: 0;
+}
+
+.item-identity {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+.item-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+}
+
+dt {
+  font: var(--mat-sys-label-medium);
+}
+
+dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.semantics-note {
+  margin-top: 24px;
+  max-width: 80ch;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+caption {
+  padding: 0 0 10px;
+  text-align: left;
+  font: var(--mat-sys-body-small);
+}
+
+th,
+td {
+  padding: 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  font: var(--mat-sys-label-large);
+}
+
+.minimum-panel {
+  max-width: 760px;
+}
+
+.minimum-form {
+  display: grid;
+  gap: 8px;
+}
+
+.field-error {
+  margin: -8px 0 8px;
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+}
+
+.minimum-actions,
+.removal-confirmation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.removal-confirmation {
+  padding: 12px 0;
+}
+
+.notice {
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599px) {
+  .metric-grid,
+  .item-identity {
+    grid-template-columns: 1fr;
+  }
+
+  .item-actions {
+    justify-items: start;
+  }
+}

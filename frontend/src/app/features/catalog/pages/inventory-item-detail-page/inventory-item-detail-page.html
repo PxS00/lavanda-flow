@@ -1,0 +1,43 @@
+<section class="detail-page" aria-labelledby="detail-heading">
+  <a mat-button routerLink="/catalog">Voltar ao catálogo</a>
+  <h1 id="detail-heading">Detalhes do item de estoque</h1>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando item de estoque..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      <header>
+        <h2>{{ currentState.item.name }}</h2>
+        <p>{{ currentState.item.active ? 'Ativo' : 'Inativo' }}</p>
+        <a mat-flat-button [routerLink]="['/inventory/items', currentState.item.id]">
+          Abrir operações de estoque
+        </a>
+      </header>
+
+      <mat-card appearance="outlined">
+        <mat-card-content>
+          <dl>
+            <div>
+              <dt>Categoria</dt>
+              <dd>{{ categoryLabel(currentState.item.category) }}</dd>
+            </div>
+            <div>
+              <dt>Unidade de medida</dt>
+              <dd>{{ unitLabel(currentState.item.unitOfMeasure) }}</dd>
+            </div>
+            <div class="description">
+              <dt>Descrição</dt>
+              <dd>{{ currentState.item.description || 'Nenhuma descrição informada.' }}</dd>
+            </div>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</section>
