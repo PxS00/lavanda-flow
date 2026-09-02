@@ -1,195 +1,166 @@
-# Escopo da V1
+# V1 Product Scope
 
-## Objetivo
+## Objective
 
-A primeira versão do Lavanda Flow deve resolver o problema atual de controle de estoque da Céu de Lavanda de forma simples, confiável e rastreável.
+Lavanda Flow V1 must give Céu de Lavanda a simple, reliable, and traceable way to control inventory and register internal production.
 
-A V1 será focada em estoque geral, não apenas perfumes ou essências. O modelo deve permitir cadastrar e controlar matérias-primas, insumos químicos, bases, embalagens e demais itens utilizados na operação.
+V1 covers the whole operational inventory rather than only perfumes or essences. The same inventory model controls raw materials (`matéria-prima`), intermediate products (`produto intermediário`), finalized products (`produto finalizado`), packaging, and other items used by the operation.
 
-## Problemas que a V1 resolve
+## Problems V1 solves
 
-- falta de visibilidade sobre o que já existe em estoque;
-- compras duplicadas por esquecimento;
-- perdas por vencimento;
-- ausência de histórico de entradas e saídas;
-- dificuldade para saber quanto ainda existe de cada item;
-- dificuldade para identificar lotes e fornecedores associados ao estoque.
+- lack of visibility into available stock;
+- duplicate purchases caused by missing inventory information;
+- expiration losses;
+- missing history for stock entries and withdrawals;
+- difficulty identifying batch and supplier origins;
+- missing records of the concrete batches used in production;
+- inability to trace a finalized product upstream to supplier batches or a supplier batch forward to affected production.
 
-## Funcionalidades incluídas
+## Included capabilities
 
-### Catálogo de itens
+### Inventory catalog
 
-Permitir cadastrar itens de estoque com, no mínimo:
+An operator can register inventory items with at least a name, category, unit of measure, active status, optional minimum stock, and optional notes.
 
-- nome;
-- categoria;
-- unidade de medida;
-- status ativo/inativo;
-- observações opcionais.
+Initial categories include essence, chemical input, base, alcohol, colorant, fixative, bottle, valve, cap, label, packaging, and other. Categories organize inventory but do not create separate stock systems for raw materials, intermediate products, and finalized products.
 
-Categorias iniciais previstas:
+### Suppliers and externally supplied batches
 
-- essência;
-- insumo químico;
-- base;
-- álcool;
-- corante;
-- fixador;
-- frasco;
-- válvula;
-- tampa;
-- rótulo;
-- embalagem;
-- outros.
+Suppliers can be registered and associated with externally supplied inventory batches. Each such batch preserves the lot code assigned by its manufacturer or supplier; Lavanda Flow must not automatically replace that code with an internal code.
 
-### Fornecedores
+### Inventory batches
 
-Permitir associar fornecedores aos lotes recebidos.
+An inventory item may have multiple independent batches. A batch represents physical stock and has one of two origins:
 
-Dados mínimos previstos:
+1. an external supplier or manufacturer; or
+2. an internal Céu de Lavanda production execution.
 
-- nome;
-- identificação opcional;
-- contato opcional;
-- observações opcionais.
+A batch records its item, origin, lot code, quantities, unit of measure, entry or production date, expiration when applicable, and optional notes. Externally supplied and internally produced batches share this inventory and movement model.
 
-### Lotes
+### Stock movements, balances, and expiration
 
-Cada item pode possuir vários lotes independentes.
+Every quantity change creates an auditable stock movement. Supported operations include entry, consumption or withdrawal, positive and negative adjustment, loss, and expired disposal. Corrections create new adjustment movements rather than rewriting history.
 
-Cada lote deve permitir registrar:
+The system provides balances by item and batch, zero and low-stock information, expiration status, and movement history. When applicable, eligible batches are prioritized by FEFO (*First Expired, First Out*). Available stock, expiration, FEFO, and consumption eligibility are backend-authoritative.
 
-- item;
-- fornecedor;
-- número/código do lote;
-- quantidade inicial;
-- quantidade disponível;
-- unidade de medida;
-- data de entrada;
-- data de validade, quando aplicável;
-- observações.
+### Formulas and recipes
 
-A existência de múltiplos lotes para o mesmo item é obrigatória no modelo, pois compras diferentes podem possuir datas de validade e fornecedores distintos.
+V1 includes the minimum formula or recipe information needed for production. A formula defines the inventory items and proportions required for a product. It does not identify the concrete batches consumed by a particular execution; those allocations belong to the production record.
 
-### Movimentações de estoque
+### Internal production
 
-Toda alteração de quantidade deve gerar uma movimentação.
+An operator can register a production execution with its formula, output item and quantity, and the exact source batches and quantities actually consumed.
 
-Tipos iniciais:
+One production execution creates exactly one new output batch. A later execution creates a distinct output batch even when it uses the same product, formula, source batches, and calendar month. A production may consume externally supplied batches, internally produced batches, or multiple batches of the same inventory item.
 
-- entrada;
-- consumo/saída;
-- ajuste positivo;
-- ajuste negativo;
-- perda;
-- descarte por vencimento.
+Produced intermediate batches remain normal inventory batches and may be consumed by later production executions. This supports chains of arbitrary depth, for example:
 
-Cada movimentação deve registrar:
+```text
+supplier raw-material batches
+            ↓
+Base Body Splash production
+            ↓
+internal Base Body Splash batch
+            ↓
+Body Splash production
+            ↓
+internal finalized Body Splash batch
+```
 
-- lote afetado;
-- tipo;
-- quantidade;
-- data e hora;
-- motivo ou observação, quando aplicável.
+Production is one atomic business operation: all source-batch consumption, corresponding auditable movements, and output-batch creation either succeed together or leave no partial production state. Quantities use exact decimal representation, and stock must never become negative.
 
-Não deve existir alteração silenciosa de estoque sem histórico correspondente.
+### Recursive batch genealogy
 
-### Saldo de estoque
+Genealogy is persisted through explicit production-to-source-batch relationships, not notes or lot-code strings. Operators can navigate it recursively in both directions across any production depth:
 
-O sistema deve permitir consultar:
+- from a finalized or intermediate batch to all upstream source batches, including through other produced batches;
+- from a supplier or produced source batch to all downstream internally produced descendants.
 
-- saldo por item;
-- saldo por lote;
-- estoque zerado;
-- estoque abaixo do mínimo definido, quando configurado.
+Example, upstream:
 
-### Validade
+```text
+BDS-014-003-12-2026
+│
+├── ESS-44821
+└── BAS-000-001-12-2026
+    │
+    ├── ALC-9001
+    ├── PG-4432
+    └── FIX-2004
+```
 
-O sistema deve identificar:
+Example, downstream:
 
-- lotes vencidos;
-- lotes próximos do vencimento;
-- lotes válidos.
+```text
+ALC-9001
+   ↓
+BAS-000-001-12-2026
+   ↓
+├── BDS-014-003-12-2026
+├── BDS-014-004-12-2026
+└── ...
+```
 
-A interface deve destacar itens que precisam ser utilizados com prioridade.
+### Internal production lot codes
 
-### FEFO
+Céu de Lavanda's internal production lot format is:
 
-Quando houver múltiplos lotes disponíveis do mesmo item, o sistema deverá priorizar o lote com validade mais próxima quando essa regra for aplicável.
+```text
+TTT-EEE-LLL-MM-YYYY
+```
 
-FEFO significa *First Expired, First Out*.
+For example, `BDS-014-003-12-2026` means:
 
-### Pesquisa e consulta
+- `TTT`: stable three-letter internal product-type code, such as `BDS` for Body Splash, `SBN` for Sabonete, or `BAS` for Base;
+- `EEE`: stable three-digit essence reference; `000` is reserved for products with no associated essence, while actual references use `001` through `999`, are never recycled, and remain unchanged if the essence display name changes;
+- `LLL`: production sequence from `001` through `999` for the relevant `TTT-EEE` prefix within a calendar month and year; it resets when the month or year changes, and every new production execution receives a new sequence;
+- `MM`: production month;
+- `YYYY`: production year.
 
-A V1 deve permitir pesquisar itens pelo nome e visualizar rapidamente:
+The lot code is a human operational identifier. It is neither database identity nor the source of genealogy.
 
-- quantidade total disponível;
-- lotes existentes;
-- validade;
-- fornecedor;
-- histórico de movimentações.
+Automatic generation is recommended but optional. A future interface may offer **Generate automatically (recommended)** or **Enter manually**. For automatic generation, the backend assigns the definitive code when production is successfully registered and prevents concurrent allocations from receiving the same code. The frontend may show a preview but must neither reserve nor authoritatively calculate the next sequence. Explicit manual entry remains allowed and is not required to encode genealogy.
 
-### Dashboard simples
+### Search and operational dashboard
 
-A tela inicial deverá apresentar apenas informações operacionais úteis, como:
+V1 supports item search and quick access to total available quantity, batches, expiration, supplier or internal-production origin, and movement history. The dashboard remains limited to useful operational information such as active items, low or zero stock, and expiring or expired batches.
 
-- quantidade de itens ativos;
-- itens com estoque baixo;
-- itens sem estoque;
-- lotes próximos do vencimento;
-- lotes vencidos.
+## Initial import
 
-## Importação inicial
+The existing inventory CSV is the source for the initial migration. Names, references, quantities, expiration dates, and missing or inconsistent values must be normalized before import. The CSV is not a source of truth after migration.
 
-O estoque atual existente em CSV será usado como fonte de migração inicial.
+## Outside V1
 
-Os dados deverão ser normalizados antes da importação, especialmente:
+V1 does not include:
 
-- nomes;
-- gênero/referência quando aplicável;
-- quantidades;
-- datas de validade;
-- valores ausentes ou inconsistentes.
+- production costing or margins;
+- sales, invoicing, or other fiscal features;
+- purchase orders, supplier integration, or automatic purchasing forecasts;
+- barcodes or QR codes unless separately approved;
+- automatic unit conversion;
+- advanced formula lifecycle or versioning beyond the minimum recipe definitions required for production;
+- automatic production planning or scheduling, unattended execution of the production process, and broader manufacturing automation; operator-triggered production registration remains part of V1.
 
-O CSV não será considerado fonte de verdade após a migração.
+These unrelated ERP capabilities must not expand V1.
 
-## Fora do escopo da V1
+## Success criteria
 
-Não fazem parte da primeira versão:
+V1 is operationally useful when an operator can, without relying on the spreadsheet:
 
-- fórmulas e receitas;
-- versionamento de fórmulas;
-- produção automatizada;
-- consumo automático de matérias-primas por produção;
-- criação de lotes de produto acabado;
-- rastreabilidade completa entre matéria-prima, base e produto final;
-- custos de produção;
-- cálculo de margem;
-- vendas;
-- emissão fiscal;
-- código de barras;
-- QR Code;
-- integração com fornecedores;
-- previsão automática de compras.
+1. search an item and see its quantity, batches, expiration, and origin;
+2. register a purchase or stock entry and preserve its supplier lot code;
+3. register consumption, adjustments, losses, and disposal with auditable history;
+4. register an internal production and see its generated or manually entered output lot;
+5. identify the exact source batches and quantities consumed by a production;
+6. trace a finalized product recursively through intermediate batches to supplier batches;
+7. trace a supplier batch forward to all affected internally produced batches;
+8. quickly identify low, zero, expiring, and expired stock.
 
-Essas funcionalidades devem ser suportadas futuramente pela arquitetura, mas não devem aumentar o escopo da V1.
+## Product principles
 
-## Critérios de sucesso
-
-A V1 será considerada útil quando a usuária conseguir, sem recorrer à planilha:
-
-1. pesquisar um item e saber se existe em estoque;
-2. consultar quantidade e validade;
-3. registrar uma nova compra ou entrada;
-4. registrar quanto foi utilizado;
-5. consultar o histórico de movimentações;
-6. identificar rapidamente itens vencidos ou próximos do vencimento.
-
-## Princípios de produto
-
-- simplicidade de uso acima de quantidade de funcionalidades;
-- interface mobile-first;
-- histórico em vez de alterações destrutivas;
-- rastreabilidade desde o modelo de dados;
-- consistência de estoque acima de conveniência técnica;
-- evolução incremental sem transformar a V1 em um ERP completo.
+- simplicity of use over feature count;
+- mobile-first interface;
+- historical records instead of destructive changes;
+- traceability represented explicitly in the data model;
+- stock consistency over technical convenience;
+- incremental evolution without turning V1 into a complete ERP.

@@ -1,211 +1,133 @@
-# Modelo de Dados
+# Data Model
 
-## Objetivo
+## Purpose
 
-Este documento descreve o modelo relacional inicial da V1. Ele é deliberadamente simples e deve evoluir junto com o domínio antes da implementação física definitiva.
+This document describes the V1 relational model and the minimum conceptual relationships required for inventory, production, and recursive batch genealogy. Established inventory structures remain concrete; new production structures stay conceptual until an implementation issue or ADR decides their physical design.
 
-## ERD inicial
+PostgreSQL is the source of truth, and Flyway controls every schema change.
+
+## Inventory model
 
 ```text
 supplier
-   │
-   │ 1:N
+   │ 1:N (external origin only)
    ▼
-inventory_batch
-   ▲
-   │ N:1
-   │
-inventory_item
-   │
-   │ 1:N
-   ▼
-inventory_batch
+inventory_batch ◄── N:1 ── inventory_item
    │
    │ 1:N
    ▼
 stock_movement
 ```
 
-## Tabelas
+### `inventory_item`
 
-### inventory_item
+Represents any stock-controlled item: raw material (`matéria-prima`), intermediate product (`produto intermediário`), finalized product (`produto finalizado`), packaging, or another operational item.
 
-Representa um item controlado no estoque.
+Established fields include identity, name, category, default unit, optional minimum stock, active state, optional notes, and audit timestamps. Name, category, and default unit are required; minimum stock cannot be negative.
 
-Campos previstos:
+### `supplier`
 
-```text
-id                  UUID / BIGINT
-name                VARCHAR
-category            VARCHAR
-default_unit         VARCHAR
-minimum_stock       NUMERIC nullable
-active              BOOLEAN
-notes               TEXT nullable
-created_at          TIMESTAMPTZ
-updated_at          TIMESTAMPTZ
-```
+Represents an external commercial source with identity, name, optional identifier and contact details, active state, and audit timestamps.
 
-Restrições iniciais:
+### `inventory_batch`
 
-- `name` obrigatório;
-- `category` obrigatório;
-- `default_unit` obrigatório;
-- `minimum_stock >= 0` quando informado.
+Represents identifiable physical stock for one inventory item. Existing inventory principles include identity, item relationship, optional supplier relationship, lot code, initial and current quantities, relevant dates, expiration, optional notes, audit timestamps, and concurrency version.
 
-### supplier
+Every batch has one conceptual origin:
 
-Representa um fornecedor.
+- **external:** associated with a supplier or manufacturer when known and preserving the lot code assigned by that source; or
+- **internal:** the one output batch of a Céu de Lavanda production execution.
 
-```text
-id                  UUID / BIGINT
-name                VARCHAR
-identifier          VARCHAR nullable
-contact             VARCHAR nullable
-notes               TEXT nullable
-active              BOOLEAN
-created_at          TIMESTAMPTZ
-updated_at          TIMESTAMPTZ
-```
+These origins do not create separate batch or stock systems. A produced intermediate batch is an ordinary `inventory_batch` and may later be consumed by production.
 
-### inventory_batch
+`current_quantity` may remain a materialized balance for efficient queries only when every update is accompanied by `stock_movement` in the same transaction. It is never negative. Externally supplied lot codes are not automatically replaced by internal lot codes.
 
-Representa um lote físico de um item.
+### `stock_movement`
+
+Represents an immutable, auditable quantity change for one inventory batch. Established movement types include `ENTRY`, `CONSUMPTION`, `ADJUSTMENT_IN`, `ADJUSTMENT_OUT`, `LOSS`, and `EXPIRED_DISPOSAL`.
+
+A movement has a positive exact-decimal quantity and required occurrence time. Corrections create new movements rather than changing historical records.
+
+## Minimum production relationships
+
+The physical table and column names below the established inventory model are deliberately unspecified. The relational design must represent at least these concepts and cardinalities:
 
 ```text
-id                  UUID / BIGINT
-inventory_item_id   FK -> inventory_item
-supplier_id         FK -> supplier nullable
-lot_code            VARCHAR nullable
-initial_quantity    NUMERIC
-current_quantity    NUMERIC
-received_at         DATE
-expires_at          DATE nullable
-notes               TEXT nullable
-created_at          TIMESTAMPTZ
-updated_at          TIMESTAMPTZ
-version             BIGINT
+Formula / recipe
+   │ 1:N
+   ▼
+Formula requirement ── N:1 ── Inventory item
+
+Formula / recipe
+   │ 1:N
+   ▼
+Production execution ── exactly 1 output ──► Inventory batch
+   │
+   │ 1:N
+   ▼
+Production consumption ── N:1 ──► source Inventory batch
+          │
+          └── exact quantity consumed
 ```
 
-Restrições iniciais:
+The required semantics are:
 
-- `inventory_item_id` obrigatório;
-- `initial_quantity > 0`;
-- `current_quantity >= 0`;
-- lote vencido pode permanecer registrado, mas não deve ser selecionado automaticamente para consumo;
-- `version` pode ser utilizado para controle otimista de concorrência.
+- formula or recipe requirements identify required inventory items and proportions;
+- a production execution references the applicable formula or recipe and records the produced item and quantity;
+- each production execution creates exactly one new output `inventory_batch`;
+- each internally produced batch is the output of exactly one production execution;
+- repeated executions create distinct output batches even with identical product, formula, source batches, and month;
+- each production consumption joins one execution to one concrete source batch and records the exact positive quantity consumed;
+- one execution may contain multiple consumptions for different source batches of the same inventory item;
+- a source batch may be external or internally produced;
+- one source batch may be consumed by multiple production executions, subject to available stock.
 
-`current_quantity` pode ser mantido como saldo materializado para eficiência, desde que toda alteração seja acompanhada por `stock_movement` na mesma transação.
+Formula requirements and production consumptions are separate relationships: the former describes what should be used; the latter records what was actually allocated.
 
-O histórico de movimentações permanece a trilha de auditoria da quantidade.
+## Recursive bidirectional genealogy
 
-### stock_movement
+Genealogy is derived from explicit production-execution, output-batch, and source-batch-consumption relations:
 
-Representa uma alteração de estoque.
+- **upstream:** output batch -> producing execution -> source batches -> their producing executions -> earlier source batches;
+- **downstream:** source batch -> consuming executions -> output batches -> later consuming executions -> descendants.
 
-```text
-id                  UUID / BIGINT
-batch_id            FK -> inventory_batch
-movement_type       VARCHAR
-quantity            NUMERIC
-reason              TEXT nullable
-occurred_at         TIMESTAMPTZ
-created_at          TIMESTAMPTZ
-```
+Because an internally produced batch may itself be consumed, the same relationship supports arbitrary depth without special raw-material, base, or finalized-product tables. Genealogy must not be inferred from `lot_code`, notes, categories, or naming conventions.
 
-Tipos iniciais:
+## Transaction and integrity requirements
 
-```text
-ENTRY
-CONSUMPTION
-ADJUSTMENT_IN
-ADJUSTMENT_OUT
-LOSS
-EXPIRED_DISPOSAL
-```
+Production registration commits as one atomic business operation. The transaction must include:
 
-Restrições:
+- validation of source-batch eligibility and sufficient balance;
+- all source-batch balance reductions;
+- auditable consumption movements;
+- exact production-consumption records;
+- creation of the one output batch and its stock-creating history;
+- its relationship to the production execution;
+- definitive generated internal lot-code allocation when automatic generation is chosen.
 
-- `batch_id` obrigatório;
-- `movement_type` obrigatório;
-- `quantity > 0`;
-- `occurred_at` obrigatório.
+Failure rolls back every effect; no negative balance or partial production state may remain. Concurrent withdrawals and productions must not overspend stock, and concurrent automatic lot allocation must not produce duplicate codes.
 
-## Sobre saldo calculado versus saldo materializado
+Quantities use `NUMERIC`/`DECIMAL`, never floating-point types. FEFO, expiration, available stock, and inventory eligibility are backend-authoritative. Date-dependent rules use the application `Clock`; `expiresAt <= today` is expired.
 
-Existem duas alternativas principais.
+## Internal lot-code data semantics
 
-### Saldo derivado exclusivamente de movimentações
+Internally produced batches use `TTT-EEE-LLL-MM-YYYY`, for example `BDS-014-003-12-2026`.
 
-Vantagens:
+- `TTT` is a stable three-letter product-type code;
+- `EEE` is a stable essence reference: `000` is reserved for no essence, while actual references use `001` through `999`, are never recycled, and do not change with the essence display name;
+- `LLL` is `001` through `999`, allocated for the relevant `TTT-EEE` prefix within a month/year, reset when month/year changes, and advanced for every execution;
+- `MM` and `YYYY` represent the production month and year.
 
-- uma única fonte histórica;
-- menor risco de divergência entre saldo e movimentos.
+The internal lot code is a human operational identifier, not a database key or genealogy relation. Automatic generation is optional and backend-authoritative; manual entry remains allowed and does not need to encode source batches. A preview displayed by the frontend neither reserves a sequence nor guarantees the definitive code.
 
-Desvantagens:
+## Balance and retention principles
 
-- consultas de saldo exigem agregação recorrente;
-- lógica de concorrência pode ficar menos direta.
+V1 keeps the established proposal of a materialized `current_quantity` on `inventory_batch` plus immutable `stock_movement` history, updated in the same transaction. The final implementation and its concurrency controls must remain aligned with the relevant ADR.
 
-### Saldo materializado no lote + histórico de movimentações
+Items and suppliers with history should be deactivated rather than deleted. Operational batches, production relationships, consumptions, and movements must not be removed merely to clean up data because doing so breaks auditability and genealogy.
 
-Vantagens:
+Automatic unit conversion is not part of V1. A batch uses its item's unit; all formula and consumption quantities must be compatible with that unit.
 
-- consulta rápida;
-- validação de saldo disponível simples;
-- controle de concorrência explícito sobre o lote.
+## Physical design left open
 
-Desvantagens:
-
-- exige garantir atomicidade entre atualização de saldo e criação da movimentação.
-
-### Decisão inicial
-
-A proposta inicial da V1 é utilizar `current_quantity` em `inventory_batch` e persistir toda alteração também em `stock_movement`, obrigatoriamente dentro da mesma transação.
-
-Essa decisão deve ser registrada em ADR antes da implementação definitiva.
-
-## Unidade de medida
-
-A unidade padrão pertence ao `inventory_item`.
-
-Na V1, um lote deve utilizar a mesma unidade definida para seu item. Conversões automáticas entre litro/mililitro ou quilograma/grama podem ser introduzidas posteriormente caso tragam benefício real.
-
-Quantidades devem usar `NUMERIC`, nunca tipos de ponto flutuante.
-
-## Índices previstos
-
-Avaliar na implementação:
-
-```text
-inventory_item(name)
-inventory_item(category)
-inventory_batch(inventory_item_id)
-inventory_batch(expires_at)
-inventory_batch(supplier_id)
-stock_movement(batch_id, occurred_at)
-```
-
-Índices devem ser confirmados com os padrões reais de consulta e não criados indiscriminadamente.
-
-## Exclusão
-
-Preferir desativação para itens e fornecedores com histórico.
-
-Lotes e movimentações utilizados operacionalmente não devem ser removidos apenas para "limpar" o sistema, pois isso quebra rastreabilidade.
-
-## Evolução futura
-
-Entidades futuras esperadas:
-
-```text
-formula
-formula_version
-formula_component
-production_order
-production_batch
-production_consumption
-finished_product
-```
-
-O modelo futuro deverá permitir relacionar o lote consumido em uma produção ao lote gerado como saída, formando a cadeia de rastreabilidade.
+Production implementation work must decide exact table and column names, keys, indexes, foreign-key layout, constraints, formula versioning needs, and generated-sequence strategy. Those decisions must preserve the conceptual cardinalities and invariants above without changing current module boundaries implicitly.
