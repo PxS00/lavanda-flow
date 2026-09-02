@@ -1,5 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 
+import { localizeUiError } from '../../../core/http/localize-ui-error';
 import { UiError } from '../../../core/http/ui-error';
 
 @Component({
@@ -11,5 +12,5 @@ import { UiError } from '../../../core/http/ui-error';
 export class ErrorState {
   readonly error = input.required<UiError>();
 
-  protected readonly fieldErrors = computed(() => Object.entries(this.error().fieldErrors ?? {}));
+  protected readonly presentation = computed(() => localizeUiError(this.error()));
 }

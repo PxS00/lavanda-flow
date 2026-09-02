@@ -16,7 +16,7 @@ describe('ErrorState', () => {
       kind: 'validation',
       message: 'Request validation failed.',
       code: 'VALIDATION_ERROR',
-      fieldErrors: {
+      details: {
         name: 'must not be blank',
       },
     });
@@ -28,13 +28,11 @@ describe('ErrorState', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should render the error message', () => {
-    expect(fixture.nativeElement.textContent).toContain('Request validation failed.');
+  it('should render the localized error message', () => {
+    expect(fixture.nativeElement.textContent).toContain('Revise os dados informados.');
   });
 
-  it('should render field validation errors', () => {
-    expect(fixture.nativeElement.textContent).toContain('name:');
-
-    expect(fixture.nativeElement.textContent).toContain('must not be blank');
+  it('should not render raw backend validation errors', () => {
+    expect(fixture.nativeElement.textContent).not.toContain('must not be blank');
   });
 });
