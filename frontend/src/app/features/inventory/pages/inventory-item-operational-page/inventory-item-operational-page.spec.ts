@@ -1,12 +1,12 @@
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, input, output } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MatPaginatorIntl } from '@angular/material/paginator';
-import { By } from '@angular/platform-browser';
-import { ActivatedRoute, ParamMap, convertToParamMap, provideRouter } from '@angular/router';
-import { Observable, Subject } from 'rxjs';
+import {HttpErrorResponse} from '@angular/common/http';
+import {Component, input, output} from '@angular/core';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {MatPaginatorIntl} from '@angular/material/paginator';
+import {By} from '@angular/platform-browser';
+import {ActivatedRoute, convertToParamMap, ParamMap, provideRouter} from '@angular/router';
+import {Observable, Subject} from 'rxjs';
 
-import { InventoryItemOperationsApiService } from '../../data-access/inventory-item-operations-api.service';
+import {InventoryItemOperationsApiService} from '../../data-access/inventory-item-operations-api.service';
 import {
   BatchInventoryDto,
   ConfigureMinimumStockLevelRequest,
@@ -16,10 +16,10 @@ import {
   MinimumStockLevelDto,
   MovementHistoryPageDto,
 } from '../../data-access/inventory-operations.dto';
-import { MovementHistoryApiService } from '../../data-access/movement-history-api.service';
-import { FefoWithdrawalPanel } from '../../ui/fefo-withdrawal-panel/fefo-withdrawal-panel';
-import { createPtBrPaginatorIntl } from '../../../../core/i18n/pt-br-paginator-intl';
-import { InventoryItemOperationalPage } from './inventory-item-operational-page';
+import {MovementHistoryApiService} from '../../data-access/movement-history-api.service';
+import {FefoWithdrawalPanel} from '../../ui/fefo-withdrawal-panel/fefo-withdrawal-panel';
+import {createPtBrPaginatorIntl} from '../../../../core/i18n/pt-br-paginator-intl';
+import {InventoryItemOperationalPage} from './inventory-item-operational-page';
 
 @Component({ selector: 'app-fefo-withdrawal-panel', template: 'withdrawal panel' })
 class FefoWithdrawalPanelStub {
@@ -331,7 +331,9 @@ describe('InventoryItemOperationalPage', () => {
     expect(text).toContain('5.25');
     expect(text).toContain('LOT-A');
     expect(text).toContain('Perfume production');
-    expect(text).toContain('01/09/2026, 12:00');
+    expect(text).toContain(
+      formatDate(populatedMovements.content[0].occurredAt, 'dd/MM/yyyy, HH:mm', 'pt-BR'),
+    );
 
     const nextButton = fixture.nativeElement.querySelector(
       'button[aria-label="Próxima página"]',
