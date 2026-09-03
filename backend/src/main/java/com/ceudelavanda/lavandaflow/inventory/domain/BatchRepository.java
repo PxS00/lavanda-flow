@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.inventory.domain;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +14,9 @@ public interface BatchRepository {
     Batch save(Batch batch);
 
     Optional<Batch> findById(UUID id);
+
+    /** Loads existing batch aggregates for a set of stable identifiers without acquiring write locks. */
+    List<Batch> findByIds(Collection<UUID> ids);
 
     /**
      * Returns the immutable catalog item identity for a batch without loading the batch aggregate.
