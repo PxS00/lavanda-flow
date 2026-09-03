@@ -21,7 +21,6 @@ public record UpsertProductionFormulaRequest(
     @Schema(description = "Positive reference output quantity in the catalog item's unit of measure")
     BigDecimal outputQuantity,
     @NotEmpty
-    @Valid
     @Schema(description = "One or more catalog item requirements; duplicate item identifiers are rejected")
     List<@NotNull @Valid ProductionFormulaIngredientRequest> ingredients
 ) {
