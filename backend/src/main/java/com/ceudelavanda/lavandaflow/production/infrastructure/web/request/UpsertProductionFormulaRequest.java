@@ -23,6 +23,6 @@ public record UpsertProductionFormulaRequest(
     @NotEmpty
     @Valid
     @Schema(description = "One or more catalog item requirements; duplicate item identifiers are rejected")
-    List<ProductionFormulaIngredientRequest> ingredients
+    List<@NotNull @Valid ProductionFormulaIngredientRequest> ingredients
 ) {
 }

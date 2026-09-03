@@ -121,6 +121,19 @@ class ProductionFormulaControllerTest {
             .andExpect(jsonPath("$.details.outputInventoryItemId").exists())
             .andExpect(jsonPath("$.details.outputQuantity").exists())
             .andExpect(jsonPath("$.details.ingredients").exists());
+
+        mockMvc.perform(post("/api/v1/production/formulas")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "outputInventoryItemId": "00000000-0000-0000-0000-000000000001",
+                      "outputQuantity": 1,
+                      "ingredients": [null]
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @Test

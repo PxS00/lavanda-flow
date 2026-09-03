@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,7 +40,7 @@ class ProductionFormulaTest {
     }
 
     @Test
-    void shouldRejectEmptyOrDuplicateIngredients() {
+    void shouldRejectEmptyDuplicateOrNullIngredients() {
         var outputItemId = UUID.randomUUID();
         var ingredientItemId = UUID.randomUUID();
 
@@ -63,6 +64,15 @@ class ProductionFormulaTest {
         ))
             .isInstanceOf(InvalidProductionFormulaException.class)
             .hasMessage("Formula must not contain the same ingredient inventory item more than once");
+
+        assertThatThrownBy(() -> ProductionFormula.create(
+            outputItemId,
+            BigDecimal.ONE,
+            UnitOfMeasure.UNIT,
+            Arrays.asList((FormulaIngredient) null)
+        ))
+            .isInstanceOf(InvalidProductionFormulaException.class)
+            .hasMessage("Formula ingredients must not contain null entries");
     }
 
     @Test

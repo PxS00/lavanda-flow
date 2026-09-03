@@ -95,9 +95,8 @@ public class ProductionFormula {
             throw new InvalidProductionFormulaException("ingredients", "Formula must contain at least one ingredient");
         }
 
-        var copy = List.copyOf(ingredients);
         var itemIds = new HashSet<UUID>();
-        for (var ingredient : copy) {
+        for (var ingredient : ingredients) {
             if (ingredient == null) {
                 throw new InvalidProductionFormulaException("ingredients", "Formula ingredients must not contain null entries");
             }
@@ -108,6 +107,6 @@ public class ProductionFormula {
                 );
             }
         }
-        return copy;
+        return List.copyOf(ingredients);
     }
 }
