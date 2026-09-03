@@ -21,6 +21,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -41,10 +42,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GetBatchGenealogyIntegrationTest {
 
     @Autowired private GetBatchGenealogy getBatchGenealogy;
+    @Autowired private ProductionGenealogyQueryRepository genealogyRepository;
     @Autowired private RegisterProduction registerProduction;
     @Autowired private InventoryItemRepository inventoryItemRepository;
     @Autowired private BatchRepository batchRepository;
     @Autowired private ProductionFormulaRepository productionFormulaRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
     void shouldResolveMultiLevelUpstreamGenealogyWithMultipleExternalSourceBatches() {
@@ -140,6 +143,18 @@ class GetBatchGenealogyIntegrationTest {
             List.of(allocation(first.outputBatchId(), "5")),
             "BRANCH-C"
         );
+
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM production_consumption WHERE source_batch_id = ?",
+            Integer.class,
+            sharedRawBatch.getId()
+        )).isEqualTo(2);
+
+        var flatDownstream = genealogyRepository.findDownstreamEdges(sharedRawBatch.getId());
+        assertThat(flatDownstream).hasSize(3);
+        assertThat(flatDownstream)
+            .extracting(ProductionGenealogyEdgeRecord::outputBatchId)
+            .containsExactlyInAnyOrder(first.outputBatchId(), second.outputBatchId(), descendant.outputBatchId());
 
         var result = getBatchGenealogy.execute(sharedRawBatch.getId(), GenealogyDirection.DOWNSTREAM);
 
