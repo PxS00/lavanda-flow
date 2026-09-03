@@ -7,7 +7,7 @@ Apply the root `AGENTS.md` first. This file contains Angular-specific guidance o
 - Use Angular 22, TypeScript, Angular Material/CDK, Angular Router, native `HttpClient`, Signals, RxJS when justified, and Vitest.
 - Use standalone architecture. Do not set `standalone: true` or `ChangeDetectionStrategy.OnPush` explicitly: both are Angular 22 defaults.
 - Feature routes may use lazy loading.
-- Keep HTTP and data-access logic outside presentation components. Business and inventory rules remain backend-authoritative.
+- Keep HTTP and data-access logic outside presentation components. Business, inventory, and production rules remain backend-authoritative.
 - Keep components small and focused. Prefer `input()`, `output()`, `model()`, and `inject()` over the corresponding decorators or constructor injection.
 - Prefer inline templates for small components and use `linkedSignal()` only when multiple reactive sources must stay synchronized.
 - Use `host` metadata instead of `@HostBinding` or `@HostListener`.
@@ -19,6 +19,7 @@ Apply the root `AGENTS.md` first. This file contains Angular-specific guidance o
 - Use Signals for appropriate local or derived state and `computed()` for derived values. Keep transformations pure; use `set()` or `update()`, never `mutate()`.
 - Use RxJS for asynchronous composition when justified, and the async pipe for observable templates.
 - Do not duplicate backend-authoritative inventory logic in frontend state or apply incorrect optimistic state to stock-changing operations.
+- Never reserve or authoritatively calculate generated production lot sequences; any frontend preview remains non-binding until the backend confirms registration.
 - Prefer native control flow (`@if`, `@for`, `@switch`), `class` bindings over `ngClass`, and `style` bindings over `ngStyle`.
 - Keep templates simple. Do not assume globals such as `new Date()` are available in templates.
 - For external templates or styles, use paths relative to the component TypeScript file.

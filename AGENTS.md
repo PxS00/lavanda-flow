@@ -2,7 +2,7 @@
 
 ## Project and source of truth
 
-Lavanda Flow is Céu de Lavanda's inventory and production management system. V1 covers inventory, batches, stock movements, expiration dates, suppliers, and alerts. Formulas, automated production, costs, and complete traceability are out of scope until explicitly approved.
+Lavanda Flow is Céu de Lavanda's inventory and production management system. V1 covers operational inventory and the approved minimum internal-production and recursive batch-traceability workflow. Unrelated ERP and manufacturing expansion, including costs and margins, sales and fiscal features, purchasing automation, and broader manufacturing automation, remains outside V1.
 
 The current GitHub issue is the implementation specification. Before changing anything, read its Objective, Context, Scope, Acceptance Criteria, Constraints, and Out of Scope; then read the documentation relevant to the affected area.
 
