@@ -94,6 +94,10 @@ class GetBatchGenealogyIntegrationTest {
         assertThat(result.rootBatch().lotCode()).isEqualTo("GENEALOGY-FINAL");
         assertThat(result.downstream()).isEmpty();
         assertThat(result.upstream()).singleElement().satisfies(finalEdge -> {
+            assertThat(finalEdge.executionId()).isEqualTo(finalExecution.executionId());
+            assertThat(finalEdge.formulaId()).isEqualTo(finalFormula.getId());
+            assertThat(finalEdge.productionDate()).isEqualTo(LocalDate.of(2026, 9, 3));
+            assertThat(finalEdge.completedAt()).isEqualTo(Instant.parse("2026-09-03T12:00:00Z"));
             assertThat(finalEdge.consumedQuantity()).isEqualByComparingTo("10");
             assertThat(finalEdge.sourceBatch().batchId()).isEqualTo(intermediate.outputBatchId());
             assertThat(finalEdge.sourceBatch().origin()).isEqualTo(GenealogyBatchOrigin.INTERNALLY_PRODUCED);
@@ -103,6 +107,8 @@ class GetBatchGenealogyIntegrationTest {
                 .containsExactlyInAnyOrder(new BigDecimal("4"), new BigDecimal("6"));
             assertThat(finalEdge.next())
                 .allSatisfy(rawEdge -> {
+                    assertThat(rawEdge.executionId()).isEqualTo(intermediate.executionId());
+                    assertThat(rawEdge.completedAt()).isEqualTo(Instant.parse("2026-09-03T12:00:00Z"));
                     assertThat(rawEdge.sourceBatch().origin())
                         .isEqualTo(GenealogyBatchOrigin.EXTERNAL_OR_NON_PRODUCED);
                     assertThat(rawEdge.next()).isEmpty();
@@ -181,6 +187,20 @@ class GetBatchGenealogyIntegrationTest {
             .findFirst()
             .orElseThrow();
         assertThat(secondBranch.next()).isEmpty();
+    }
+
+    @Test
+    void shouldReturnEmptyGenealogyForAnExistingBatchWithoutProductionRelationships() {
+        var standaloneItem = item("Standalone item", Category.OTHER, null);
+        var standaloneBatch = batch(standaloneItem.getId(), "STANDALONE", "1");
+
+        var result = getBatchGenealogy.execute(standaloneBatch.getId(), GenealogyDirection.BOTH);
+
+        assertThat(result.direction()).isEqualTo(GenealogyDirection.BOTH);
+        assertThat(result.rootBatch().batchId()).isEqualTo(standaloneBatch.getId());
+        assertThat(result.rootBatch().origin()).isEqualTo(GenealogyBatchOrigin.EXTERNAL_OR_NON_PRODUCED);
+        assertThat(result.upstream()).isEmpty();
+        assertThat(result.downstream()).isEmpty();
     }
 
     @Test
