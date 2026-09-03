@@ -15,6 +15,14 @@ public interface BatchRepository {
     Optional<Batch> findById(UUID id);
 
     /**
+     * Returns the immutable catalog item identity for a batch without loading the batch aggregate.
+     *
+     * <p>This supports item-first locking flows that must discover a batch's item before locking the
+     * batch and reading its mutable balance.</p>
+     */
+    Optional<UUID> findInventoryItemIdById(UUID id);
+
+    /**
      * Acquires an exclusive write lock for one existing batch until the
      * surrounding transaction completes.
      *

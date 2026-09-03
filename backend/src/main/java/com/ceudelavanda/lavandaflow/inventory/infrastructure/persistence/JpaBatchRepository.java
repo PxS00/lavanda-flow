@@ -34,6 +34,11 @@ class JpaBatchRepository implements BatchRepository {
     }
 
     @Override
+    public Optional<UUID> findInventoryItemIdById(UUID id) {
+        return repository.findInventoryItemIdById(id);
+    }
+
+    @Override
     public void lockByIdForUpdate(UUID id) {
         repository.findByIdForUpdate(id);
     }
