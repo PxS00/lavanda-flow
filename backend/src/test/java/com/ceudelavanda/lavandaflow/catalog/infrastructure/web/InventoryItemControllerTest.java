@@ -53,6 +53,42 @@ class InventoryItemControllerTest {
     void shouldRegisterInventoryItem() throws Exception {
         var itemId = UUID.randomUUID();
         var command = new RegisterInventoryItemCommand(
+            "Lavender Essence", "Floral raw material", Category.ESSENCE, UnitOfMeasure.MILLILITER, "014", "ESS"
+        );
+        when(registerInventoryItem.execute(command)).thenReturn(new InventoryItemResult(
+            itemId, "Lavender Essence", "Floral raw material", Category.ESSENCE, UnitOfMeasure.MILLILITER, true, "014", "ESS"
+        ));
+
+        mockMvc.perform(post("/api/v1/inventory-items")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "name": "Lavender Essence",
+                      "description": "Floral raw material",
+                      "category": "ESSENCE",
+                      "unitOfMeasure": "MILLILITER",
+                      "essenceReference": "014",
+                      "productionTypeCode": "ESS"
+                    }
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(header().string("Location", "/api/v1/inventory-items/" + itemId))
+            .andExpect(jsonPath("$.id").value(itemId.toString()))
+            .andExpect(jsonPath("$.name").value("Lavender Essence"))
+            .andExpect(jsonPath("$.category").value("ESSENCE"))
+            .andExpect(jsonPath("$.unitOfMeasure").value("MILLILITER"))
+            .andExpect(jsonPath("$.essenceReference").value("014"))
+            .andExpect(jsonPath("$.productionTypeCode").value("ESS"))
+            .andExpect(jsonPath("$.active").value(true));
+
+        verify(registerInventoryItem).execute(command);
+    }
+
+    @Test
+    void shouldAcceptExistingRegistrationRequestWithoutProductionMetadata() throws Exception {
+        var itemId = UUID.randomUUID();
+        var command = new RegisterInventoryItemCommand(
             "Lavender Essence", "Floral raw material", Category.ESSENCE, UnitOfMeasure.MILLILITER
         );
         when(registerInventoryItem.execute(command)).thenReturn(new InventoryItemResult(
@@ -70,13 +106,7 @@ class InventoryItemControllerTest {
                       "unitOfMeasure": "MILLILITER"
                     }
                     """))
-            .andExpect(status().isCreated())
-            .andExpect(header().string("Location", "/api/v1/inventory-items/" + itemId))
-            .andExpect(jsonPath("$.id").value(itemId.toString()))
-            .andExpect(jsonPath("$.name").value("Lavender Essence"))
-            .andExpect(jsonPath("$.category").value("ESSENCE"))
-            .andExpect(jsonPath("$.unitOfMeasure").value("MILLILITER"))
-            .andExpect(jsonPath("$.active").value(true));
+            .andExpect(status().isCreated());
 
         verify(registerInventoryItem).execute(command);
     }
@@ -96,6 +126,26 @@ class InventoryItemControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
             .andExpect(jsonPath("$.details.name").exists());
+    }
+
+    @Test
+    void shouldRejectInvalidProductionReferenceFormat() throws Exception {
+        mockMvc.perform(post("/api/v1/inventory-items")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "name": "Lavender Essence",
+                      "category": "ESSENCE",
+                      "unitOfMeasure": "MILLILITER",
+                      "essenceReference": "000",
+                      "productionTypeCode": "ess"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.details.essenceReference").exists())
+            .andExpect(jsonPath("$.details.productionTypeCode").exists());
     }
 
     @Test

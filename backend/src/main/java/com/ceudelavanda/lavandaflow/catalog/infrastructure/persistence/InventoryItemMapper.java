@@ -14,7 +14,9 @@ final class InventoryItemMapper {
             item.getDescription(),
             item.getCategory(),
             item.getUnitOfMeasure(),
-            item.isActive()
+            item.isActive(),
+            item.getEssenceReference(),
+            item.getProductionTypeCode()
         );
     }
 
@@ -25,7 +27,9 @@ final class InventoryItemMapper {
             entity.getDescription(),
             entity.getCategory(),
             entity.getUnitOfMeasure(),
-            entity.isActive()
+            entity.isActive(),
+            entity.getEssenceReference(),
+            entity.getProductionTypeCode()
         );
     }
 }

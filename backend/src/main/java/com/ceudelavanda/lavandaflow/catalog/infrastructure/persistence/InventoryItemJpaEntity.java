@@ -33,13 +33,21 @@ class InventoryItemJpaEntity {
     @Column(nullable = false)
     private boolean active;
 
+    @Column(name = "essence_reference")
+    private String essenceReference;
+
+    @Column(name = "production_type_code")
+    private String productionTypeCode;
+
     InventoryItemJpaEntity(
         UUID id,
         String name,
         String description,
         Category category,
         UnitOfMeasure unitOfMeasure,
-        boolean active
+        boolean active,
+        String essenceReference,
+        String productionTypeCode
     ) {
         this.id = id;
         this.name = name;
@@ -47,5 +55,7 @@ class InventoryItemJpaEntity {
         this.category = category;
         this.unitOfMeasure = unitOfMeasure;
         this.active = active;
+        this.essenceReference = essenceReference;
+        this.productionTypeCode = productionTypeCode;
     }
 }
