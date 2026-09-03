@@ -13,8 +13,21 @@ public record InventoryItemResult(
     String description,
     Category category,
     UnitOfMeasure unitOfMeasure,
-    boolean active
+    boolean active,
+    String essenceReference,
+    String productionTypeCode
 ) {
+    public InventoryItemResult(
+        UUID id,
+        String name,
+        String description,
+        Category category,
+        UnitOfMeasure unitOfMeasure,
+        boolean active
+    ) {
+        this(id, name, description, category, unitOfMeasure, active, null, null);
+    }
+
     public static InventoryItemResult from(InventoryItem item) {
         return new InventoryItemResult(
             item.getId(),
@@ -22,7 +35,9 @@ public record InventoryItemResult(
             item.getDescription(),
             item.getCategory(),
             item.getUnitOfMeasure(),
-            item.isActive()
+            item.isActive(),
+            item.getEssenceReference(),
+            item.getProductionTypeCode()
         );
     }
 }
