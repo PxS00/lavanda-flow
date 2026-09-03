@@ -2,6 +2,7 @@
     displayName = "Production",
     allowedDependencies = {
         "catalog",
+        "inventory",
         "shared::error"
     }
 )
