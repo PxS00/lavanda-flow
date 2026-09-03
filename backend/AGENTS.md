@@ -5,8 +5,11 @@ Apply the root `AGENTS.md` first. This file contains backend-specific guidance o
 ## Stack and architecture
 
 - Use Java 25, Spring Boot 4.1, Spring Modulith, Spring MVC, Spring Validation, Spring Data JPA, PostgreSQL, Flyway, Testcontainers, and Maven.
-- Keep the modular monolith organized by feature/domain. The initial modules are `catalog`, `inventory`, `suppliers`, and `shared`.
-- Respect public module APIs and never import another module's internal infrastructure.
+- Keep the modular monolith organized by feature/domain. The V1 modules are `catalog`, `inventory`, `production`, `suppliers`, and `shared`.
+- Keep production cohesive: `production` owns formulas/recipes, the production lifecycle and transaction orchestration, lot-code allocation, consumption records, and genealogy. Do not create separate `formulas` or `traceability` modules.
+- `inventory` retains ownership of `Batch` and all stock invariants; `catalog` retains stable item metadata, including essence references and production-type metadata.
+- `production` may depend only on public APIs of `catalog`, `inventory`, and narrowly scoped `shared` facilities. Existing modules must not depend on `production`.
+- Cross module boundaries only through public APIs and stable identifiers or immutable values; never import another module's internal infrastructure or JPA entities.
 - Do not use a global `controller`/`service`/`repository`/`entity` package layout.
 - Controllers do not own business rules. Do not add speculative patterns, modules, events, or abstractions.
 
@@ -15,6 +18,7 @@ Apply the root `AGENTS.md` first. This file contains backend-specific guidance o
 - Quantities use `BigDecimal`; stock cannot become negative.
 - Movements are immutable and auditable. Corrections create new adjustment movements.
 - Balance-changing operations are transactional.
+- Production state and inventory effects must commit atomically through public module APIs.
 - FEFO and expiration behavior are backend-authoritative. `expiresAt <= today` is expired.
 - Use the application `Clock` for date-sensitive behavior and tests.
 
