@@ -9,6 +9,7 @@ import com.ceudelavanda.lavandaflow.inventory.ProductionOutputBatch;
 import com.ceudelavanda.lavandaflow.inventory.ProductionSourceAllocation;
 import com.ceudelavanda.lavandaflow.inventory.ProductionStockApplication;
 import com.ceudelavanda.lavandaflow.inventory.ProductionStockCommand;
+import com.ceudelavanda.lavandaflow.inventory.ProductionStockResult;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaNotFoundException;
 import com.ceudelavanda.lavandaflow.production.application.lot.AllocateInternalProductionLotCode;
 import com.ceudelavanda.lavandaflow.production.application.lot.AllocateInternalProductionLotCodeCommand;
@@ -83,24 +84,11 @@ public class RegisterProduction {
             )
         ));
 
-        var consumptions = inventoryResult.sourceConsumptions().stream()
-            .map(consumption -> {
-                var sourceReference = sourceReferences.get(consumption.batchId());
-                if (sourceReference == null) {
-                    throw new InvalidProductionExecutionException(
-                        "consumptions",
-                        "Inventory returned a source consumption that was not part of the validated production allocation"
-                    );
-                }
-                return new ProductionConsumption(
-                    consumption.batchId(),
-                    sourceReference.inventoryItemId(),
-                    consumption.movementId(),
-                    consumption.quantity()
-                );
-            })
-            .toList();
-
+        var consumptions = toProductionConsumptions(
+            inventoryResult,
+            sourceReferences,
+            validated.sourceAllocations()
+        );
         var execution = ProductionExecution.create(
             formula.getId(),
             formula.getOutputInventoryItemId(),
@@ -237,6 +225,54 @@ public class RegisterProduction {
             }
         }
         return sourceReferences;
+    }
+
+    private List<ProductionConsumption> toProductionConsumptions(
+        ProductionStockResult inventoryResult,
+        Map<UUID, ProductionBatchReference> sourceReferences,
+        List<ProductionSourceAllocationCommand> sourceAllocations
+    ) {
+        if (inventoryResult == null || inventoryResult.sourceConsumptions() == null) {
+            throw new InvalidProductionExecutionException(
+                "inventoryResult",
+                "Inventory production result must contain source consumptions"
+            );
+        }
+
+        var expectedQuantities = new HashMap<UUID, BigDecimal>();
+        for (var allocation : sourceAllocations) {
+            expectedQuantities.put(allocation.batchId(), allocation.quantity());
+        }
+        if (inventoryResult.sourceConsumptions().size() != expectedQuantities.size()) {
+            throw new InvalidProductionExecutionException(
+                "consumptions",
+                "Inventory production result must contain exactly one consumption for every validated source batch"
+            );
+        }
+
+        var seenBatchIds = new HashSet<UUID>();
+        var consumptions = new ArrayList<ProductionConsumption>();
+        for (var consumption : inventoryResult.sourceConsumptions()) {
+            var expectedQuantity = expectedQuantities.get(consumption.batchId());
+            var sourceReference = sourceReferences.get(consumption.batchId());
+            if (expectedQuantity == null
+                || sourceReference == null
+                || !seenBatchIds.add(consumption.batchId())
+                || consumption.quantity() == null
+                || consumption.quantity().compareTo(expectedQuantity) != 0) {
+                throw new InvalidProductionExecutionException(
+                    "consumptions",
+                    "Inventory production result does not match the validated exact source allocations"
+                );
+            }
+            consumptions.add(new ProductionConsumption(
+                consumption.batchId(),
+                sourceReference.inventoryItemId(),
+                consumption.movementId(),
+                consumption.quantity()
+            ));
+        }
+        return List.copyOf(consumptions);
     }
 
     private BigDecimal scaleRequirement(

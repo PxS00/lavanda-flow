@@ -69,7 +69,7 @@ class RegisterProductionRollbackIntegrationTest {
             null,
             Category.ESSENCE,
             UnitOfMeasure.MILLILITER,
-            "998",
+            null,
             null
         ));
         var formula = productionFormulaRepository.save(ProductionFormula.create(

@@ -13,7 +13,6 @@ import com.ceudelavanda.lavandaflow.production.application.lot.AllocateInternalP
 import com.ceudelavanda.lavandaflow.production.application.lot.AllocateInternalProductionLotCodeCommand;
 import com.ceudelavanda.lavandaflow.production.application.lot.InternalProductionLotCode;
 import com.ceudelavanda.lavandaflow.production.domain.FormulaIngredient;
-import com.ceudelavanda.lavandaflow.production.domain.ProductionExecution;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionExecutionRepository;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionFormula;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionFormulaRepository;
@@ -37,6 +36,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -70,7 +70,8 @@ class RegisterProductionTest {
             productionStockApplication,
             CLOCK
         );
-        when(productionExecutionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(productionExecutionRepository.save(any()))
+            .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -151,6 +152,33 @@ class RegisterProductionTest {
         assertThat(result.lotCode()).isEqualTo("MANUAL-LOT-42");
         assertThat(result.lotCodeMode()).isEqualTo(ProductionLotCodeMode.MANUAL);
         verifyNoInteractions(allocateInternalProductionLotCode);
+    }
+
+    @Test
+    void shouldRejectInventoryResultThatDoesNotMatchValidatedSources() {
+        var formulaId = UUID.randomUUID();
+        var outputItemId = UUID.randomUUID();
+        var ingredientItemId = UUID.randomUUID();
+        var batchId = UUID.randomUUID();
+        var formula = formula(formulaId, outputItemId, ingredientItemId, "5", "5");
+        prepareFormula(formula, outputItemId, ingredientItemId);
+        when(productionBatchReferenceLookup.findByBatchId(batchId))
+            .thenReturn(Optional.of(new ProductionBatchReference(batchId, ingredientItemId)));
+        when(productionStockApplication.apply(any())).thenReturn(new ProductionStockResult(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            List.of(new ProductionSourceConsumptionResult(batchId, UUID.randomUUID(), new BigDecimal("4")))
+        ));
+
+        assertThatThrownBy(() -> registerProduction.execute(command(
+            formulaId,
+            "5",
+            List.of(new ProductionSourceAllocationCommand(batchId, new BigDecimal("5"))),
+            ProductionLotCodeMode.MANUAL,
+            "MANUAL-LOT"
+        ))).isInstanceOf(com.ceudelavanda.lavandaflow.production.domain.exception.InvalidProductionExecutionException.class);
+
+        verify(productionExecutionRepository, never()).save(any());
     }
 
     @Test

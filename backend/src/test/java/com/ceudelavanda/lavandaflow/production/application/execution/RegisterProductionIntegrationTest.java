@@ -212,14 +212,9 @@ class RegisterProductionIntegrationTest {
             null,
             category,
             UnitOfMeasure.MILLILITER,
-            category == Category.ESSENCE ? nextEssenceReference() : null,
+            null,
             productionTypeCode
         ));
-    }
-
-    private String nextEssenceReference() {
-        var value = Math.floorMod(UUID.randomUUID().hashCode(), 999) + 1;
-        return "%03d".formatted(value);
     }
 
     private ProductionFormula formula(UUID outputItemId, UUID ingredientItemId, String outputQty, String ingredientQty) {
