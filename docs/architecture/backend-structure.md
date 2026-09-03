@@ -26,6 +26,11 @@ backend/
     │   │               │   ├── application/
     │   │               │   └── infrastructure/
     │   │               │
+    │   │               ├── production/
+    │   │               │   ├── domain/
+    │   │               │   ├── application/
+    │   │               │   └── infrastructure/
+    │   │               │
     │   │               ├── suppliers/
     │   │               │   ├── domain/
     │   │               │   ├── application/
@@ -246,50 +251,43 @@ shared/
 
 Do not move business rules to `shared` simply because more than one module uses them. First evaluate ownership and public APIs between modules.
 
-## Future modules
+## Module `production`
 
-When approved in scope:
+ADR [0009](decisions/0009-define-v1-production-module-boundaries.md) adds one cohesive V1 production module:
 
 ```text
-com.ceudelavanda.lavandaflow
-├── catalog
-├── inventory
-├── suppliers
-├── formulas
-├── production
-├── traceability
-└── shared
+production
+├── formula and recipe definitions
+├── production executions
+├── exact source-batch consumption records
+├── internal production lot-code allocation
+└── recursive genealogy relationships and queries
 ```
 
-### `formulas`
-
-- formulas;
-- ingredients;
-- formula versioning.
-
-### `production`
-
-- production order;
-- produced batch;
-- automatic material consumption;
-- produced item/base generation.
-
-### `traceability`
-
-- navigation between raw-material batch, intermediate production, and finished product;
-- batch impact queries.
-
-These modules must not be created physically before they enter the approved scope.
+Do not create separate `formulas` or `traceability` modules for V1. `catalog` owns stable item metadata, including essence references. `inventory` continues to own batches, balances, movements, FEFO, expiration, and eligibility; it creates an internally produced output batch only through its public API when requested by the production use case.
 
 ## Dependencies between modules
 
-Expected initial direction:
+Allowed direction:
 
 ```text
-suppliers ─────┐
-               ▼
-catalog ───► inventory
+production ──► catalog
+production ──► inventory
+inventory ───► catalog
+inventory ───► suppliers
 ```
+
+The arrows mean “depends on.” `production` may depend on the public APIs of `catalog`, `inventory`, and narrowly scoped `shared` facilities. It must not depend directly on `suppliers`; supplier origin remains behind inventory's public batch view. `catalog`, `inventory`, and `suppliers` must not depend on `production`.
+
+Production-facing public contracts must provide only the operations and immutable values needed to:
+
+- resolve catalog item metadata, including stable essence references;
+- inspect and validate source batches by stable identifier;
+- atomically consume exact source-batch quantities and record movements;
+- create exactly one internally produced output batch and its initial movement;
+- return stable batch identifiers and the inventory facts needed by production and genealogy queries.
+
+Cross-module contracts use stable identifiers and public value records. Direct cross-module JPA entity relationships, repository imports, and infrastructure imports are forbidden.
 
 Dependencies must occur only through public module APIs.
 
@@ -311,17 +309,7 @@ Spring Modulith must verify boundaries and cycles between modules.
 
 Do not introduce events merely to avoid simple Java calls.
 
-Use events when there is a real decoupling benefit, for example in the future:
-
-```text
-ProductionCompleted
-        ↓
-Inventory consumes materials
-        ↓
-Traceability records relationships
-```
-
-In V1, simple synchronous interactions are acceptable when they preserve module boundaries.
+The V1 production operation uses synchronous public-contract calls so production state, inventory effects, and genealogy share one local transaction. Do not replace this atomic path with messaging, sagas, distributed transactions, or eventual consistency without a new requirement and ADR.
 
 ## Transactions
 
@@ -340,6 +328,8 @@ commit
 ```
 
 If any step fails, the complete operation must roll back.
+
+The `production` application use case owns the wider production transaction. Within it, the inventory public contract protects and validates source stock, creates consumption movements, and creates the output batch and its initial movement. Production persists the execution, exact consumption relationships, definitive generated lot code when requested, and genealogy in the same transaction. Any failure rolls back every effect.
 
 ## Java code documentation
 
@@ -406,6 +396,7 @@ src/test/java/com/ceudelavanda/lavandaflow/
 │   └── ModularityTest.java
 ├── catalog/
 ├── inventory/
+├── production/
 └── suppliers/
 ```
 
@@ -416,6 +407,8 @@ There must be a test that runs Spring Modulith module verification to detect:
 - cycles;
 - improper access to another module's internals;
 - violations of allowed dependencies.
+
+When `production` is implemented, its declared dependencies must be limited to the public APIs of `catalog`, `inventory`, and narrowly scoped `shared` facilities. Modulith tests must also prove that existing modules do not acquire a dependency on `production`, keeping the graph acyclic.
 
 ## Conventions
 
