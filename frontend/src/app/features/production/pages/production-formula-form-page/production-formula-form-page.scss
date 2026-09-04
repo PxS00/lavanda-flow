@@ -1,0 +1,71 @@
+:host {
+  display: block;
+}
+
+.formula-form-page,
+form {
+  display: grid;
+  gap: 24px;
+  max-width: 840px;
+}
+
+header {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+h1,
+header p {
+  margin: 0;
+}
+
+header p {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+mat-card-content {
+  display: grid;
+  gap: 8px;
+  padding-top: 16px;
+}
+
+.ingredient-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+}
+
+legend {
+  padding: 0 4px;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-medium);
+}
+
+.field-error {
+  margin: -8px 0 8px;
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.success-message {
+  margin: 0;
+  color: var(--mat-sys-primary);
+  font: var(--mat-sys-body-medium);
+}
+
+@media (max-width: 700px) {
+  .ingredient-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -12,7 +12,7 @@ describe('operational UI workflow', () => {
   const itemId = 'item-1';
   const item = {
     id: itemId, name: 'Essência de lavanda', description: null, category: 'ESSENCE',
-    unitOfMeasure: 'MILLILITER', active: true,
+    unitOfMeasure: 'MILLILITER', active: true, essenceReference: '027', productionTypeCode: 'BDS',
   };
   let http: HttpTestingController;
 

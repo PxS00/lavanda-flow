@@ -27,6 +27,8 @@ describe('catalog routes', () => {
                 category: 'OTHER',
                 unitOfMeasure: 'UNIT',
                 active: true,
+                essenceReference: null,
+                productionTypeCode: null,
               }),
           },
         },

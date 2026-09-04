@@ -1,0 +1,59 @@
+<section class="formula-list-page" aria-labelledby="formula-list-heading">
+  <header class="page-header">
+    <div>
+      <h1 id="formula-list-heading">Fórmulas de produção</h1>
+      <p>Defina os itens e as quantidades de referência para cada produção.</p>
+    </div>
+    <a mat-flat-button routerLink="/production/formulas/new">Cadastrar fórmula</a>
+  </header>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando fórmulas de produção..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      @if (currentState.formulas.length === 0) {
+        <app-empty-state
+          title="Nenhuma fórmula cadastrada"
+          message="Cadastre uma fórmula para definir os requisitos de produção."
+        />
+      } @else {
+        <ul class="formula-list" aria-label="Fórmulas de produção">
+          @for (item of currentState.formulas; track item.formula.id) {
+            <li>
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>Fórmula de produção</mat-card-title>
+                  <mat-card-subtitle>{{ item.formula.ingredients.length }} ingrediente(s)</mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  <dl>
+                    <div>
+                      <dt>Item de saída</dt>
+                      <dd>{{ item.outputItem.name }} · {{ unitLabel(item.outputItem.unitOfMeasure) }}</dd>
+                    </div>
+                    <div>
+                      <dt>Quantidade de saída</dt>
+                      <dd>
+                        {{ item.formula.outputQuantity | number: '1.0-6' }}
+                        {{ unitLabel(item.formula.outputUnitOfMeasure) }}
+                      </dd>
+                    </div>
+                  </dl>
+                </mat-card-content>
+                <mat-card-actions align="end">
+                  <a mat-button [routerLink]="['/production/formulas', item.formula.id]">Ver fórmula</a>
+                </mat-card-actions>
+              </mat-card>
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>
