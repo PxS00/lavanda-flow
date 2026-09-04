@@ -21,6 +21,13 @@ export const PRODUCTION_ROUTES: Routes = [
       ),
   },
   {
+    path: 'executions/new',
+    loadComponent: () =>
+      import('./pages/production-registration-page/production-registration-page').then(
+        (m) => m.ProductionRegistrationPage,
+      ),
+  },
+  {
     path: 'formulas/:formulaId',
     loadComponent: () =>
       import('./pages/production-formula-form-page/production-formula-form-page').then(

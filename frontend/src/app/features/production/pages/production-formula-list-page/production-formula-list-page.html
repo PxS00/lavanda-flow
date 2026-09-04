@@ -4,7 +4,10 @@
       <h1 id="formula-list-heading">Fórmulas de produção</h1>
       <p>Defina os itens e as quantidades de referência para cada produção.</p>
     </div>
-    <a mat-flat-button routerLink="/production/formulas/new">Cadastrar fórmula</a>
+    <div class="page-actions">
+      <a mat-stroked-button routerLink="/production/executions/new">Registrar produção</a>
+      <a mat-flat-button routerLink="/production/formulas/new">Cadastrar fórmula</a>
+    </div>
   </header>
 
   @let currentState = state();

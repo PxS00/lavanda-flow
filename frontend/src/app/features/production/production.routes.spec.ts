@@ -13,16 +13,44 @@ describe('production routes', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideRouter(routes), provideHttpClient(), { provide: API_BASE_URL, useValue: '/api/v1' },
-        { provide: InventoryItemApiService, useValue: { search: () => of({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 }) } },
-        { provide: ProductionFormulaApiService, useValue: { list: () => of([]), getById: () => of({ id: 'formula-1', outputInventoryItemId: 'item', outputQuantity: 1, outputUnitOfMeasure: 'UNIT', ingredients: [] }) } },
+        provideRouter(routes),
+        provideHttpClient(),
+        { provide: API_BASE_URL, useValue: '/api/v1' },
+        {
+          provide: InventoryItemApiService,
+          useValue: {
+            search: () => of({
+              content: [],
+              page: 0,
+              size: 100,
+              totalElements: 0,
+              totalPages: 0,
+            }),
+          },
+        },
+        {
+          provide: ProductionFormulaApiService,
+          useValue: {
+            list: () => of([]),
+            getById: () =>
+              of({
+                id: 'formula-1',
+                outputInventoryItemId: 'item',
+                outputQuantity: 1,
+                outputUnitOfMeasure: 'UNIT',
+                ingredients: [],
+              }),
+          },
+        },
       ],
     });
   });
 
   it('should lazy load production from the application routes', () => {
     const shellRoute = routes.find((route) => route.path === '');
-    expect(shellRoute?.children?.find((route) => route.path === 'production')?.loadChildren).toBeTypeOf('function');
+    expect(shellRoute?.children?.find((route) => route.path === 'production')?.loadChildren).toBeTypeOf(
+      'function',
+    );
   });
 
   it('should resolve formula listing and new-form routes before the formula ID route', async () => {
@@ -31,6 +59,11 @@ describe('production routes', () => {
 
     await harness.navigateByUrl('/production/formulas/new');
     expect(harness.routeNativeElement?.textContent).toContain('Cadastrar fórmula de produção');
+  });
+
+  it('should resolve the production registration route', async () => {
+    const harness = await RouterTestingHarness.create('/production/executions/new');
+    expect(harness.routeNativeElement?.textContent).toContain('Registrar produção interna');
   });
 
   it('should resolve a stable formula edit route', async () => {
