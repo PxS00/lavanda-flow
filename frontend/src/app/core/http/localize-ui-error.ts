@@ -17,6 +17,10 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   INVALID_REQUEST_PARAMETER: 'Um parâmetro informado é inválido.',
   MALFORMED_REQUEST_BODY: 'Não foi possível processar os dados enviados.',
   MISSING_REQUEST_PARAMETER: 'Falta uma informação obrigatória.',
+  PRODUCTION_FORMULA_NOT_FOUND: 'Fórmula de produção não encontrada.',
+  PRODUCTION_FORMULA_CATALOG_ITEM_NOT_FOUND: 'Um item de estoque da fórmula não foi encontrado.',
+  INACTIVE_PRODUCTION_FORMULA_CATALOG_ITEM: 'Um item de estoque da fórmula está inativo.',
+  INVALID_PRODUCTION_FORMULA: 'Revise os dados da fórmula.',
 };
 
 const KIND_MESSAGES: Readonly<Record<UiError['kind'], string>> = {

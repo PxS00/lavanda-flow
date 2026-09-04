@@ -1,0 +1,149 @@
+<section class="formula-form-page" aria-labelledby="formula-form-heading">
+  <header>
+    <a mat-button routerLink="/production/formulas">Voltar às fórmulas</a>
+    <h1 id="formula-form-heading">
+      {{ isEditing() ? 'Editar fórmula de produção' : 'Cadastrar fórmula de produção' }}
+    </h1>
+    <p>Informe o item de saída e os requisitos de ingredientes para a produção.</p>
+  </header>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando configuração da fórmula..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('ready') {
+      @if (globalSubmissionError(); as error) {
+        <app-error-state [error]="error" />
+      }
+      @if (successMessage(); as message) {
+        <p class="success-message" role="status">{{ message }}</p>
+      }
+
+      <form [formGroup]="formulaForm" (submit)="submit($event)" novalidate>
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Saída da produção</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-form-field appearance="outline">
+              <mat-label>Item de saída</mat-label>
+              <mat-select
+                formControlName="outputInventoryItemId"
+                [disabled]="isSubmitting()"
+                [attr.aria-describedby]="
+                  backendFieldError('outputInventoryItemId') ? 'output-item-backend-error' : null
+                "
+              >
+                @for (item of items(); track item.id) {
+                  <mat-option [value]="item.id">
+                    {{ item.name }} · {{ unitLabel(item.unitOfMeasure) }}
+                  </mat-option>
+                }
+              </mat-select>
+              @if (
+                formulaForm.controls.outputInventoryItemId.touched &&
+                formulaForm.controls.outputInventoryItemId.invalid
+              ) {
+                <mat-error>Selecione o item de saída.</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('outputInventoryItemId'); as error) {
+              <p id="output-item-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+
+            <mat-form-field appearance="outline">
+              <mat-label>Quantidade de saída</mat-label>
+              <input
+                matInput
+                type="text"
+                inputmode="decimal"
+                formControlName="outputQuantity"
+                [readonly]="isSubmitting()"
+                [attr.aria-describedby]="
+                  backendFieldError('outputQuantity') ? 'output-quantity-backend-error' : null
+                "
+              />
+              <mat-hint>Quantidade positiva com até 6 casas decimais</mat-hint>
+              @if (
+                formulaForm.controls.outputQuantity.touched &&
+                formulaForm.controls.outputQuantity.invalid
+              ) {
+                <mat-error>Use uma quantidade positiva com até 6 casas decimais.</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('outputQuantity'); as error) {
+              <p id="output-quantity-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card appearance="outlined">
+          <mat-card-header>
+            <mat-card-title>Ingredientes</mat-card-title>
+          </mat-card-header>
+          <mat-card-content formArrayName="ingredients">
+            @for (ingredient of ingredients.controls; track $index; let index = $index) {
+              <fieldset class="ingredient-row" [formGroupName]="index">
+                <legend>Ingrediente {{ index + 1 }}</legend>
+                <mat-form-field appearance="outline">
+                  <mat-label>Item de estoque</mat-label>
+                  <mat-select formControlName="inventoryItemId" [disabled]="isSubmitting()">
+                    @for (item of items(); track item.id) {
+                      <mat-option [value]="item.id">
+                        {{ item.name }} · {{ unitLabel(item.unitOfMeasure) }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                  @if (ingredient.controls.inventoryItemId.touched && ingredient.controls.inventoryItemId.invalid) {
+                    <mat-error>Selecione o item de estoque.</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Quantidade</mat-label>
+                  <input
+                    matInput
+                    type="text"
+                    inputmode="decimal"
+                    formControlName="quantity"
+                    [readonly]="isSubmitting()"
+                  />
+                  @if (ingredient.controls.quantity.touched && ingredient.controls.quantity.invalid) {
+                    <mat-error>Use uma quantidade positiva com até 6 casas decimais.</mat-error>
+                  }
+                </mat-form-field>
+
+                <button
+                  mat-button
+                  type="button"
+                  [disabled]="ingredients.length === 1 || isSubmitting()"
+                  (click)="removeIngredient(index)"
+                >
+                  Remover ingrediente
+                </button>
+              </fieldset>
+            }
+            @if (backendFieldError('ingredients'); as error) {
+              <p id="ingredients-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+            <button mat-stroked-button type="button" [disabled]="isSubmitting()" (click)="addIngredient()">
+              Adicionar ingrediente
+            </button>
+          </mat-card-content>
+        </mat-card>
+
+        <div class="form-actions">
+          <button mat-flat-button type="submit" [disabled]="isSubmitting()">
+            {{ isSubmitting() ? 'Salvando...' : (isEditing() ? 'Salvar fórmula' : 'Cadastrar fórmula') }}
+          </button>
+          <a mat-button routerLink="/production/formulas">Cancelar</a>
+        </div>
+      </form>
+    }
+  }
+</section>
