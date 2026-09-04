@@ -29,10 +29,18 @@ describe('ProductionFormulaListPage', () => {
   beforeEach(async () => {
     response = new Subject<readonly ProductionFormulaDto[]>();
     list = vi.fn(() => response);
-    getById = vi.fn(() => of({
-      id: 'output-item', name: 'Produto de lavanda', description: null, category: 'OTHER',
-      unitOfMeasure: 'MILLILITER', active: false, essenceReference: null, productionTypeCode: 'EAU_DE_PARFUM',
-    }));
+    getById = vi.fn(() =>
+      of({
+        id: 'output-item',
+        name: 'Produto de lavanda',
+        description: null,
+        category: 'OTHER',
+        unitOfMeasure: 'MILLILITER',
+        active: false,
+        essenceReference: null,
+        productionTypeCode: 'EAU_DE_PARFUM',
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [ProductionFormulaListPage],
@@ -49,6 +57,14 @@ describe('ProductionFormulaListPage', () => {
 
   it('should show loading feedback before formulas are returned', () => {
     expect(fixture.nativeElement.textContent).toContain('Carregando fórmulas de produção...');
+  });
+
+  it('should expose the production registration action', () => {
+    const registrationLink = Array.from(
+      fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>,
+    ).find((link) => link.textContent?.includes('Registrar produção'));
+
+    expect(registrationLink?.getAttribute('href')).toBe('/production/executions/new');
   });
 
   it('should render formulas returned by the backend', () => {
@@ -95,9 +111,9 @@ describe('ProductionFormulaListPage', () => {
   });
 
   function findButton(text: string): HTMLButtonElement {
-    return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(
-      (button) => button.textContent?.includes(text),
-    ) as HTMLButtonElement;
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((button) => button.textContent?.includes(text)) as HTMLButtonElement;
   }
 });
 

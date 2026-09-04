@@ -1,0 +1,167 @@
+:host {
+  display: block;
+}
+
+.production-registration-page,
+form {
+  display: grid;
+  gap: 24px;
+  max-width: 960px;
+}
+
+.page-header {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.page-header div {
+  display: grid;
+  gap: 4px;
+}
+
+h1,
+h2,
+.page-header p {
+  margin: 0;
+}
+
+.page-header p,
+.field-hint,
+.context-message,
+.batch-facts {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+mat-card-content {
+  display: grid;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lot-mode-fieldset,
+.allocation-row {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+}
+
+.lot-mode-fieldset {
+  display: grid;
+  gap: 12px;
+}
+
+.lot-mode-fieldset legend,
+.allocation-row legend {
+  padding: 0 4px;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-medium);
+}
+
+mat-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.ingredient-section {
+  display: grid;
+  gap: 16px;
+}
+
+.allocation-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 2fr) minmax(180px, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.batch-facts {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  font: var(--mat-sys-body-small);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--mat-sys-error);
+  font: var(--mat-sys-body-small);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.summary-grid div {
+  min-width: 0;
+}
+
+.summary-grid dt {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-medium);
+}
+
+.summary-grid dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.review-list,
+.overview-list,
+.confirmed-consumptions ul {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.review-list li,
+.overview-list li {
+  display: grid;
+  gap: 2px;
+}
+
+.success-card {
+  border-color: var(--mat-sys-primary);
+}
+
+.refresh-error {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+
+.refresh-error p {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .date-grid,
+  .allocation-row {
+    grid-template-columns: 1fr;
+  }
+
+  .batch-facts {
+    grid-column: auto;
+  }
+
+  mat-radio-group {
+    flex-direction: column;
+  }
+}
