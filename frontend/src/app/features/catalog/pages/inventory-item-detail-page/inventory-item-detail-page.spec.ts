@@ -16,6 +16,8 @@ describe('InventoryItemDetailPage', () => {
     category: 'ESSENCE',
     unitOfMeasure: 'MILLILITER',
     active: true,
+    essenceReference: '027',
+    productionTypeCode: 'BDS',
   };
 
   let fixture: ComponentFixture<InventoryItemDetailPage>;
@@ -58,6 +60,8 @@ describe('InventoryItemDetailPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Lavender Essence');
     expect(fixture.nativeElement.textContent).toContain('Floral raw material');
     expect(fixture.nativeElement.textContent).toContain('Mililitro');
+    expect(fixture.nativeElement.textContent).toContain('027');
+    expect(fixture.nativeElement.textContent).toContain('BDS');
 
     const operationLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find(
       (link) => (link as HTMLAnchorElement).textContent?.includes('Abrir operações de estoque'),
@@ -70,6 +74,14 @@ describe('InventoryItemDetailPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Item de estoque não encontrado.');
+  });
+
+  it('should render an absence state for production metadata not assigned by the backend', () => {
+    response.next({ ...item, essenceReference: null, productionTypeCode: null });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Não atribuída.');
+    expect(fixture.nativeElement.textContent).toContain('Não atribuído.');
   });
 
   it('should render a generic server error and retry', () => {

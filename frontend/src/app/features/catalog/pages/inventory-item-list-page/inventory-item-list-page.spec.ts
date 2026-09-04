@@ -20,6 +20,8 @@ describe('InventoryItemListPage', () => {
     category: 'ESSENCE' as const,
     unitOfMeasure: 'MILLILITER' as const,
     active: true,
+    essenceReference: null,
+    productionTypeCode: null,
   };
   const populatedPage: InventoryItemPageDto = {
     content: [item],
