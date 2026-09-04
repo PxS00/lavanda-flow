@@ -175,6 +175,23 @@ describe('ProductionRegistrationPage', () => {
     );
   });
 
+  it('should reject duplicate concrete batch IDs before review confirmation', async () => {
+    await configure();
+    fillBaseForm();
+    clickButton('Adicionar lote');
+    const allocations =
+      fixture.componentInstance.registrationForm.controls.allocationGroups.at(0).controls.allocations;
+    allocations.at(1).setValue({ batchId: 'batch-a', quantity: '1' });
+    fixture.detectChanges();
+
+    reviewProduction();
+
+    expect(register).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Cada lote concreto pode aparecer apenas uma vez na mesma produção.',
+    );
+  });
+
   it('should prevent duplicate confirmation while the production request is in flight', async () => {
     await configure();
     fillBaseForm();
@@ -339,6 +356,17 @@ function overview(inventoryItemId: string): InventoryItemOverviewDto {
 }
 
 function apiError(code: string): HttpErrorResponse {
+  const details =
+    code === 'INSUFFICIENT_STOCK'
+      ? null
+      : code === 'EXPIRED_BATCH'
+        ? { batchId: 'batch-a' }
+        : {
+            inventoryItemId: ingredientItem.id,
+            expectedQuantity: '5',
+            actualQuantity: '4',
+          };
+
   return new HttpErrorResponse({
     status: 422,
     error: {
@@ -348,7 +376,7 @@ function apiError(code: string): HttpErrorResponse {
       code,
       message: 'Production registration rejected',
       path: '/api/v1/production/executions',
-      details: {},
+      details,
     },
   });
 }
