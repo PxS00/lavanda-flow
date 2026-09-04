@@ -10,6 +10,9 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   INACTIVE_INVENTORY_ITEM: 'Este item de estoque está inativo.',
   INACTIVE_SUPPLIER: 'Este fornecedor está inativo.',
   INSUFFICIENT_ELIGIBLE_STOCK: 'Não há estoque elegível suficiente para concluir a saída.',
+  INSUFFICIENT_STOCK: 'Um dos lotes selecionados não possui saldo suficiente.',
+  BATCH_NOT_FOUND: 'Lote não encontrado.',
+  EXPIRED_BATCH: 'Um dos lotes selecionados está vencido e não pode ser consumido.',
   MINIMUM_STOCK_LEVEL_NOT_FOUND: 'Estoque mínimo não configurado.',
   INVALID_MINIMUM_STOCK_QUANTITY: 'Informe uma quantidade mínima válida.',
   INVALID_BATCH_DATA: 'Os dados do lote são inválidos.',
@@ -21,6 +24,11 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   PRODUCTION_FORMULA_CATALOG_ITEM_NOT_FOUND: 'Um item de estoque da fórmula não foi encontrado.',
   INACTIVE_PRODUCTION_FORMULA_CATALOG_ITEM: 'Um item de estoque da fórmula está inativo.',
   INVALID_PRODUCTION_FORMULA: 'Revise os dados da fórmula.',
+  INVALID_PRODUCTION_EXECUTION: 'Revise os dados da produção.',
+  INVALID_PRODUCTION_ALLOCATION:
+    'As quantidades dos lotes não correspondem aos requisitos da fórmula.',
+  INVALID_MANUAL_PRODUCTION_LOT_CODE: 'Revise o código de lote manual informado.',
+  PRODUCTION_SOURCE_BATCH_NOT_FOUND: 'Um lote selecionado para a produção não foi encontrado.',
 };
 
 const KIND_MESSAGES: Readonly<Record<UiError['kind'], string>> = {
@@ -34,7 +42,10 @@ const KIND_MESSAGES: Readonly<Record<UiError['kind'], string>> = {
 };
 
 export function localizeUiError(error: UiError): UiErrorPresentation {
-  return { message: error.code === undefined ? KIND_MESSAGES[error.kind] : (CODE_MESSAGES[error.code] ?? KIND_MESSAGES[error.kind]) };
+  return {
+    message:
+      error.code === undefined ? KIND_MESSAGES[error.kind] : (CODE_MESSAGES[error.code] ?? KIND_MESSAGES[error.kind]),
+  };
 }
 
 export function localizeFieldError(error: UiError | null, field: string): string | undefined {
