@@ -30,28 +30,17 @@
             <mat-card-title>Saída da produção</mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <mat-form-field appearance="outline">
-              <mat-label>Item de saída</mat-label>
-              <mat-select
-                formControlName="outputInventoryItemId"
-                [disabled]="isSubmitting()"
-                [attr.aria-describedby]="
-                  backendFieldError('outputInventoryItemId') ? 'output-item-backend-error' : null
-                "
-              >
-                @for (item of items(); track item.id) {
-                  <mat-option [value]="item.id">
-                    {{ item.name }} · {{ unitLabel(item.unitOfMeasure) }}
-                  </mat-option>
-                }
-              </mat-select>
-              @if (
-                formulaForm.controls.outputInventoryItemId.touched &&
-                formulaForm.controls.outputInventoryItemId.invalid
-              ) {
-                <mat-error>Selecione o item de saída.</mat-error>
-              }
-            </mat-form-field>
+            <app-inventory-item-selector
+              [selected]="formulaForm.controls.outputInventoryItem.value"
+              [disabled]="isSubmitting()"
+              (selectionChange)="formulaForm.controls.outputInventoryItem.setValue($event)"
+            />
+            @if (
+              formulaForm.controls.outputInventoryItem.touched &&
+              formulaForm.controls.outputInventoryItem.invalid
+            ) {
+              <p class="field-error" role="alert">Selecione o item de saída.</p>
+            }
             @if (backendFieldError('outputInventoryItemId'); as error) {
               <p id="output-item-backend-error" class="field-error" role="alert">{{ error }}</p>
             }
@@ -90,19 +79,14 @@
             @for (ingredient of ingredients.controls; track $index; let index = $index) {
               <fieldset class="ingredient-row" [formGroupName]="index">
                 <legend>Ingrediente {{ index + 1 }}</legend>
-                <mat-form-field appearance="outline">
-                  <mat-label>Item de estoque</mat-label>
-                  <mat-select formControlName="inventoryItemId" [disabled]="isSubmitting()">
-                    @for (item of items(); track item.id) {
-                      <mat-option [value]="item.id">
-                        {{ item.name }} · {{ unitLabel(item.unitOfMeasure) }}
-                      </mat-option>
-                    }
-                  </mat-select>
-                  @if (ingredient.controls.inventoryItemId.touched && ingredient.controls.inventoryItemId.invalid) {
-                    <mat-error>Selecione o item de estoque.</mat-error>
-                  }
-                </mat-form-field>
+                <app-inventory-item-selector
+                  [selected]="ingredient.controls.inventoryItem.value"
+                  [disabled]="isSubmitting()"
+                  (selectionChange)="ingredient.controls.inventoryItem.setValue($event)"
+                />
+                @if (ingredient.controls.inventoryItem.touched && ingredient.controls.inventoryItem.invalid) {
+                  <p class="field-error" role="alert">Selecione o item de estoque.</p>
+                }
 
                 <mat-form-field appearance="outline">
                   <mat-label>Quantidade</mat-label>

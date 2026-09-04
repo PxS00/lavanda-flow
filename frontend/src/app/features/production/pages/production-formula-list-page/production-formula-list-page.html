@@ -24,30 +24,30 @@
         />
       } @else {
         <ul class="formula-list" aria-label="Fórmulas de produção">
-          @for (formula of currentState.formulas; track formula.id) {
+          @for (item of currentState.formulas; track item.formula.id) {
             <li>
               <mat-card appearance="outlined">
                 <mat-card-header>
                   <mat-card-title>Fórmula de produção</mat-card-title>
-                  <mat-card-subtitle>{{ formula.ingredients.length }} ingrediente(s)</mat-card-subtitle>
+                  <mat-card-subtitle>{{ item.formula.ingredients.length }} ingrediente(s)</mat-card-subtitle>
                 </mat-card-header>
                 <mat-card-content>
                   <dl>
                     <div>
                       <dt>Item de saída</dt>
-                      <dd>{{ formula.outputInventoryItemId }}</dd>
+                      <dd>{{ item.outputItem.name }} · {{ unitLabel(item.outputItem.unitOfMeasure) }}</dd>
                     </div>
                     <div>
                       <dt>Quantidade de saída</dt>
                       <dd>
-                        {{ formula.outputQuantity | number: '1.0-6' }}
-                        {{ unitLabel(formula.outputUnitOfMeasure) }}
+                        {{ item.formula.outputQuantity | number: '1.0-6' }}
+                        {{ unitLabel(item.formula.outputUnitOfMeasure) }}
                       </dd>
                     </div>
                   </dl>
                 </mat-card-content>
                 <mat-card-actions align="end">
-                  <a mat-button [routerLink]="['/production/formulas', formula.id]">Ver fórmula</a>
+                  <a mat-button [routerLink]="['/production/formulas', item.formula.id]">Ver fórmula</a>
                 </mat-card-actions>
               </mat-card>
             </li>

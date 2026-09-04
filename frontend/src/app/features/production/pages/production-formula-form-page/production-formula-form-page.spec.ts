@@ -13,7 +13,7 @@ describe('ProductionFormulaFormPage', () => {
   const items: readonly InventoryItemDto[] = [
     item('output', 'Produto'),
     item('ingredient-a', 'Essência A'),
-    item('ingredient-b', 'Essência B'),
+    item('ingredient-b', 'Essência B', false),
   ];
   const formula: ProductionFormulaDto = {
     id: 'formula-1',
@@ -32,6 +32,7 @@ describe('ProductionFormulaFormPage', () => {
   let create: ReturnType<typeof vi.fn<(request: UpsertProductionFormulaRequest) => Observable<ProductionFormulaDto>>>;
   let update: ReturnType<typeof vi.fn<(id: string, request: UpsertProductionFormulaRequest) => Observable<ProductionFormulaDto>>>;
   let getById: ReturnType<typeof vi.fn<(id: string) => Observable<ProductionFormulaDto>>>;
+  let getInventoryItemById: ReturnType<typeof vi.fn<(id: string) => Observable<InventoryItemDto>>>;
   let router: Router;
 
   async function configure(formulaId: string | null): Promise<void> {
@@ -40,13 +41,14 @@ describe('ProductionFormulaFormPage', () => {
     create = vi.fn(() => createResponse);
     update = vi.fn(() => updateResponse);
     getById = vi.fn(() => of(formula));
+    getInventoryItemById = vi.fn((inventoryItemId) => of(items.find((item) => item.id === inventoryItemId) as InventoryItemDto));
 
     await TestBed.configureTestingModule({
       imports: [ProductionFormulaFormPage],
       providers: [
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap(formulaId === null ? {} : { formulaId })) } },
-        { provide: InventoryItemApiService, useValue: { search: vi.fn(() => of(page(items))) } },
+        { provide: InventoryItemApiService, useValue: { search: vi.fn(() => of(page([]))), getById: getInventoryItemById } },
         { provide: ProductionFormulaApiService, useValue: { create, update, getById } },
       ],
     }).compileComponents();
@@ -62,7 +64,7 @@ describe('ProductionFormulaFormPage', () => {
     setCreateValues();
     click('Adicionar ingrediente');
     fixture.componentInstance.formulaForm.controls.ingredients.at(1).setValue({
-      inventoryItemId: 'ingredient-b', quantity: '2.000001',
+      inventoryItem: items[2], quantity: '2.000001',
     });
 
     submit();
@@ -96,14 +98,18 @@ describe('ProductionFormulaFormPage', () => {
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     expect(getById).toHaveBeenCalledWith(formula.id);
+    expect(getInventoryItemById).toHaveBeenCalledWith('output');
+    expect(getInventoryItemById).toHaveBeenCalledWith('ingredient-a');
+    expect(getInventoryItemById).toHaveBeenCalledWith('ingredient-b');
     expect(fixture.componentInstance.formulaForm.getRawValue()).toEqual({
-      outputInventoryItemId: 'output',
+      outputInventoryItem: items[0],
       outputQuantity: '12.5',
       ingredients: [
-        { inventoryItemId: 'ingredient-a', quantity: '1.25' },
-        { inventoryItemId: 'ingredient-b', quantity: '2' },
+        { inventoryItem: items[1], quantity: '1.25' },
+        { inventoryItem: items[2], quantity: '2' },
       ],
     });
+    expect(fixture.nativeElement.textContent).toContain('Essência B');
 
     submit();
     expect(update).toHaveBeenCalledWith(formula.id, {
@@ -140,10 +146,22 @@ describe('ProductionFormulaFormPage', () => {
     expect(fixture.nativeElement.textContent).not.toContain('sucesso');
   });
 
+  it('should accept an API-valid decimal that JavaScript cannot represent exactly', async () => {
+    await configure(null);
+    fixture.componentInstance.formulaForm.setValue({
+      outputInventoryItem: items[0], outputQuantity: '9007199254740.000001',
+      ingredients: [{ inventoryItem: items[1], quantity: '1' }],
+    });
+
+    submit();
+
+    expect(create).toHaveBeenCalled();
+  });
+
   function setCreateValues(): void {
     fixture.componentInstance.formulaForm.setValue({
-      outputInventoryItemId: 'output', outputQuantity: '12.5',
-      ingredients: [{ inventoryItemId: 'ingredient-a', quantity: '1.25' }],
+      outputInventoryItem: items[0], outputQuantity: '12.5',
+      ingredients: [{ inventoryItem: items[1], quantity: '1.25' }],
     });
     fixture.detectChanges();
   }
@@ -166,9 +184,9 @@ describe('ProductionFormulaFormPage', () => {
   }
 });
 
-function item(id: string, name: string): InventoryItemDto {
+function item(id: string, name: string, active = true): InventoryItemDto {
   return {
-    id, name, description: null, category: 'ESSENCE', unitOfMeasure: 'MILLILITER', active: true,
+    id, name, description: null, category: 'ESSENCE', unitOfMeasure: 'MILLILITER', active,
     essenceReference: null, productionTypeCode: null,
   };
 }

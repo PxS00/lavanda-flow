@@ -1,8 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 
+import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
+import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
 import { ProductionFormulaDto } from '../../data-access/production-formula.dto';
 import { ProductionFormulaApiService } from '../../data-access/production-formula-api.service';
 import { ProductionFormulaListPage } from './production-formula-list-page';
@@ -22,14 +24,23 @@ describe('ProductionFormulaListPage', () => {
   let fixture: ComponentFixture<ProductionFormulaListPage>;
   let response: Subject<readonly ProductionFormulaDto[]>;
   let list: ReturnType<typeof vi.fn<() => Observable<readonly ProductionFormulaDto[]>>>;
+  let getById: ReturnType<typeof vi.fn<(id: string) => Observable<InventoryItemDto>>>;
 
   beforeEach(async () => {
     response = new Subject<readonly ProductionFormulaDto[]>();
     list = vi.fn(() => response);
+    getById = vi.fn(() => of({
+      id: 'output-item', name: 'Produto de lavanda', description: null, category: 'OTHER',
+      unitOfMeasure: 'MILLILITER', active: false, essenceReference: null, productionTypeCode: 'EAU_DE_PARFUM',
+    }));
 
     await TestBed.configureTestingModule({
       imports: [ProductionFormulaListPage],
-      providers: [provideRouter([]), { provide: ProductionFormulaApiService, useValue: { list } }],
+      providers: [
+        provideRouter([]),
+        { provide: ProductionFormulaApiService, useValue: { list } },
+        { provide: InventoryItemApiService, useValue: { getById } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ProductionFormulaListPage);
@@ -44,7 +55,9 @@ describe('ProductionFormulaListPage', () => {
     response.next([formula]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('output-item');
+    expect(getById).toHaveBeenCalledWith('output-item');
+    expect(fixture.nativeElement.textContent).toContain('Produto de lavanda');
+    expect(fixture.nativeElement.textContent).not.toContain('output-item');
     expect(fixture.nativeElement.textContent).toContain('2 ingrediente(s)');
     const formulaLink = fixture.nativeElement.querySelector('mat-card a') as HTMLAnchorElement;
     expect(formulaLink.getAttribute('href')).toBe('/production/formulas/formula-1');
@@ -55,6 +68,15 @@ describe('ProductionFormulaListPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhuma fórmula cadastrada');
+  });
+
+  it('should render an error when the output item lookup fails', () => {
+    getById.mockReturnValue(throwError(() => apiError('INVENTORY_ITEM_NOT_FOUND')));
+
+    response.next([formula]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Item de estoque não encontrado.');
   });
 
   it('should render a mapped backend error and retry the list request', () => {
@@ -79,14 +101,14 @@ describe('ProductionFormulaListPage', () => {
   }
 });
 
-function apiError(): HttpErrorResponse {
+function apiError(code = 'PRODUCTION_FORMULA_NOT_FOUND'): HttpErrorResponse {
   return new HttpErrorResponse({
     status: 404,
     error: {
       timestamp: '2026-09-03T12:00:00Z',
       status: 404,
       error: 'Not Found',
-      code: 'PRODUCTION_FORMULA_NOT_FOUND',
+      code,
       message: 'Production formula was not found',
       path: '/api/v1/production/formulas',
       details: {},

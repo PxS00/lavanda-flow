@@ -17,13 +17,13 @@ import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
 import { inventoryItemUnitLabel } from '../../../catalog/inventory-item-display';
+import { InventoryItemSelector } from '../../../catalog/ui/inventory-item-selector/inventory-item-selector';
 import { SupplierDto } from '../../../suppliers/data-access/supplier.dto';
 import { StockReceiptApiService } from '../../data-access/stock-receipt-api.service';
 import {
   RegisterStockReceiptDto,
   RegisterStockReceiptRequest,
 } from '../../data-access/stock-receipt.dto';
-import { InventoryItemSelector } from '../../ui/inventory-item-selector/inventory-item-selector';
 import { SupplierSelector } from '../../ui/supplier-selector/supplier-selector';
 
 const DECIMAL_PATTERN = /^\d+(?:\.\d{1,6})?$/;
