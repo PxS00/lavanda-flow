@@ -28,6 +28,13 @@ export const PRODUCTION_ROUTES: Routes = [
       ),
   },
   {
+    path: 'genealogy/batches/:batchId',
+    loadComponent: () =>
+      import('./pages/production-genealogy-page/production-genealogy-page').then(
+        (m) => m.ProductionGenealogyPage,
+      ),
+  },
+  {
     path: 'formulas/:formulaId',
     loadComponent: () =>
       import('./pages/production-formula-form-page/production-formula-form-page').then(

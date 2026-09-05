@@ -123,7 +123,7 @@
               <thead>
                 <tr>
                   <th scope="col">Status</th><th scope="col">Código do lote</th><th scope="col">ID do fornecedor</th>
-                  <th scope="col">Entrada</th><th scope="col">Validade</th><th scope="col">Quantidade inicial</th><th scope="col">Quantidade atual</th>
+                  <th scope="col">Entrada</th><th scope="col">Validade</th><th scope="col">Quantidade inicial</th><th scope="col">Quantidade atual</th><th scope="col">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -136,6 +136,11 @@
                     <td>{{ batch.expiresAt ? formatLocalDate(batch.expiresAt) : '—' }}</td>
                     <td>{{ batch.initialQuantity | number: '1.0-6' }}</td>
                     <td>{{ batch.currentQuantity | number: '1.0-6' }}</td>
+                    <td>
+                      <a mat-button [routerLink]="['/production/genealogy/batches', batch.batchId]">
+                        Rastrear genealogia
+                      </a>
+                    </td>
                   </tr>
                 }
               </tbody>
