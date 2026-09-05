@@ -142,6 +142,7 @@ Rules:
 - reject invalid months or malformed nonblank expiration values;
 - a blank expiration is allowed when quantity is zero because no opening batch is created;
 - a positive-stock row with blank expiration must be rejected rather than creating untracked expiring stock from this source.
+- a positive-stock row whose normalized expiration is before the migration effective date must be rejected, matching the existing batch invariant that `expiresAt` cannot precede `receivedAt`.
 
 Do not infer expiration from another row or invent a default shelf life.
 
@@ -159,6 +160,8 @@ Therefore:
 The existing batch schema requires `receivedAt`. For opening-stock batches, the later importer must use an explicit migration effective date from its execution context as the batch entry date.
 
 That date represents **when Lavanda Flow established the opening snapshot**, not a claim about when the stock was originally purchased or received. Documentation/reporting for the import must make this distinction explicit.
+
+The importer must validate the effective date against every positive-stock expiration before writing. It must not backdate the effective date to make an already-expired source row pass validation.
 
 The opening movement timestamp likewise records the migration/apply operation, not reconstructed purchase history.
 
@@ -200,6 +203,7 @@ A row is rejected during validation when any required mapping is ambiguous or in
 - quantity precision beyond 6 decimals;
 - malformed nonblank expiration;
 - positive quantity with blank expiration;
+- normalized expiration before the migration effective date;
 - unresolved duplicate identity.
 
 No rejected row may be silently skipped in apply mode.
@@ -222,7 +226,7 @@ Dry-run and apply must use the same normalization rules.
 
 ## Expected current-source interpretation
 
-Given the source characteristics recorded in #134 and assuming no additional invalid values are discovered during importer validation:
+Given the source characteristics recorded in #134, assuming no additional invalid values are discovered during importer validation and an effective date no later than the earliest positive-stock expiration:
 
 - all 82 source rows remain represented as catalog records;
 - the repeated `Scandall` records remain distinct through deterministic reference-based name disambiguation;
