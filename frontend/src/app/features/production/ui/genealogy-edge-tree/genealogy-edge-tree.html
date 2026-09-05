@@ -1,0 +1,56 @@
+<ul class="edge-list">
+  @for (edge of edges(); track edge.executionId + ':' + edge.sourceBatch.batchId + ':' + edge.outputBatch.batchId) {
+    <li>
+      <details open>
+        <summary>
+          {{ batchLabel(edge.sourceBatch) }} → {{ batchLabel(edge.outputBatch) }}
+        </summary>
+
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <dl>
+              <div>
+                <dt>Quantidade consumida</dt>
+                <dd>
+                  {{ edge.consumedQuantity | number: '1.0-6' }}
+                  {{ unitLabel(edge.sourceBatch.unitOfMeasure) }}
+                </dd>
+              </div>
+              <div>
+                <dt>Data da produção</dt>
+                <dd>{{ formatLocalDate(edge.productionDate) }}</dd>
+              </div>
+              <div>
+                <dt>ID da execução</dt>
+                <dd>{{ edge.executionId }}</dd>
+              </div>
+              <div>
+                <dt>ID da fórmula</dt>
+                <dd>{{ edge.formulaId }}</dd>
+              </div>
+            </dl>
+
+            <div class="batch-grid">
+              <section aria-label="Lote de origem">
+                <h4>Lote de origem</h4>
+                <p>{{ batchLabel(edge.sourceBatch) }}</p>
+                <p>{{ originLabel(edge.sourceBatch.origin) }}</p>
+                <small>ID: {{ edge.sourceBatch.batchId }}</small>
+              </section>
+              <section aria-label="Lote produzido">
+                <h4>Lote produzido</h4>
+                <p>{{ batchLabel(edge.outputBatch) }}</p>
+                <p>{{ originLabel(edge.outputBatch.origin) }}</p>
+                <small>ID: {{ edge.outputBatch.batchId }}</small>
+              </section>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        @if (edge.next.length > 0) {
+          <app-genealogy-edge-tree [edges]="edge.next" />
+        }
+      </details>
+    </li>
+  }
+</ul>

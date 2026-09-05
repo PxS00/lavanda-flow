@@ -1,0 +1,102 @@
+<section class="genealogy-page" aria-labelledby="genealogy-heading">
+  <header class="page-header">
+    <a mat-button routerLink="/catalog">Voltar ao catálogo</a>
+    <div>
+      <h1 id="genealogy-heading">Genealogia do lote</h1>
+      <p>Consulte as relações de produção fornecidas pelo histórico oficial do sistema.</p>
+    </div>
+  </header>
+
+  <label class="direction-control">
+    Sentido da rastreabilidade
+    <select [value]="direction()" (change)="changeDirection($event)">
+      <option value="BOTH">Ambos os sentidos</option>
+      <option value="UPSTREAM">Origem / anteriores</option>
+      <option value="DOWNSTREAM">Uso / posteriores</option>
+    </select>
+  </label>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando genealogia do lote..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      <section aria-labelledby="root-batch-heading">
+        <h2 id="root-batch-heading">Lote consultado</h2>
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <h3>{{ currentState.genealogy.rootBatch.itemName }}</h3>
+            <p class="origin">{{ originLabel(currentState.genealogy.rootBatch.origin) }}</p>
+            <dl class="root-details">
+              <div>
+                <dt>Código do lote</dt>
+                <dd>{{ currentState.genealogy.rootBatch.lotCode || 'Não informado' }}</dd>
+              </div>
+              <div>
+                <dt>ID do lote</dt>
+                <dd>{{ currentState.genealogy.rootBatch.batchId }}</dd>
+              </div>
+              <div>
+                <dt>Unidade de medida</dt>
+                <dd>{{ unitLabel(currentState.genealogy.rootBatch.unitOfMeasure) }}</dd>
+              </div>
+              <div>
+                <dt>Entrada</dt>
+                <dd>{{ formatLocalDate(currentState.genealogy.rootBatch.receivedAt) }}</dd>
+              </div>
+              <div>
+                <dt>Validade</dt>
+                <dd>
+                  {{ currentState.genealogy.rootBatch.expiresAt ? formatLocalDate(currentState.genealogy.rootBatch.expiresAt) : 'Não informada' }}
+                </dd>
+              </div>
+            </dl>
+          </mat-card-content>
+        </mat-card>
+      </section>
+
+      @if (
+        currentState.genealogy.upstream.length === 0 &&
+        currentState.genealogy.downstream.length === 0
+      ) {
+        <app-empty-state
+          title="Nenhuma relação de produção encontrada"
+          message="Este lote não possui relação de produção interna no sentido consultado."
+        />
+      } @else {
+        @if (includesUpstream(currentState.genealogy.direction)) {
+          <section class="relationships" aria-labelledby="upstream-heading">
+            <h2 id="upstream-heading">Origem / lotes anteriores</h2>
+            @if (currentState.genealogy.upstream.length === 0) {
+              <app-empty-state
+                title="Nenhuma origem de produção encontrada"
+                message="Este lote não possui relações anteriores no sentido consultado."
+              />
+            } @else {
+              <app-genealogy-edge-tree [edges]="currentState.genealogy.upstream" />
+            }
+          </section>
+        }
+
+        @if (includesDownstream(currentState.genealogy.direction)) {
+          <section class="relationships" aria-labelledby="downstream-heading">
+            <h2 id="downstream-heading">Uso / lotes posteriores</h2>
+            @if (currentState.genealogy.downstream.length === 0) {
+              <app-empty-state
+                title="Nenhum uso em produção encontrado"
+                message="Este lote não possui relações posteriores no sentido consultado."
+              />
+            } @else {
+              <app-genealogy-edge-tree [edges]="currentState.genealogy.downstream" />
+            }
+          </section>
+        }
+      }
+    }
+  }
+</section>

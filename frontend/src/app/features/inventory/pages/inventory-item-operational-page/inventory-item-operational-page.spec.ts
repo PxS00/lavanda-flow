@@ -263,6 +263,10 @@ describe('InventoryItemOperationalPage', () => {
     expect(rows[0].textContent).toContain('supplier-1');
     expect(rows[0].textContent).toContain('100');
     expect(rows[0].textContent).toContain('40');
+    expect(
+      rows[0].querySelector('a')?.getAttribute('href'),
+    ).toBe('/production/genealogy/batches/batch-a');
+    expect(rows[0].querySelector('a')?.textContent).toContain('Rastrear genealogia');
   });
 
   it('should treat only the dedicated minimum-not-found code as an unconfigured state', () => {

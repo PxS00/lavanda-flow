@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../../core/config/api-base-url.token';
 import { routes } from '../../app.routes';
 import { InventoryItemApiService } from '../catalog/data-access/inventory-item-api.service';
 import { ProductionFormulaApiService } from './data-access/production-formula-api.service';
+import { ProductionGenealogyApiService } from './data-access/production-genealogy-api.service';
 
 describe('production routes', () => {
   beforeEach(() => {
@@ -42,6 +43,29 @@ describe('production routes', () => {
               }),
           },
         },
+        {
+          provide: ProductionGenealogyApiService,
+          useValue: {
+            getBatchGenealogy: () =>
+              of({
+                direction: 'BOTH',
+                rootBatch: {
+                  batchId: 'batch-1',
+                  origin: 'EXTERNAL_OR_NON_PRODUCED',
+                  inventoryItemId: 'item-1',
+                  itemName: 'Essência de lavanda',
+                  itemCategory: 'ESSENCE',
+                  unitOfMeasure: 'MILLILITER',
+                  supplierId: 'supplier-1',
+                  lotCode: 'LOT-1',
+                  receivedAt: '2026-09-01',
+                  expiresAt: null,
+                },
+                upstream: [],
+                downstream: [],
+              }),
+          },
+        },
       ],
     });
   });
@@ -64,6 +88,12 @@ describe('production routes', () => {
   it('should resolve the production registration route', async () => {
     const harness = await RouterTestingHarness.create('/production/executions/new');
     expect(harness.routeNativeElement?.textContent).toContain('Registrar produção interna');
+  });
+
+  it('should resolve genealogy by stable batch identity', async () => {
+    const harness = await RouterTestingHarness.create('/production/genealogy/batches/batch-1');
+    expect(harness.routeNativeElement?.textContent).toContain('Genealogia do lote');
+    expect(harness.routeNativeElement?.textContent).toContain('Essência de lavanda');
   });
 
   it('should resolve a stable formula edit route', async () => {
