@@ -9,10 +9,13 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 interface SpringDataInventoryItemRepository extends JpaRepository<InventoryItemJpaEntity, UUID> {
+
+    List<InventoryItemJpaEntity> findAllByActiveTrue();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select item from InventoryItemJpaEntity item where item.id = :inventoryItemId")

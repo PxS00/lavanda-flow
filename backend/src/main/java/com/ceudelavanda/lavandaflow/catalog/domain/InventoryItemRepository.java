@@ -14,5 +14,7 @@ public interface InventoryItemRepository {
 
     Optional<InventoryItem> findById(UUID id);
 
+    List<InventoryItem> findAllActive();
+
     List<InventoryItem> findByIds(Collection<UUID> ids);
 }

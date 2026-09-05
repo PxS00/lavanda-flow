@@ -11,6 +11,9 @@ import java.util.UUID;
  */
 public interface InventoryItemLookup {
 
+    /** Returns all active inventory items in one catalog read. */
+    List<InventoryItemSnapshot> findAllActive();
+
     Optional<InventoryItemSnapshot> findById(UUID inventoryItemId);
 
     List<InventoryItemSnapshot> findByIds(Collection<UUID> inventoryItemIds);

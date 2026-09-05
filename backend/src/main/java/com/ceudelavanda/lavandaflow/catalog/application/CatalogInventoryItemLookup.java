@@ -18,6 +18,13 @@ class CatalogInventoryItemLookup implements InventoryItemLookup {
     private final InventoryItemRepository inventoryItemRepository;
 
     @Override
+    public List<InventoryItemSnapshot> findAllActive() {
+        return inventoryItemRepository.findAllActive().stream()
+            .map(this::toSnapshot)
+            .toList();
+    }
+
+    @Override
     public Optional<InventoryItemSnapshot> findById(UUID inventoryItemId) {
         return inventoryItemRepository.findById(inventoryItemId)
             .map(this::toSnapshot);
