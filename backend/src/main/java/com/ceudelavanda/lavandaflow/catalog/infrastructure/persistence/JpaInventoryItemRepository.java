@@ -36,6 +36,13 @@ class JpaInventoryItemRepository
     }
 
     @Override
+    public List<InventoryItem> findAllActive() {
+        return repository.findAllByActiveTrue().stream()
+            .map(InventoryItemMapper::toDomain)
+            .toList();
+    }
+
+    @Override
     public List<InventoryItem> findByIds(Collection<UUID> ids) {
         return repository.findAllById(ids).stream()
             .map(InventoryItemMapper::toDomain)
