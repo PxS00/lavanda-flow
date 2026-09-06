@@ -23,11 +23,15 @@ import java.util.regex.Pattern;
 @Component
 class InitialInventorySnapshotParser {
 
-    private static final List<String> EXPECTED_HEADER = List.of(
+    private static final List<String> ORIGINAL_HEADER = List.of(
         "Nome do Perfume", "Genero", "Ml Disponiveis", "Expired"
+    );
+    private static final List<String> FINAL_SNAPSHOT_HEADER = List.of(
+        "Nome do Perfume", "Genero", "Ml Disponiveis", "Expired", "Retirada"
     );
     private static final Set<String> REFERENCES = Set.of("F", "M", "C", "M/C", "F/C");
     private static final Pattern DECIMAL = Pattern.compile("-?\\d+(?:\\.\\d+)?");
+    private static final Pattern WITHDRAWAL_ADJUSTMENT = Pattern.compile("-\\s*(\\d+(?:\\.\\d+)?)ml");
     private static final Pattern EXPIRATION = Pattern.compile("\\d{2}/\\d{2}");
 
     InitialInventoryImportPlan parse(
@@ -40,13 +44,18 @@ class InitialInventorySnapshotParser {
         }
 
         var lines = Files.readAllLines(file, StandardCharsets.UTF_8);
-        if (lines.isEmpty() || !parseCsvLine(lines.getFirst()).equals(EXPECTED_HEADER)) {
-            throw new IllegalArgumentException("CSV header must be exactly: " + String.join(",", EXPECTED_HEADER));
+        if (lines.isEmpty()) {
+            throw invalidHeader();
+        }
+        var header = parseCsvLine(lines.getFirst());
+        var hasWithdrawalAdjustment = header.equals(FINAL_SNAPSHOT_HEADER);
+        if (!header.equals(ORIGINAL_HEADER) && !hasWithdrawalAdjustment) {
+            throw invalidHeader();
         }
 
         var rows = new ArrayList<ParsedRow>();
         for (int index = 1; index < lines.size(); index++) {
-            rows.add(parseRow(index, lines.get(index), effectiveDate));
+            rows.add(parseRow(index, lines.get(index), effectiveDate, hasWithdrawalAdjustment));
         }
         resolveDuplicateNames(rows);
 
@@ -66,11 +75,17 @@ class InitialInventorySnapshotParser {
             .toList());
     }
 
-    private ParsedRow parseRow(int sourceRowNumber, String line, LocalDate effectiveDate) {
+    private ParsedRow parseRow(
+        int sourceRowNumber,
+        String line,
+        LocalDate effectiveDate,
+        boolean hasWithdrawalAdjustment
+    ) {
         var fields = parseCsvLine(line);
-        if (fields.size() != EXPECTED_HEADER.size()) {
+        var expectedColumnCount = hasWithdrawalAdjustment ? FINAL_SNAPSHOT_HEADER.size() : ORIGINAL_HEADER.size();
+        if (fields.size() != expectedColumnCount) {
             return ParsedRow.rejected(sourceRowNumber, InitialInventoryImportValidationCode.MALFORMED_ROW,
-                "Expected 4 columns but found " + fields.size());
+                "Expected " + expectedColumnCount + " columns but found " + fields.size());
         }
 
         var row = new ParsedRow(sourceRowNumber);
@@ -85,6 +100,9 @@ class InitialInventorySnapshotParser {
         }
 
         row.quantity = parseQuantity(fields.get(2), row);
+        if (row.quantity != null && hasWithdrawalAdjustment) {
+            row.quantity = adjustQuantity(row.quantity, fields.get(4), row);
+        }
         row.expiration = parseExpiration(fields.get(3), row);
         if (row.quantity != null && row.quantity.signum() > 0) {
             if (row.expiration == null && row.errorCode == null) {
@@ -96,6 +114,37 @@ class InitialInventorySnapshotParser {
             }
         }
         return row;
+    }
+
+    private BigDecimal adjustQuantity(BigDecimal availableQuantity, String value, ParsedRow row) {
+        var normalized = value.trim();
+        if (normalized.isEmpty()) {
+            return availableQuantity;
+        }
+
+        var matcher = WITHDRAWAL_ADJUSTMENT.matcher(normalized);
+        if (!matcher.matches()) {
+            row.reject(InitialInventoryImportValidationCode.INVALID_WITHDRAWAL_ADJUSTMENT,
+                "Withdrawal adjustment must be a negative decimal with ml suffix");
+            return null;
+        }
+
+        final BigDecimal withdrawalAdjustment;
+        try {
+            withdrawalAdjustment = StockQuantityRules.requirePositive(
+                new BigDecimal(matcher.group(1)), "withdrawal adjustment"
+            ).negate();
+        } catch (IllegalArgumentException exception) {
+            row.reject(InitialInventoryImportValidationCode.INVALID_WITHDRAWAL_ADJUSTMENT, exception.getMessage());
+            return null;
+        }
+
+        var adjustedQuantity = availableQuantity.add(withdrawalAdjustment);
+        if (adjustedQuantity.signum() < 0) {
+            row.reject(InitialInventoryImportValidationCode.NEGATIVE_ADJUSTED_QUANTITY,
+                "Adjusted quantity must not be negative");
+        }
+        return adjustedQuantity;
     }
 
     private BigDecimal parseQuantity(String value, ParsedRow row) {
@@ -155,6 +204,13 @@ class InitialInventorySnapshotParser {
 
     private static String normalizeReference(String value) {
         return value.trim().toUpperCase(Locale.ROOT).replaceAll("\\s*/\\s*", "/");
+    }
+
+    private static IllegalArgumentException invalidHeader() {
+        return new IllegalArgumentException(
+            "CSV header must be exactly: " + String.join(",", ORIGINAL_HEADER)
+                + " or " + String.join(",", FINAL_SNAPSHOT_HEADER)
+        );
     }
 
     private static int count(

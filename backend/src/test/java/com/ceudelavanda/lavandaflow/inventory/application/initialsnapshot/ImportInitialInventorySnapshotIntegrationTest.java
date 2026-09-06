@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -115,6 +116,61 @@ class ImportInitialInventorySnapshotIntegrationTest {
     }
 
     @Test
+    void shouldApplyAdjustedFinalSnapshotWithoutFabricatingWithdrawalHistory() throws IOException {
+        var snapshot = write("""
+            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada
+            Adjusted,F,80,02/24,-50ml
+            Catalog only,M,50,,- 50ml
+            Unchanged,C,3,03/24,
+            """);
+
+        var dryRun = importer.execute(InitialInventoryImportMode.DRY_RUN, snapshot, EFFECTIVE_DATE);
+
+        assertThat(dryRun.rejectedCount()).isZero();
+        assertThat(dryRun.openingStockCount()).isEqualTo(2);
+        assertThat(dryRun.catalogOnlyCount()).isEqualTo(1);
+        assertThat(dryRun.rows()).extracting(InitialInventoryImportRowResult::quantity)
+            .containsExactly(
+                new BigDecimal("30.000000"),
+                new BigDecimal("0.000000"),
+                new BigDecimal("3.000000")
+            );
+        assertDatabaseCounts(0, 0, 0);
+
+        importer.execute(InitialInventoryImportMode.APPLY, snapshot, EFFECTIVE_DATE);
+
+        assertDatabaseCounts(3, 2, 2);
+        var adjusted = inventoryItemLookup.findAllActive().stream()
+            .filter(item -> item.name().equals("Adjusted"))
+            .findFirst()
+            .orElseThrow();
+        assertThat(getCurrentStock.execute(new GetCurrentStockQuery(adjusted.id(), true)).totalCurrentQuantity())
+            .isEqualByComparingTo("30.000000");
+        assertThat(getBatchInventory.execute(adjusted.id()).batches()).singleElement().satisfies(batch -> {
+            assertThat(batch.initialQuantity()).isEqualByComparingTo("30.000000");
+            assertThat(batch.currentQuantity()).isEqualByComparingTo("30.000000");
+        });
+        assertThat(getMovementHistory.execute(new GetMovementHistoryQuery(
+            adjusted.id(), null, null, null, null, 0, 100
+        )).content()).singleElement().satisfies(movement -> {
+            assertThat(movement.type()).isEqualTo(MovementType.ENTRY);
+            assertThat(movement.quantity()).isEqualByComparingTo("30.000000");
+        });
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM stock_movement WHERE movement_type = 'CONSUMPTION'", Integer.class
+        )).isZero();
+
+        var catalogOnly = inventoryItemLookup.findAllActive().stream()
+            .filter(item -> item.name().equals("Catalog only"))
+            .findFirst()
+            .orElseThrow();
+        assertThat(getBatchInventory.execute(catalogOnly.id()).batches()).isEmpty();
+        assertThat(getMovementHistory.execute(new GetMovementHistoryQuery(
+            catalogOnly.id(), null, null, null, null, 0, 100
+        )).content()).isEmpty();
+    }
+
+    @Test
     void shouldRejectInvalidFileAndInitializedCatalogBeforeSnapshotWrites() throws IOException {
         var invalid = write("""
             Nome do Perfume,Genero,Ml Disponiveis,Expired
@@ -127,6 +183,19 @@ class ImportInitialInventorySnapshotIntegrationTest {
             .isInstanceOf(InitialInventoryImportException.class)
             .satisfies(exception -> assertThat(((InitialInventoryImportException) exception).report().rejectedCount())
                 .isEqualTo(1));
+        assertDatabaseCounts(0, 0, 0);
+
+        var negativeAdjusted = write("""
+            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada
+            Invalid adjustment,F,1,02/24,-2ml
+            """);
+        assertThatThrownBy(() -> importer.execute(
+            InitialInventoryImportMode.APPLY, negativeAdjusted, EFFECTIVE_DATE
+        ))
+            .isInstanceOf(InitialInventoryImportException.class)
+            .satisfies(exception -> assertThat(
+                ((InitialInventoryImportException) exception).report().rows().getFirst().validationCode()
+            ).isEqualTo(InitialInventoryImportValidationCode.NEGATIVE_ADJUSTED_QUANTITY));
         assertDatabaseCounts(0, 0, 0);
 
         var existing = inventoryItemRegistration.registerEssence("Existing inactive guard fixture");
