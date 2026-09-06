@@ -22,6 +22,11 @@ class JpaInventoryItemRepository
     }
 
     @Override
+    public boolean existsAny() {
+        return repository.count() > 0;
+    }
+
+    @Override
     public InventoryItem save(InventoryItem item) {
         var entity = InventoryItemMapper.toEntity(item);
         var savedEntity = repository.save(entity);

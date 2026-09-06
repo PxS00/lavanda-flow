@@ -10,6 +10,8 @@ import java.util.UUID;
  */
 public interface InventoryItemRepository {
 
+    boolean existsAny();
+
     InventoryItem save(InventoryItem item);
 
     Optional<InventoryItem> findById(UUID id);
