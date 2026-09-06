@@ -1,4 +1,73 @@
-<section>
-  <h1>Painel</h1>
-  <p>O resumo operacional estará disponível aqui.</p>
+<section class="dashboard-page" aria-labelledby="dashboard-heading">
+  <header class="page-header">
+    <div>
+      <h1 id="dashboard-heading">Painel operacional</h1>
+      <p>Acompanhe os indicadores atuais do estoque.</p>
+    </div>
+    <button mat-stroked-button type="button" (click)="refresh()">Atualizar painel</button>
+  </header>
+
+  @let dashboard = state();
+  @switch (dashboard.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando painel operacional..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="dashboard.error" />
+      <button mat-stroked-button type="button" (click)="refresh()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      <p class="context">
+        Dados de {{ formatLocalDate(dashboard.data.asOfDate) }} · janela de próximos vencimentos:
+        {{ dashboard.data.expirationWindowDays }} dias.
+      </p>
+
+      <div class="metric-grid" aria-label="Indicadores operacionais do estoque">
+        <a class="metric-link" routerLink="/catalog" aria-label="Ver itens ativos no catálogo">
+          <mat-card appearance="outlined" class="metric-card">
+            <span class="metric-label">Itens ativos</span>
+            <strong class="metric-value">{{ dashboard.data.activeItemCount }}</strong>
+          </mat-card>
+        </a>
+
+        <a
+          class="metric-link"
+          routerLink="/inventory/alerts"
+          aria-label="Ver alertas de estoque baixo"
+        >
+          <mat-card appearance="outlined" class="metric-card">
+            <span class="metric-label">Estoque baixo</span>
+            <strong class="metric-value">{{ dashboard.data.lowStockItemCount }}</strong>
+          </mat-card>
+        </a>
+
+        <mat-card appearance="outlined" class="metric-card">
+          <span class="metric-label">Sem estoque</span>
+          <strong class="metric-value">{{ dashboard.data.outOfStockItemCount }}</strong>
+        </mat-card>
+
+        <a
+          class="metric-link"
+          routerLink="/inventory/alerts"
+          aria-label="Ver alertas de lotes próximos do vencimento"
+        >
+          <mat-card appearance="outlined" class="metric-card">
+            <span class="metric-label">Lotes próximos do vencimento</span>
+            <strong class="metric-value">{{ dashboard.data.expiringSoonBatchCount }}</strong>
+          </mat-card>
+        </a>
+
+        <a
+          class="metric-link"
+          routerLink="/inventory/alerts"
+          aria-label="Ver alertas de lotes vencidos"
+        >
+          <mat-card appearance="outlined" class="metric-card">
+            <span class="metric-label">Lotes vencidos</span>
+            <strong class="metric-value">{{ dashboard.data.expiredBatchCount }}</strong>
+          </mat-card>
+        </a>
+      </div>
+    }
+  }
 </section>
