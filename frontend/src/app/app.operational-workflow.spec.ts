@@ -30,6 +30,11 @@ describe('operational UI workflow', () => {
 
   it('composes shell, catalog, receipt, workspace refresh, FEFO, alerts, and stable item navigation', async () => {
     const harness = await RouterTestingHarness.create('/dashboard');
+    http.expectOne(`${apiUrl}/inventory/dashboard`).flush({
+      asOfDate: '2026-09-01', expirationWindowDays: 30, activeItemCount: 1,
+      lowStockItemCount: 1, outOfStockItemCount: 0, expiringSoonBatchCount: 0, expiredBatchCount: 0,
+    });
+    harness.fixture.detectChanges();
     expect(harness.routeNativeElement?.textContent).toContain('Painel');
     findLink(harness, 'Estoque').click();
     await harness.fixture.whenStable();
