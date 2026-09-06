@@ -3,6 +3,12 @@
 This is a one-time offline administration workflow. Keep the operational CSV outside the repository and
 use the same explicit effective date for both runs.
 
+The importer accepts only the original four-column header
+`Nome do Perfume,Genero,Ml Disponiveis,Expired` or the final five-column header with trailing `Retirada`.
+For the final shape, blank `Retirada` means zero; otherwise it is a negative milliliter adjustment, and the
+opening quantity is `Ml Disponiveis + Retirada`. This derives the current opening snapshot only: it does not
+create historical withdrawal or `CONSUMPTION` movements.
+
 From `backend/`, first validate the complete file without database writes:
 
 ```bash

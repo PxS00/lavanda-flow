@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,6 +44,53 @@ class InitialInventorySnapshotParserTest {
         assertThat(plan.report().rows().get(0).quantity()).isEqualByComparingTo("10.500000");
         assertThat(plan.report().rows().get(0).expiration()).isEqualTo(LocalDate.of(2027, 9, 30));
         assertThat(plan.report().rows().get(1).expiration()).isNull();
+    }
+
+    @Test
+    void shouldAdjustFinalSnapshotQuantitiesUsingWithdrawalColumn() throws IOException {
+        var plan = parse("""
+            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada
+            Adjusted,F,80,09/27,-50ml
+            Spaced,M,80,10/27,- 50ml
+            Decimal,C,10.5,11/27,-0.500001ml
+            Blank,F/C,1,12/27,
+            Catalog only,M/C,50,,-50ml
+            """);
+
+        assertThat(plan.report().openingStockCount()).isEqualTo(4);
+        assertThat(plan.report().catalogOnlyCount()).isEqualTo(1);
+        assertThat(plan.report().rejectedCount()).isZero();
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::quantity)
+            .containsExactly(
+                new BigDecimal("30.000000"),
+                new BigDecimal("30.000000"),
+                new BigDecimal("9.999999"),
+                new BigDecimal("1.000000"),
+                new BigDecimal("0.000000")
+            );
+        assertThat(plan.report().rows().get(4).outcome()).isEqualTo(InitialInventoryImportOutcome.CATALOG_ONLY);
+    }
+
+    @Test
+    void shouldRejectInvalidWithdrawalAdjustmentsAndNegativeAdjustedQuantity() throws IOException {
+        var plan = parse("""
+            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada
+            Positive,F,80,09/27,50ml
+            Malformed,M,80,09/27,-50liters
+            Too precise,C,80,09/27,-0.0000001ml
+            Below zero,F/C,10,09/27,-11ml
+            Positive blank,M/C,10,,
+            """);
+
+        assertThat(plan.report().rejectedCount()).isEqualTo(5);
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsExactly(
+                InitialInventoryImportValidationCode.INVALID_WITHDRAWAL_ADJUSTMENT,
+                InitialInventoryImportValidationCode.INVALID_WITHDRAWAL_ADJUSTMENT,
+                InitialInventoryImportValidationCode.INVALID_WITHDRAWAL_ADJUSTMENT,
+                InitialInventoryImportValidationCode.NEGATIVE_ADJUSTED_QUANTITY,
+                InitialInventoryImportValidationCode.EXPIRATION_REQUIRED
+            );
     }
 
     @Test
@@ -96,6 +144,14 @@ class InitialInventorySnapshotParserTest {
         ))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("CSV header must be exactly");
+
+        var extraColumn = write("""
+            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada,Unexpected
+            Item,F,1,09/27,,
+            """);
+        assertThatThrownBy(() -> parser.parse(
+            extraColumn, InitialInventoryImportMode.DRY_RUN, EFFECTIVE_DATE
+        )).isInstanceOf(IllegalArgumentException.class);
     }
 
     private InitialInventoryImportPlan parse(String csv) throws IOException {
