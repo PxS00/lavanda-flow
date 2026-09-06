@@ -23,6 +23,15 @@ class CatalogInventoryItemLookupTest {
     private InventoryItemRepository inventoryItemRepository;
 
     @Test
+    void shouldReportAnyActiveOrInactiveCatalogItem() {
+        when(inventoryItemRepository.existsAny()).thenReturn(true);
+
+        assertThat(new CatalogInventoryItemLookup(inventoryItemRepository).existsAny()).isTrue();
+
+        verify(inventoryItemRepository).existsAny();
+    }
+
+    @Test
     void shouldRetrieveAllActiveItemsInOneCatalogRead() {
         var first = InventoryItem.create("First", null, Category.ESSENCE, UnitOfMeasure.MILLILITER);
         var second = InventoryItem.create("Second", null, Category.BOTTLE, UnitOfMeasure.UNIT);
