@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormField, form, required, validate } from '@angular/forms/signals';
@@ -9,6 +8,7 @@ import { RouterLink } from '@angular/router';
 import { catchError, map, of, Subject, switchMap, tap } from 'rxjs';
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
+import { formatDecimalString } from '../../../../core/i18n/decimal-string';
 import { formatLocalDate } from '../../../../core/i18n/local-date';
 import { UiError } from '../../../../core/http/ui-error';
 import {
@@ -35,7 +35,6 @@ const NON_NEGATIVE_INTEGER = /^\d+$/;
 @Component({
   selector: 'app-inventory-alerts-page',
   imports: [
-    DecimalPipe,
     EmptyState,
     ErrorState,
     FormField,
@@ -75,6 +74,7 @@ export class InventoryAlertsPage {
   protected readonly lowStockState = signal<AlertState<LowStockAlertsDto>>({ kind: 'loading' });
   protected readonly expirationState = signal<AlertState<ExpirationAlertsDto>>({ kind: 'loading' });
   protected readonly formatLocalDate = formatLocalDate;
+  protected readonly formatDecimal = formatDecimalString;
   protected readonly expirationStatusLabel = expirationStatusLabel;
 
   constructor() {

@@ -12,7 +12,7 @@
               <div>
                 <dt>Quantidade consumida</dt>
                 <dd>
-                  {{ edge.consumedQuantity | number: '1.0-6' }}
+                  {{ formatDecimal(edge.consumedQuantity) }}
                   {{ unitLabel(edge.sourceBatch.unitOfMeasure) }}
                 </dd>
               </div>

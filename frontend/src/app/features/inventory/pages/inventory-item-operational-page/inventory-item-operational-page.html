@@ -43,11 +43,11 @@
             <dl class="metric-grid">
               <div>
                 <dt>Quantidade física atual</dt>
-                <dd>{{ overview.data.totalCurrentQuantity | number: '1.0-6' }}</dd>
+                <dd>{{ formatDecimal(overview.data.totalCurrentQuantity) }}</dd>
               </div>
               <div>
                 <dt>Estoque disponível</dt>
-                <dd>{{ overview.data.availableQuantity | number: '1.0-6' }}</dd>
+                <dd>{{ formatDecimal(overview.data.availableQuantity) }}</dd>
               </div>
               <div>
                 <dt>Status do estoque</dt>
@@ -57,7 +57,7 @@
                 <dt>Quantidade mínima</dt>
                 <dd>
                   @if (overview.data.minimumQuantity !== null) {
-                    {{ overview.data.minimumQuantity | number: '1.0-6' }}
+                    {{ formatDecimal(overview.data.minimumQuantity) }}
                   } @else {
                     Não configurado
                   }
@@ -134,8 +134,8 @@
                     <td>{{ batch.supplierId || '—' }}</td>
                     <td>{{ formatLocalDate(batch.receivedAt) }}</td>
                     <td>{{ batch.expiresAt ? formatLocalDate(batch.expiresAt) : '—' }}</td>
-                    <td>{{ batch.initialQuantity | number: '1.0-6' }}</td>
-                    <td>{{ batch.currentQuantity | number: '1.0-6' }}</td>
+                    <td>{{ formatDecimal(batch.initialQuantity) }}</td>
+                    <td>{{ formatDecimal(batch.currentQuantity) }}</td>
                     <td>
                       <a mat-button [routerLink]="['/production/genealogy/batches', batch.batchId]">
                         Rastrear genealogia
@@ -165,7 +165,7 @@
       @case ('loaded') {
         <p class="current-minimum">
           @if (minimum.data !== null) {
-            Mínimo atual: <strong>{{ minimum.data.minimumQuantity | number: '1.0-6' }}</strong>
+            Mínimo atual: <strong>{{ formatDecimal(minimum.data.minimumQuantity) }}</strong>
           } @else {
             Nenhum estoque mínimo configurado.
           }
@@ -268,7 +268,7 @@
                   <tr>
                     <td>{{ movement.occurredAt | date: 'dd/MM/yyyy, HH:mm' }}</td>
                     <td>{{ movementTypeLabel(movement.type) }}</td>
-                    <td>{{ movement.quantity | number: '1.0-6' }} {{ enumLabel(movement.unitOfMeasure) }}</td>
+                    <td>{{ formatDecimal(movement.quantity) }} {{ enumLabel(movement.unitOfMeasure) }}</td>
                     <td>{{ movement.lotCode || '—' }}</td>
                     <td>{{ movement.batchId }}</td>
                     <td>{{ movement.reason || '—' }}</td>

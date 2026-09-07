@@ -7,6 +7,7 @@ describe('formatDecimalString', () => {
     expect(formatDecimalString('55.000000')).toBe('55');
     expect(formatDecimalString('1234.500000')).toBe('1.234,5');
     expect(formatDecimalString('1234567.123456')).toBe('1.234.567,123456');
+    expect(formatDecimalString('9999999999999.123456')).toBe('9.999.999.999.999,123456');
   });
 
   it('preserves an unsupported value unchanged', () => {

@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormField, form, required, validate } from '@angular/forms/signals';
@@ -23,6 +23,7 @@ import {
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
 import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/localize-ui-error';
+import { formatDecimalString } from '../../../../core/i18n/decimal-string';
 import { formatLocalDate } from '../../../../core/i18n/local-date';
 import { UiError } from '../../../../core/http/ui-error';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
@@ -52,7 +53,7 @@ interface WithdrawalContext {
   readonly inventoryItemId: string;
   readonly itemName: string;
   readonly unitOfMeasure: InventoryItemOverviewDto['unitOfMeasure'];
-  readonly availableQuantity: number;
+  readonly availableQuantity: string;
   readonly active: boolean;
 }
 
@@ -64,7 +65,6 @@ type PanelState<T> =
 @Component({
   selector: 'app-inventory-item-operational-page',
   imports: [
-    DecimalPipe,
     DatePipe,
     EmptyState,
     ErrorState,
@@ -109,7 +109,7 @@ export class InventoryItemOperationalPage {
         return undefined;
       }
 
-      if (!MINIMUM_QUANTITY_PATTERN.test(normalized) || Number(normalized) <= 0) {
+      if (!MINIMUM_QUANTITY_PATTERN.test(normalized) || !/[1-9]/.test(normalized)) {
         return {
           kind: 'positive-decimal',
           message: 'Use um número positivo com até 6 casas decimais.',
@@ -145,6 +145,7 @@ export class InventoryItemOperationalPage {
   });
   protected readonly enumLabel = formatEnumLabel;
   protected readonly formatLocalDate = formatLocalDate;
+  protected readonly formatDecimal = formatDecimalString;
   protected readonly batchStatusLabel = batchStatusLabel;
   protected readonly movementTypeLabel = movementTypeLabel;
   protected readonly stockStatusLabel = stockStatusLabel;
@@ -216,7 +217,7 @@ export class InventoryItemOperationalPage {
       return;
     }
 
-    const minimumQuantity = Number(this.minimumStockModel().minimumQuantity.trim());
+    const minimumQuantity = this.minimumStockModel().minimumQuantity.trim();
     this.isSavingMinimum.set(true);
     this.minimumActionError.set(null);
     this.minimumNotice.set(null);
@@ -234,7 +235,7 @@ export class InventoryItemOperationalPage {
           }
 
           this.minimumState.set({ kind: 'loaded', data: level });
-          this.minimumStockForm().reset({ minimumQuantity: String(level.minimumQuantity) });
+          this.minimumStockForm().reset({ minimumQuantity: level.minimumQuantity });
           this.confirmingMinimumRemoval.set(false);
           this.minimumNotice.set('Estoque mínimo salvo.');
           this.overviewRequests.next(inventoryItemId);
@@ -376,7 +377,7 @@ export class InventoryItemOperationalPage {
         switchMap((inventoryItemId) =>
           this.operationsApi.getMinimumStockLevel(inventoryItemId).pipe(
             map((data): PanelState<MinimumStockLevelDto | null> => {
-              this.minimumStockForm().reset({ minimumQuantity: String(data.minimumQuantity) });
+              this.minimumStockForm().reset({ minimumQuantity: data.minimumQuantity });
               return { kind: 'loaded', data };
             }),
             catchError((error: unknown) => {

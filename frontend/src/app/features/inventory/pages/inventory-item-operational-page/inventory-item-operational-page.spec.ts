@@ -26,7 +26,7 @@ class FefoWithdrawalPanelStub {
   readonly inventoryItemId = input.required<string>();
   readonly itemName = input.required<string>();
   readonly unitOfMeasure = input.required<InventoryUnitOfMeasure>();
-  readonly availableQuantity = input.required<number>();
+  readonly availableQuantity = input.required<string>();
   readonly active = input.required<boolean>();
   readonly withdrawalCompleted = output<void>();
 }
@@ -41,9 +41,9 @@ describe('InventoryItemOperationalPage', () => {
     active: true,
     asOfDate: '2026-09-01',
     expirationWindowDays: 30,
-    totalCurrentQuantity: 120,
-    availableQuantity: 80,
-    minimumQuantity: 90,
+    totalCurrentQuantity: '120',
+    availableQuantity: '80',
+    minimumQuantity: '90',
     lowStock: true,
     outOfStock: false,
     nonZeroBatchCount: 3,
@@ -51,7 +51,7 @@ describe('InventoryItemOperationalPage', () => {
     expiredBatchCount: 1,
     expiringSoonBatchCount: 2,
   };
-  const minimum: MinimumStockLevelDto = { inventoryItemId, minimumQuantity: 90 };
+  const minimum: MinimumStockLevelDto = { inventoryItemId, minimumQuantity: '90' };
   const populatedMovements: MovementHistoryPageDto = {
     content: [
       {
@@ -63,7 +63,7 @@ describe('InventoryItemOperationalPage', () => {
         batchId: 'batch-1',
         lotCode: 'LOT-A',
         type: 'CONSUMPTION',
-        quantity: 5.25,
+        quantity: '5.25',
         reason: 'Perfume production',
         occurredAt: '2026-09-01T15:00:00Z',
       },
@@ -180,7 +180,7 @@ describe('InventoryItemOperationalPage', () => {
     expect(panel.inventoryItemId()).toBe(inventoryItemId);
     expect(panel.itemName()).toBe('Lavender Essence');
     expect(panel.unitOfMeasure()).toBe('MILLILITER');
-    expect(panel.availableQuantity()).toBe(80);
+    expect(panel.availableQuantity()).toBe('80');
     expect(panel.active()).toBe(true);
 
     panel.withdrawalCompleted.emit();
@@ -228,7 +228,7 @@ describe('InventoryItemOperationalPage', () => {
       ...overview,
       inventoryItemId: itemBId,
       name: 'Lavender Base',
-      availableQuantity: 45,
+      availableQuantity: '45',
     });
     fixture.detectChanges();
 
@@ -236,7 +236,7 @@ describe('InventoryItemOperationalPage', () => {
       .componentInstance as FefoWithdrawalPanelStub;
     expect(panel.inventoryItemId()).toBe(itemBId);
     expect(panel.itemName()).toBe('Lavender Base');
-    expect(panel.availableQuantity()).toBe(45);
+    expect(panel.availableQuantity()).toBe('45');
   });
 
   it('should preserve backend batch ordering and display every operational status', () => {
@@ -297,14 +297,28 @@ describe('InventoryItemOperationalPage', () => {
     submitMinimumForm();
 
     expect(configureMinimumStockLevel).toHaveBeenCalledWith(inventoryItemId, {
-      minimumQuantity: 25.123456,
+      minimumQuantity: '25.123456',
     });
 
-    configureResponse.next({ inventoryItemId, minimumQuantity: 25.123456 });
+    configureResponse.next({ inventoryItemId, minimumQuantity: '25.123456' });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Estoque mínimo salvo.');
     expect(getOverview).toHaveBeenCalledTimes(2);
+  });
+
+  it('should preserve an exact minimum-stock quantity above JavaScript precision', () => {
+    minimumResponse.error(
+      apiError(404, 'MINIMUM_STOCK_LEVEL_NOT_FOUND', 'Minimum stock level not found.'),
+    );
+    fixture.componentInstance.minimumStockModel.set({ minimumQuantity: '8589934592.000001' });
+    fixture.detectChanges();
+
+    submitMinimumForm();
+
+    expect(configureMinimumStockLevel).toHaveBeenCalledWith(inventoryItemId, {
+      minimumQuantity: '8589934592.000001',
+    });
   });
 
   it('should require explicit confirmation before removing a minimum stock level', () => {
@@ -332,7 +346,7 @@ describe('InventoryItemOperationalPage', () => {
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Consumo');
-    expect(text).toContain('5.25');
+    expect(text).toContain('5,25');
     expect(text).toContain('LOT-A');
     expect(text).toContain('Perfume production');
     const expectedOccurredAt = new Intl.DateTimeFormat('pt-BR', {
@@ -385,8 +399,8 @@ describe('InventoryItemOperationalPage', () => {
       inventoryItemId,
       supplierId: 'supplier-1',
       lotCode,
-      initialQuantity: 100,
-      currentQuantity: status === 'ZERO_BALANCE' ? 0 : 40,
+      initialQuantity: '100',
+      currentQuantity: status === 'ZERO_BALANCE' ? '0' : '40',
       receivedAt: '2026-08-01',
       expiresAt: status === 'AVAILABLE' ? '2026-10-01' : '2026-08-31',
       status,

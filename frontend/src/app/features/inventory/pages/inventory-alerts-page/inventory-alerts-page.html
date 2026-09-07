@@ -45,9 +45,9 @@
                 @for (alert of lowStock.data.alerts; track alert.inventoryItemId) {
                   <tr>
                     <td><strong>{{ alert.name }}</strong><span class="identifier">ID: {{ alert.inventoryItemId }}</span></td>
-                    <td>{{ alert.availableQuantity | number: '1.0-6' }} {{ alert.unitOfMeasure }}</td>
-                    <td>{{ alert.minimumQuantity | number: '1.0-6' }} {{ alert.unitOfMeasure }}</td>
-                    <td>{{ alert.deficitQuantity | number: '1.0-6' }} {{ alert.unitOfMeasure }}</td>
+                    <td>{{ formatDecimal(alert.availableQuantity) }} {{ alert.unitOfMeasure }}</td>
+                    <td>{{ formatDecimal(alert.minimumQuantity) }} {{ alert.unitOfMeasure }}</td>
+                    <td>{{ formatDecimal(alert.deficitQuantity) }} {{ alert.unitOfMeasure }}</td>
                     <td><a mat-button [routerLink]="['/inventory/items', alert.inventoryItemId]" [attr.aria-label]="'Abrir operação do item ' + alert.name">Abrir item</a></td>
                   </tr>
                 }
@@ -109,7 +109,7 @@
                     <td><span class="status" [class.status-expired]="alert.status === 'EXPIRED'" [class.status-expiring]="alert.status === 'EXPIRING_SOON'">{{ expirationStatusLabel(alert.status) }}</span></td>
                     <td>{{ formatLocalDate(alert.expiresAt) }}</td>
                     <td>{{ alert.daysUntilExpiration }}</td>
-                    <td>{{ alert.currentQuantity | number: '1.0-6' }}</td>
+                    <td>{{ formatDecimal(alert.currentQuantity) }}</td>
                     <td>{{ alert.lotCode || '—' }}<span class="identifier">ID: {{ alert.batchId }}</span></td>
                     <td><span class="identifier">ID: {{ alert.inventoryItemId }}</span></td>
                     <td><a mat-button [routerLink]="['/inventory/items', alert.inventoryItemId]" [attr.aria-label]="'Abrir operação do item ' + alert.inventoryItemId">Abrir item</a></td>

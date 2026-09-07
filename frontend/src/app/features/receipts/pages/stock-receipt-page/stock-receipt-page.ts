@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormField, form, maxLength, required, validate } from '@angular/forms/signals';
@@ -11,6 +10,7 @@ import { catchError, distinctUntilChanged, finalize, map, of, switchMap } from '
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
 import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/localize-ui-error';
+import { formatDecimalString } from '../../../../core/i18n/decimal-string';
 import { formatLocalDate } from '../../../../core/i18n/local-date';
 import { UiError } from '../../../../core/http/ui-error';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
@@ -63,7 +63,6 @@ type PreselectionResult =
 @Component({
   selector: 'app-stock-receipt-page',
   imports: [
-    DecimalPipe,
     ErrorState,
     FormField,
     InventoryItemSelector,
@@ -100,6 +99,7 @@ export class StockReceiptPage {
   protected readonly isSubmitting = signal(false);
   protected readonly createdReceipt = signal<RegisterStockReceiptDto | null>(null);
   protected readonly unitLabel = inventoryItemUnitLabel;
+  protected readonly formatDecimal = formatDecimalString;
   protected readonly formatLocalDate = formatLocalDate;
   protected readonly globalSubmissionError = computed(() => {
     const error = this.submissionError();
@@ -188,7 +188,7 @@ export class StockReceiptPage {
       inventoryItemId: item.id,
       supplierId: supplier?.id ?? null,
       lotCode: normalizeOptional(model.lotCode),
-      quantity: Number(model.quantity.trim()),
+      quantity: model.quantity.trim(),
       receivedAt: model.receivedAt,
       expiresAt: normalizeOptional(model.expiresAt),
       reason: normalizeOptional(model.reason),
@@ -248,7 +248,7 @@ function validateQuantity(
 
   const [integerPart] = normalized.split('.');
   const significantIntegerDigits = integerPart.replace(/^0+/, '').length;
-  if (significantIntegerDigits > 13 || Number(normalized) <= 0) {
+  if (significantIntegerDigits > 13 || !/[1-9]/.test(normalized)) {
     return {
       kind: 'quantity-range',
       message: 'Use uma quantidade positiva com no máximo 13 dígitos inteiros e 6 casas decimais.',

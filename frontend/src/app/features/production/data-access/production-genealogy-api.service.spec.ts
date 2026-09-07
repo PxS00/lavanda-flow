@@ -18,7 +18,7 @@ describe('ProductionGenealogyApiService', () => {
         formulaId: 'formula-1',
         productionDate: '2026-09-01',
         completedAt: '2026-09-01T12:00:00Z',
-        consumedQuantity: 1.234567,
+        consumedQuantity: '1.234567',
         sourceBatch: batch('source', 'EXTERNAL_OR_NON_PRODUCED'),
         outputBatch: batch('root', 'INTERNALLY_PRODUCED'),
         next: [],
@@ -59,7 +59,7 @@ describe('ProductionGenealogyApiService', () => {
       request.flush({ ...response, direction });
 
       expect(received?.upstream[0].next).toEqual([]);
-      expect(received?.upstream[0].consumedQuantity).toBe(1.234567);
+      expect(received?.upstream[0].consumedQuantity).toBe('1.234567');
     },
   );
 });

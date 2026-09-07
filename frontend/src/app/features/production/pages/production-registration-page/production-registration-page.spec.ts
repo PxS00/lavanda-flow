@@ -24,10 +24,10 @@ const ingredientItem = item('ingredient-item', 'Essência Lavanda');
 const formula: ProductionFormulaDto = {
   id: 'formula-1',
   outputInventoryItemId: outputItem.id,
-  outputQuantity: 100,
+  outputQuantity: '100',
   outputUnitOfMeasure: 'MILLILITER',
   ingredients: [
-    { inventoryItemId: ingredientItem.id, quantity: 5, unitOfMeasure: 'MILLILITER' },
+    { inventoryItemId: ingredientItem.id, quantity: '5', unitOfMeasure: 'MILLILITER' },
   ],
 };
 const batches: BatchInventoryDto = {
@@ -43,7 +43,7 @@ const execution: ProductionExecutionDto = {
   formulaId: formula.id,
   outputInventoryItemId: outputItem.id,
   outputBatchId: 'output-batch-1',
-  outputQuantity: 100,
+  outputQuantity: '100',
   lotCode: 'BDS-014-003-09-2026',
   lotCodeMode: 'GENERATED',
   productionDate: '2026-09-04',
@@ -55,7 +55,7 @@ const execution: ProductionExecutionDto = {
       sourceBatchId: 'batch-a',
       sourceInventoryItemId: ingredientItem.id,
       movementId: 'movement-1',
-      quantity: 5,
+      quantity: '5',
     },
   ],
 };
@@ -128,8 +128,8 @@ describe('ProductionRegistrationPage', () => {
     clickButton('Confirmar produção');
     expect(register).toHaveBeenCalledWith({
       formulaId: formula.id,
-      outputQuantity: 100,
-      sourceAllocations: [{ batchId: 'batch-a', quantity: 5 }],
+      outputQuantity: '100',
+      sourceAllocations: [{ batchId: 'batch-a', quantity: '5' }],
       productionDate: '2026-09-04',
       outputReceivedAt: '2026-09-04',
       outputExpiresAt: '2027-09-04',
@@ -168,11 +168,28 @@ describe('ProductionRegistrationPage', () => {
     expect(register).toHaveBeenCalledWith(
       expect.objectContaining({
         sourceAllocations: [
-          { batchId: 'batch-a', quantity: 5 },
-          { batchId: 'batch-b', quantity: 1.25 },
+          { batchId: 'batch-a', quantity: '5' },
+          { batchId: 'batch-b', quantity: '1.25' },
         ],
       }),
     );
+  });
+
+  it('should preserve exact production output and source allocation quantities', async () => {
+    await configure();
+    fillBaseForm();
+    fixture.componentInstance.registrationForm.controls.outputQuantity.setValue('9999999999999.999999');
+    fixture.componentInstance.registrationForm.controls.allocationGroups.at(0).controls.allocations.at(0)
+      .setValue({ batchId: 'batch-a', quantity: '100.000001' });
+    fixture.detectChanges();
+
+    reviewProduction();
+    clickButton('Confirmar produção');
+
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({
+      outputQuantity: '9999999999999.999999',
+      sourceAllocations: [{ batchId: 'batch-a', quantity: '100.000001' }],
+    }));
   });
 
   it('should reject duplicate concrete batch IDs before review confirmation', async () => {
@@ -326,8 +343,8 @@ function batch(
     inventoryItemId: ingredientItem.id,
     supplierId: 'supplier-1',
     lotCode,
-    initialQuantity: currentQuantity,
-    currentQuantity,
+    initialQuantity: String(currentQuantity),
+    currentQuantity: String(currentQuantity),
     receivedAt: '2026-08-01',
     expiresAt: status === 'EXPIRED' ? '2026-09-01' : '2027-09-01',
     status,
@@ -343,8 +360,8 @@ function overview(inventoryItemId: string): InventoryItemOverviewDto {
     active: true,
     asOfDate: '2026-09-04',
     expirationWindowDays: 30,
-    totalCurrentQuantity: 95,
-    availableQuantity: 95,
+    totalCurrentQuantity: '95',
+    availableQuantity: '95',
     minimumQuantity: null,
     lowStock: false,
     outOfStock: false,

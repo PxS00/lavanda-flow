@@ -22,9 +22,9 @@ describe('InventoryItemOperationsApiService', () => {
     active: true,
     asOfDate: '2026-09-01',
     expirationWindowDays: 30,
-    totalCurrentQuantity: 120,
-    availableQuantity: 100,
-    minimumQuantity: 25,
+    totalCurrentQuantity: '120',
+    availableQuantity: '100',
+    minimumQuantity: '25',
     lowStock: false,
     outOfStock: false,
     nonZeroBatchCount: 2,
@@ -37,7 +37,7 @@ describe('InventoryItemOperationsApiService', () => {
     asOfDate: '2026-09-01',
     batches: [],
   };
-  const minimum: MinimumStockLevelDto = { inventoryItemId, minimumQuantity: 25 };
+  const minimum: MinimumStockLevelDto = { inventoryItemId, minimumQuantity: '25' };
 
   let service: InventoryItemOperationsApiService;
   let httpTesting: HttpTestingController;
@@ -90,7 +90,7 @@ describe('InventoryItemOperationsApiService', () => {
   });
 
   it('should create or update the minimum stock level with the exact body', () => {
-    const body: ConfigureMinimumStockLevelRequest = { minimumQuantity: 25.125 };
+    const body: ConfigureMinimumStockLevelRequest = { minimumQuantity: '25.125' };
     service.configureMinimumStockLevel(inventoryItemId, body).subscribe();
 
     const request = httpTesting.expectOne(

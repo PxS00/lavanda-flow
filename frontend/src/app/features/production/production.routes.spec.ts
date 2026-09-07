@@ -37,7 +37,7 @@ describe('production routes', () => {
               of({
                 id: 'formula-1',
                 outputInventoryItemId: 'item',
-                outputQuantity: 1,
+                outputQuantity: '1',
                 outputUnitOfMeasure: 'UNIT',
                 ingredients: [],
               }),

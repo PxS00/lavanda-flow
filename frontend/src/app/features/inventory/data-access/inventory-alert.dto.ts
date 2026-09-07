@@ -7,9 +7,9 @@ export interface LowStockAlertEntryDto {
   readonly inventoryItemId: string;
   readonly name: string;
   readonly unitOfMeasure: InventoryUnitOfMeasure;
-  readonly availableQuantity: number;
-  readonly minimumQuantity: number;
-  readonly deficitQuantity: number;
+  readonly availableQuantity: string;
+  readonly minimumQuantity: string;
+  readonly deficitQuantity: string;
 }
 
 /** Transport representation of the low-stock alert query. */
@@ -23,7 +23,7 @@ export interface ExpirationAlertEntryDto {
   readonly inventoryItemId: string;
   readonly batchId: string;
   readonly lotCode: string | null;
-  readonly currentQuantity: number;
+  readonly currentQuantity: string;
   readonly expiresAt: string;
   readonly daysUntilExpiration: number;
   readonly status: ExpirationAlertStatus;

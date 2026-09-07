@@ -20,10 +20,10 @@ describe('V1 operational readiness', () => {
   const formula: ProductionFormulaDto = {
     id: 'formula-final',
     outputInventoryItemId: outputItem.id,
-    outputQuantity: 10,
+    outputQuantity: '10',
     outputUnitOfMeasure: 'MILLILITER',
     ingredients: [
-      { inventoryItemId: sourceItem.id, quantity: 4.25, unitOfMeasure: 'MILLILITER' },
+      { inventoryItemId: sourceItem.id, quantity: '4.25', unitOfMeasure: 'MILLILITER' },
     ],
   };
   const execution: ProductionExecutionDto = {
@@ -31,7 +31,7 @@ describe('V1 operational readiness', () => {
     formulaId: formula.id,
     outputInventoryItemId: outputItem.id,
     outputBatchId: 'final-output-batch',
-    outputQuantity: 10,
+    outputQuantity: '10',
     lotCode: 'BDS-000-007-09-2026',
     lotCodeMode: 'GENERATED',
     productionDate: '2026-09-30',
@@ -43,7 +43,7 @@ describe('V1 operational readiness', () => {
         sourceBatchId: 'intermediate-batch',
         sourceInventoryItemId: sourceItem.id,
         movementId: 'consumption-final',
-        quantity: 4.25,
+        quantity: '4.25',
       },
     ],
   };
@@ -106,8 +106,8 @@ describe('V1 operational readiness', () => {
           inventoryItemId: sourceItem.id,
           supplierId: null,
           lotCode: 'BAS-000-003-09-2026',
-          initialQuantity: 10,
-          currentQuantity: 10,
+          initialQuantity: '10',
+          currentQuantity: '10',
           receivedAt: '2026-09-30',
           expiresAt: null,
           status: 'AVAILABLE',
@@ -139,8 +139,8 @@ describe('V1 operational readiness', () => {
     expect(registration.request.method).toBe('POST');
     expect(registration.request.body).toEqual({
       formulaId: formula.id,
-      outputQuantity: 10,
-      sourceAllocations: [{ batchId: 'intermediate-batch', quantity: 4.25 }],
+      outputQuantity: '10',
+      sourceAllocations: [{ batchId: 'intermediate-batch', quantity: '4.25' }],
       productionDate: '2026-09-30',
       outputReceivedAt: '2026-09-30',
       outputExpiresAt: null,
@@ -150,8 +150,8 @@ describe('V1 operational readiness', () => {
     expect(text(harness)).not.toContain('Produção registrada');
 
     registration.flush(execution);
-    http.expectOne(`${apiUrl}/inventory/items/${outputItem.id}/overview`).flush(overview(outputItem, 10));
-    http.expectOne(`${apiUrl}/inventory/items/${sourceItem.id}/overview`).flush(overview(sourceItem, 5.75));
+    http.expectOne(`${apiUrl}/inventory/items/${outputItem.id}/overview`).flush(overview(outputItem, '10'));
+    http.expectOne(`${apiUrl}/inventory/items/${sourceItem.id}/overview`).flush(overview(sourceItem, '5.75'));
     harness.fixture.detectChanges();
 
     expect(text(harness)).toContain('Produção registrada');
@@ -174,7 +174,7 @@ describe('V1 operational readiness', () => {
     expect(text(harness)).toContain('Base intermediária confirmada');
     expect(text(harness)).toContain('Descendente confirmado pelo backend');
     expect(text(harness)).toContain('execution-source-to-intermediate');
-    expect(text(harness)).toContain('4.25');
+    expect(text(harness)).toContain('4,25');
   });
 
   function genealogy(): BatchGenealogyDto {
@@ -203,7 +203,7 @@ describe('V1 operational readiness', () => {
           formulaId: formula.id,
           productionDate: '2026-09-30',
           completedAt: '2026-09-30T15:00:00Z',
-          consumedQuantity: 4.25,
+          consumedQuantity: '4.25',
           sourceBatch: intermediate,
           outputBatch: final,
           next: [
@@ -212,7 +212,7 @@ describe('V1 operational readiness', () => {
               formulaId: 'formula-intermediate',
               productionDate: '2026-09-29',
               completedAt: '2026-09-29T15:00:00Z',
-              consumedQuantity: 6.5,
+              consumedQuantity: '6.5',
               sourceBatch: original,
               outputBatch: intermediate,
               next: [],
@@ -226,7 +226,7 @@ describe('V1 operational readiness', () => {
           formulaId: 'formula-descendant',
           productionDate: '2026-10-01',
           completedAt: '2026-10-01T15:00:00Z',
-          consumedQuantity: 2,
+          consumedQuantity: '2',
           sourceBatch: final,
           outputBatch: descendant,
           next: [],
@@ -253,7 +253,7 @@ function item(id: string, name: string, productionTypeCode: string): InventoryIt
   };
 }
 
-function overview(inventoryItem: InventoryItemDto, quantity: number) {
+function overview(inventoryItem: InventoryItemDto, quantity: string) {
   return {
     inventoryItemId: inventoryItem.id,
     name: inventoryItem.name,
