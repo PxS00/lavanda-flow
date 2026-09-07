@@ -1,7 +1,7 @@
 <section class="withdrawal-panel" aria-labelledby="withdrawal-heading">
   <header>
     <h2 id="withdrawal-heading">Retirada por validade (FEFO)</h2>
-    <p>{{ itemName() }} · Estoque disponível: {{ availableQuantity() | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</p>
+    <p>{{ itemName() }} · Estoque disponível: {{ formatDecimal(availableQuantity()) }} {{ unitLabel(unitOfMeasure()) }}</p>
   </header>
 
   @if (state() === 'success') {
@@ -12,8 +12,8 @@
           <h3>Saída registrada</h3>
           <p>A alocação automática por FEFO foi concluída.</p>
           <dl class="summary-list">
-            <div><dt>Quantidade solicitada</dt><dd>{{ withdrawal.requestedQuantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
-            <div><dt>Quantidade alocada</dt><dd>{{ withdrawal.allocatedQuantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
+            <div><dt>Quantidade solicitada</dt><dd>{{ formatDecimal(withdrawal.requestedQuantity) }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
+            <div><dt>Quantidade alocada</dt><dd>{{ formatDecimal(withdrawal.allocatedQuantity) }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
           </dl>
           <h4>Alocações registradas</h4>
           <div class="table-scroll">
@@ -27,7 +27,7 @@
                   <tr>
                     <td>{{ allocation.batchId }}</td>
                     <td>{{ allocation.movementId }}</td>
-                    <td>{{ allocation.quantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</td>
+                    <td>{{ formatDecimal(allocation.quantity) }} {{ unitLabel(unitOfMeasure()) }}</td>
                   </tr>
                 }
               </tbody>
@@ -89,7 +89,7 @@
           <p class="warning">Esta ação consome estoque. Os lotes elegíveis serão selecionados por FEFO e mais de um lote pode ser usado.</p>
           <dl class="summary-list">
             <div><dt>Item</dt><dd>{{ itemName() }}</dd></div>
-            <div><dt>Quantidade solicitada</dt><dd>{{ withdrawal.quantity | number: '1.0-6' }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
+            <div><dt>Quantidade solicitada</dt><dd>{{ formatDecimal(withdrawal.quantity) }} {{ unitLabel(unitOfMeasure()) }}</dd></div>
             <div><dt>Motivo</dt><dd>{{ withdrawal.reason || '—' }}</dd></div>
           </dl>
           @if (globalSubmissionError(); as error) {

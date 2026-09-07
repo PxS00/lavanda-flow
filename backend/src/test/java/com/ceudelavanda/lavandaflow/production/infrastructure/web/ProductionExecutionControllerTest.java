@@ -7,6 +7,7 @@ import com.ceudelavanda.lavandaflow.production.application.execution.RegisterPro
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaNotFoundException;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionLotCodeMode;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
+import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -30,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductionExecutionController.class)
-@Import(ClockConfig.class)
+@Import({ClockConfig.class, ExactDecimalJsonConfiguration.class})
 @WithMockUser
 class ProductionExecutionControllerTest {
 
@@ -97,10 +98,12 @@ class ProductionExecutionControllerTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.executionId").value(executionId.toString()))
             .andExpect(jsonPath("$.outputBatchId").value(outputBatchId.toString()))
+            .andExpect(jsonPath("$.outputQuantity").value("10"))
             .andExpect(jsonPath("$.lotCode").value("BDS-000-001-09-2026"))
             .andExpect(jsonPath("$.lotCodeMode").value("GENERATED"))
             .andExpect(jsonPath("$.consumptions[0].sourceBatchId").value(sourceBatchId.toString()))
-            .andExpect(jsonPath("$.consumptions[0].movementId").value(sourceMovementId.toString()));
+            .andExpect(jsonPath("$.consumptions[0].movementId").value(sourceMovementId.toString()))
+            .andExpect(jsonPath("$.consumptions[0].quantity").value("5"));
 
         verify(registerProduction).execute(command);
     }

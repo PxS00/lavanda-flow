@@ -43,7 +43,7 @@
                     <div>
                       <dt>Quantidade de saída</dt>
                       <dd>
-                        {{ item.formula.outputQuantity | number: '1.0-6' }}
+                        {{ formatDecimal(item.formula.outputQuantity) }}
                         {{ unitLabel(item.formula.outputUnitOfMeasure) }}
                       </dd>
                     </div>

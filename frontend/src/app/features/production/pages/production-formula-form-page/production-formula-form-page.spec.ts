@@ -18,11 +18,11 @@ describe('ProductionFormulaFormPage', () => {
   const formula: ProductionFormulaDto = {
     id: 'formula-1',
     outputInventoryItemId: 'output',
-    outputQuantity: 12.5,
+    outputQuantity: '12.5',
     outputUnitOfMeasure: 'MILLILITER',
     ingredients: [
-      { inventoryItemId: 'ingredient-a', quantity: 1.25, unitOfMeasure: 'MILLILITER' },
-      { inventoryItemId: 'ingredient-b', quantity: 2, unitOfMeasure: 'MILLILITER' },
+      { inventoryItemId: 'ingredient-a', quantity: '1.25', unitOfMeasure: 'MILLILITER' },
+      { inventoryItemId: 'ingredient-b', quantity: '2', unitOfMeasure: 'MILLILITER' },
     ],
   };
 
@@ -71,10 +71,10 @@ describe('ProductionFormulaFormPage', () => {
 
     expect(create).toHaveBeenCalledWith({
       outputInventoryItemId: 'output',
-      outputQuantity: 12.5,
+      outputQuantity: '12.5',
       ingredients: [
-        { inventoryItemId: 'ingredient-a', quantity: 1.25 },
-        { inventoryItemId: 'ingredient-b', quantity: 2.000001 },
+        { inventoryItemId: 'ingredient-a', quantity: '1.25' },
+        { inventoryItemId: 'ingredient-b', quantity: '2.000001' },
       ],
     });
     expect(navigate).not.toHaveBeenCalled();
@@ -114,10 +114,10 @@ describe('ProductionFormulaFormPage', () => {
     submit();
     expect(update).toHaveBeenCalledWith(formula.id, {
       outputInventoryItemId: 'output',
-      outputQuantity: 12.5,
+      outputQuantity: '12.5',
       ingredients: [
-        { inventoryItemId: 'ingredient-a', quantity: 1.25 },
-        { inventoryItemId: 'ingredient-b', quantity: 2 },
+        { inventoryItemId: 'ingredient-a', quantity: '1.25' },
+        { inventoryItemId: 'ingredient-b', quantity: '2' },
       ],
     });
     updateResponse.next(formula);
@@ -146,16 +146,20 @@ describe('ProductionFormulaFormPage', () => {
     expect(fixture.nativeElement.textContent).not.toContain('sucesso');
   });
 
-  it('should accept an API-valid decimal that JavaScript cannot represent exactly', async () => {
+  it('should preserve an API-valid decimal that JavaScript cannot represent exactly', async () => {
     await configure(null);
     fixture.componentInstance.formulaForm.setValue({
-      outputInventoryItem: items[0], outputQuantity: '9007199254740.000001',
-      ingredients: [{ inventoryItem: items[1], quantity: '1' }],
+      outputInventoryItem: items[0], outputQuantity: '9999999999999.123456',
+      ingredients: [{ inventoryItem: items[1], quantity: '8589934592.000001' }],
     });
 
     submit();
 
-    expect(create).toHaveBeenCalled();
+    expect(create).toHaveBeenCalledWith({
+      outputInventoryItemId: items[0].id,
+      outputQuantity: '9999999999999.123456',
+      ingredients: [{ inventoryItemId: items[1].id, quantity: '8589934592.000001' }],
+    });
   });
 
   function setCreateValues(): void {

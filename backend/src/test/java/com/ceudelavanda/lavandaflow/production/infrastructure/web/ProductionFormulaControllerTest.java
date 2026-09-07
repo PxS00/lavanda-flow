@@ -10,6 +10,7 @@ import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFor
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaResult;
 import com.ceudelavanda.lavandaflow.production.application.formula.UpdateProductionFormula;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
+import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -34,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductionFormulaController.class)
-@Import(ClockConfig.class)
+@Import({ClockConfig.class, ExactDecimalJsonConfiguration.class})
 @WithMockUser
 class ProductionFormulaControllerTest {
 
@@ -70,8 +71,10 @@ class ProductionFormulaControllerTest {
             .andExpect(header().string("Location", "/api/v1/production/formulas/" + formulaId))
             .andExpect(jsonPath("$.id").value(formulaId.toString()))
             .andExpect(jsonPath("$.outputInventoryItemId").value(outputItemId.toString()))
+            .andExpect(jsonPath("$.outputQuantity").value("1000"))
             .andExpect(jsonPath("$.outputUnitOfMeasure").value("MILLILITER"))
             .andExpect(jsonPath("$.ingredients[0].inventoryItemId").value(ingredientItemId.toString()))
+            .andExpect(jsonPath("$.ingredients[0].quantity").value("250"))
             .andExpect(jsonPath("$.ingredients[0].unitOfMeasure").value("MILLILITER"));
 
         verify(createProductionFormula).execute(command);
@@ -97,7 +100,8 @@ class ProductionFormulaControllerTest {
 
         mockMvc.perform(get("/api/v1/production/formulas/{formulaId}", formulaId))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.outputQuantity").value(500));
+            .andExpect(jsonPath("$.outputQuantity").value("500"))
+            .andExpect(jsonPath("$.ingredients[0].quantity").value("50"));
 
         mockMvc.perform(get("/api/v1/production/formulas"))
             .andExpect(status().isOk())

@@ -10,10 +10,10 @@ describe('ProductionExecutionApiService', () => {
   const executionsUrl = 'https://api.example.test/api/v1/production/executions';
   const requestBody: RegisterProductionRequest = {
     formulaId: 'formula-1',
-    outputQuantity: 50.5,
+    outputQuantity: '50.5',
     sourceAllocations: [
-      { batchId: 'batch-a', quantity: 2.25 },
-      { batchId: 'batch-b', quantity: 1.5 },
+      { batchId: 'batch-a', quantity: '2.25' },
+      { batchId: 'batch-b', quantity: '1.5' },
     ],
     productionDate: '2026-09-04',
     outputReceivedAt: '2026-09-04',
@@ -26,7 +26,7 @@ describe('ProductionExecutionApiService', () => {
     formulaId: 'formula-1',
     outputInventoryItemId: 'output-item',
     outputBatchId: 'output-batch',
-    outputQuantity: 50.5,
+    outputQuantity: '50.5',
     lotCode: 'BDS-014-003-09-2026',
     lotCodeMode: 'GENERATED',
     productionDate: '2026-09-04',
@@ -38,7 +38,7 @@ describe('ProductionExecutionApiService', () => {
         sourceBatchId: 'batch-a',
         sourceInventoryItemId: 'ingredient-a',
         movementId: 'movement-1',
-        quantity: 2.25,
+        quantity: '2.25',
       },
     ],
   };

@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -33,6 +32,7 @@ import {
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
 import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/localize-ui-error';
+import { formatDecimalString } from '../../../../core/i18n/decimal-string';
 import { formatLocalDate } from '../../../../core/i18n/local-date';
 import { UiError } from '../../../../core/http/ui-error';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
@@ -101,7 +101,7 @@ interface FormulaContext {
 interface ReviewAllocation {
   readonly inventoryItem: InventoryItemDto;
   readonly batch: BatchInventoryEntryDto;
-  readonly quantity: number;
+  readonly quantity: string;
 }
 
 interface ProductionReview {
@@ -131,7 +131,6 @@ type RefreshState =
 @Component({
   selector: 'app-production-registration-page',
   imports: [
-    DecimalPipe,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -193,6 +192,7 @@ export class ProductionRegistrationPage {
   protected readonly refreshState = signal<RefreshState>({ kind: 'idle' });
   protected readonly unitLabel = inventoryItemUnitLabel;
   protected readonly formatLocalDate = formatLocalDate;
+  protected readonly formatDecimal = formatDecimalString;
   protected readonly globalSubmissionError = computed(() => {
     const error = this.submissionError();
     if (error === null || error.details === undefined) {
@@ -513,11 +513,11 @@ export class ProductionRegistrationPage {
     const value = this.registrationForm.getRawValue();
     return {
       formulaId: value.formulaId,
-      outputQuantity: Number(value.outputQuantity.trim()),
+      outputQuantity: value.outputQuantity.trim(),
       sourceAllocations: value.allocationGroups.flatMap((group) =>
         group.allocations.map((allocation) => ({
           batchId: allocation.batchId,
-          quantity: Number(allocation.quantity.trim()),
+          quantity: allocation.quantity.trim(),
         })),
       ),
       productionDate: value.productionDate,
@@ -613,7 +613,7 @@ function positiveDecimal(control: AbstractControl<string>): ValidationErrors | n
 
   const [integerPart] = normalized.split('.');
   const significantIntegerDigits = integerPart.replace(/^0+/, '').length;
-  if (significantIntegerDigits > 13 || Number(normalized) <= 0) {
+  if (significantIntegerDigits > 13 || !/[1-9]/.test(normalized)) {
     return { decimal: true };
   }
   return null;

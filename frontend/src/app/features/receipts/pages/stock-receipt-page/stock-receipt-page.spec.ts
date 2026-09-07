@@ -53,7 +53,7 @@ describe('StockReceiptPage', () => {
     inventoryItemId: item.id,
     supplierId: supplier.id,
     lotCode: 'LOT-96',
-    quantity: 25.5,
+    quantity: '25.5',
     receivedAt: '2026-09-01',
     expiresAt: '2027-09-01',
     reason: 'Purchase receipt',
@@ -105,7 +105,7 @@ describe('StockReceiptPage', () => {
       inventoryItemId: item.id,
       supplierId: supplier.id,
       lotCode: 'LOT-96',
-      quantity: 25.5,
+      quantity: '25.500000',
       receivedAt: '2026-09-01',
       expiresAt: '2027-09-01',
       reason: 'Purchase receipt',
@@ -142,11 +142,29 @@ describe('StockReceiptPage', () => {
       inventoryItemId: item.id,
       supplierId: null,
       lotCode: null,
-      quantity: 1.000001,
+      quantity: '1.000001',
       receivedAt: '2026-09-01',
       expiresAt: null,
       reason: null,
     });
+  });
+
+  it('should preserve an exact 13-integer-digit receipt quantity', () => {
+    selectItem();
+    fixture.componentInstance.receiptModel.set({
+      lotCode: '',
+      quantity: '9999999999999.123456',
+      receivedAt: '2026-09-01',
+      expiresAt: '',
+      reason: '',
+    });
+    fixture.detectChanges();
+
+    submit();
+
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({
+      quantity: '9999999999999.123456',
+    }));
   });
 
   it('should reject invalid quantity and missing received date before submission', () => {

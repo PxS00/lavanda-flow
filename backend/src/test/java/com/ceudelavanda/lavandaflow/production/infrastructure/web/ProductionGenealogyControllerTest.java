@@ -9,6 +9,7 @@ import com.ceudelavanda.lavandaflow.production.application.genealogy.GenealogyDi
 import com.ceudelavanda.lavandaflow.production.application.genealogy.GenealogyEdge;
 import com.ceudelavanda.lavandaflow.production.application.genealogy.GetBatchGenealogy;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
+import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -30,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductionGenealogyController.class)
-@Import(ClockConfig.class)
+@Import({ClockConfig.class, ExactDecimalJsonConfiguration.class})
 @WithMockUser
 class ProductionGenealogyControllerTest {
 
@@ -67,7 +68,7 @@ class ProductionGenealogyControllerTest {
             .andExpect(jsonPath("$.upstream[0].executionId").value(executionId.toString()))
             .andExpect(jsonPath("$.upstream[0].productionDate").value("2026-09-03"))
             .andExpect(jsonPath("$.upstream[0].completedAt").value("2026-09-03T12:00:00Z"))
-            .andExpect(jsonPath("$.upstream[0].consumedQuantity").value(2.5))
+            .andExpect(jsonPath("$.upstream[0].consumedQuantity").value("2.500000"))
             .andExpect(jsonPath("$.upstream[0].sourceBatch.lotCode").value("RAW"));
 
         verify(getBatchGenealogy).execute(rootId, GenealogyDirection.BOTH);

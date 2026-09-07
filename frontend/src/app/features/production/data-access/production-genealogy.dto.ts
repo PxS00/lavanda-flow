@@ -25,7 +25,7 @@ export interface GenealogyEdgeDto {
   readonly formulaId: string;
   readonly productionDate: string;
   readonly completedAt: string;
-  readonly consumedQuantity: number;
+  readonly consumedQuantity: string;
   readonly sourceBatch: GenealogyBatchDto;
   readonly outputBatch: GenealogyBatchDto;
   readonly next: readonly GenealogyEdgeDto[];

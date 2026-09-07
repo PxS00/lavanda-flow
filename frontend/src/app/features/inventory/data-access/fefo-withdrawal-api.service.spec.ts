@@ -10,18 +10,18 @@ describe('FefoWithdrawalApiService', () => {
   const inventoryItemId = 'bd194732-51cf-4f73-bc5d-3a9f9337adcc';
   const withdrawalsUrl = `https://api.example.test/api/v1/inventory/items/${inventoryItemId}/withdrawals`;
   const requestBody: RegisterFefoWithdrawalRequest = {
-    quantity: 80,
+    quantity: '80',
     reason: 'Production',
   };
   const singleAllocation: RegisterFefoWithdrawalDto = {
     inventoryItemId,
-    requestedQuantity: 80,
-    allocatedQuantity: 80,
+    requestedQuantity: '80',
+    allocatedQuantity: '80',
     allocations: [
       {
         batchId: 'b78247ac-5e22-4097-a609-d396c81fab64',
         movementId: '2b459b94-25e0-4fbf-bb6e-8bd2d92446ff',
-        quantity: 80,
+        quantity: '80',
       },
     ],
   };
@@ -60,11 +60,11 @@ describe('FefoWithdrawalApiService', () => {
     const response: RegisterFefoWithdrawalDto = {
       ...singleAllocation,
       allocations: [
-        { ...singleAllocation.allocations[0], quantity: 15 },
+        { ...singleAllocation.allocations[0], quantity: '15' },
         {
           batchId: '5184d508-35eb-42de-a2a0-44c4f6c9b9ae',
           movementId: '12bf0c0d-93db-4a78-bb05-b9e5d0a1e15d',
-          quantity: 65,
+          quantity: '65',
         },
       ],
     };

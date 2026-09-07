@@ -51,12 +51,12 @@ describe('ProductionGenealogyPage', () => {
     const intermediate = batch('intermediate', 'Base de lavanda', 'INTERNALLY_PRODUCED');
     const root = batch(batchId, 'Perfume de lavanda', 'INTERNALLY_PRODUCED');
     const upstream = [
-      edge('execution-root-a', intermediate, root, 2.125, [
-        edge('execution-middle', externalSource, intermediate, 1.234567, [
-          edge('execution-depth-3', secondSource, externalSource, 0.25),
+      edge('execution-root-a', intermediate, root, '2.125', [
+        edge('execution-middle', externalSource, intermediate, '1.234567', [
+          edge('execution-depth-3', secondSource, externalSource, '0.25'),
         ]),
       ]),
-      edge('execution-root-b', secondSource, root, 3.5),
+      edge('execution-root-b', secondSource, root, '3.5'),
     ];
 
     responses[0].next(genealogy('BOTH', root, upstream, []));
@@ -68,7 +68,7 @@ describe('ProductionGenealogyPage', () => {
     expect(text).toContain('LOT-root-batch');
     expect(text).toContain('Produção interna');
     expect(text).toContain('Externo ou sem produção associada');
-    expect(text).toContain('1.234567');
+    expect(text).toContain('1,234567');
     expect(text).toContain('execution-depth-3');
     expect(text).toContain('execution-root-b');
     expect(fixture.nativeElement.querySelectorAll('details').length).toBe(4);
@@ -79,8 +79,8 @@ describe('ProductionGenealogyPage', () => {
     const root = batch(batchId, 'Essência', 'EXTERNAL_OR_NON_PRODUCED');
     responses[0].next(
       genealogy('DOWNSTREAM', root, [], [
-        edge('execution-a', root, batch('output-a', 'Produto A', 'INTERNALLY_PRODUCED'), 1),
-        edge('execution-b', root, batch('output-b', 'Produto B', 'INTERNALLY_PRODUCED'), 2),
+        edge('execution-a', root, batch('output-a', 'Produto A', 'INTERNALLY_PRODUCED'), '1'),
+        edge('execution-b', root, batch('output-b', 'Produto B', 'INTERNALLY_PRODUCED'), '2'),
       ]),
     );
     fixture.detectChanges();
@@ -157,7 +157,7 @@ function edge(
   executionId: string,
   sourceBatch: GenealogyBatchDto,
   outputBatch: GenealogyBatchDto,
-  consumedQuantity: number,
+  consumedQuantity: string,
   next: readonly GenealogyEdgeDto[] = [],
 ): GenealogyEdgeDto {
   return {

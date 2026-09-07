@@ -1,12 +1,14 @@
 package com.ceudelavanda.lavandaflow.inventory.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.inventory.application.receipt.RegisterStockReceipt;
+import com.ceudelavanda.lavandaflow.inventory.application.receipt.RegisterStockReceiptCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.receipt.StockReceiptResult;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InactiveSupplierException;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InvalidBatchDataException;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InventoryItemNotFoundException;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.SupplierNotFoundException;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
+import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -22,6 +24,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -29,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(StockReceiptController.class)
-@Import(ClockConfig.class)
+@Import({ClockConfig.class, ExactDecimalJsonConfiguration.class})
 @WithMockUser
 class StockReceiptControllerTest {
 
@@ -65,10 +68,53 @@ class StockReceiptControllerTest {
             .andExpect(jsonPath("$.inventoryItemId").value(itemId.toString()))
             .andExpect(jsonPath("$.supplierId").value(supplierId.toString()))
             .andExpect(jsonPath("$.lotCode").value("LOT-96"))
-            .andExpect(jsonPath("$.quantity").value(25.5))
+            .andExpect(jsonPath("$.quantity").value("25.500000"))
             .andExpect(jsonPath("$.receivedAt").value("2026-08-31"))
             .andExpect(jsonPath("$.expiresAt").value("2027-08-31"))
             .andExpect(jsonPath("$.reason").value("Purchase receipt"));
+    }
+
+    @Test
+    void shouldBindQuotedExactQuantityWithoutScientificNotation() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(registerStockReceipt.execute(any())).thenReturn(
+            receiptResult(itemId, new BigDecimal("9999999999999.123456"))
+        );
+
+        mockMvc.perform(post("/api/v1/inventory/receipts")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "inventoryItemId": "%s",
+                      "lotCode": "LOT-96",
+                      "quantity": "9999999999999.123456",
+                      "receivedAt": "2026-08-31"
+                    }
+                    """.formatted(itemId)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.quantity").value("9999999999999.123456"));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(RegisterStockReceiptCommand.class);
+        verify(registerStockReceipt).execute(captor.capture());
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().quantity())
+            .isEqualByComparingTo("9999999999999.123456");
+    }
+
+    @Test
+    void shouldKeepAcceptingLegacyNumericQuantityRequests() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(registerStockReceipt.execute(any())).thenReturn(receiptResult(itemId, BigDecimal.ONE));
+
+        mockMvc.perform(post("/api/v1/inventory/receipts")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(validRequest(itemId, null)))
+            .andExpect(status().isCreated());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(RegisterStockReceiptCommand.class);
+        verify(registerStockReceipt).execute(captor.capture());
+        org.assertj.core.api.Assertions.assertThat(captor.getValue().quantity()).isEqualByComparingTo("25.500000");
     }
 
     @Test
@@ -163,5 +209,12 @@ class StockReceiptControllerTest {
               "reason": "Purchase receipt"
             }
             """.formatted(itemId, supplierProperty);
+    }
+
+    private static StockReceiptResult receiptResult(UUID itemId, BigDecimal quantity) {
+        return new StockReceiptResult(
+            UUID.randomUUID(), UUID.randomUUID(), itemId, null, "LOT-96", quantity,
+            LocalDate.of(2026, 8, 31), null, null, Instant.parse("2026-08-31T15:00:00Z")
+        );
     }
 }

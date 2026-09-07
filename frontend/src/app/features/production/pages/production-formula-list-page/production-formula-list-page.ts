@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { Subject, catchError, forkJoin, map, of, startWith, switchMap, tap } from 'rxjs';
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
+import { formatDecimalString } from '../../../../core/i18n/decimal-string';
 import { UiError } from '../../../../core/http/ui-error';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
@@ -30,7 +30,6 @@ interface FormulaListItem {
 @Component({
   selector: 'app-production-formula-list-page',
   imports: [
-    DecimalPipe,
     EmptyState,
     ErrorState,
     LoadingState,
@@ -48,6 +47,7 @@ export class ProductionFormulaListPage {
 
   protected readonly state = signal<FormulaListState>({ kind: 'loading' });
   protected readonly unitLabel = inventoryItemUnitLabel;
+  protected readonly formatDecimal = formatDecimalString;
 
   constructor() {
     this.requests

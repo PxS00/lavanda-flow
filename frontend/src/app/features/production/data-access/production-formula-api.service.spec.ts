@@ -12,18 +12,18 @@ describe('ProductionFormulaApiService', () => {
   const formula: ProductionFormulaDto = {
     id: 'formula-1',
     outputInventoryItemId: 'output-item',
-    outputQuantity: 10.5,
+    outputQuantity: '10.5',
     outputUnitOfMeasure: 'MILLILITER',
     ingredients: [
-      { inventoryItemId: 'ingredient-a', quantity: 2.5, unitOfMeasure: 'MILLILITER' },
+      { inventoryItemId: 'ingredient-a', quantity: '2.5', unitOfMeasure: 'MILLILITER' },
     ],
   };
   const requestBody: UpsertProductionFormulaRequest = {
     outputInventoryItemId: 'output-item',
-    outputQuantity: 10.5,
+    outputQuantity: '10.5',
     ingredients: [
-      { inventoryItemId: 'ingredient-a', quantity: 2.5 },
-      { inventoryItemId: 'ingredient-b', quantity: 1.25 },
+      { inventoryItemId: 'ingredient-a', quantity: '2.5' },
+      { inventoryItemId: 'ingredient-b', quantity: '1.25' },
     ],
   };
 

@@ -13,11 +13,11 @@ describe('ProductionFormulaListPage', () => {
   const formula: ProductionFormulaDto = {
     id: 'formula-1',
     outputInventoryItemId: 'output-item',
-    outputQuantity: 10.5,
+    outputQuantity: '10.5',
     outputUnitOfMeasure: 'MILLILITER',
     ingredients: [
-      { inventoryItemId: 'ingredient-a', quantity: 2.5, unitOfMeasure: 'MILLILITER' },
-      { inventoryItemId: 'ingredient-b', quantity: 1, unitOfMeasure: 'GRAM' },
+      { inventoryItemId: 'ingredient-a', quantity: '2.5', unitOfMeasure: 'MILLILITER' },
+      { inventoryItemId: 'ingredient-b', quantity: '1', unitOfMeasure: 'GRAM' },
     ],
   };
 

@@ -46,7 +46,7 @@
               </div>
               <div>
                 <dt>Quantidade produzida</dt>
-                <dd>{{ result.outputQuantity | number: '1.0-6' }}</dd>
+                <dd>{{ formatDecimal(result.outputQuantity) }}</dd>
               </div>
               <div>
                 <dt>Data da produção</dt>
@@ -75,7 +75,7 @@
                   <li>
                     {{ itemName(consumption.sourceInventoryItemId) }} ·
                     lote {{ sourceBatchLabel(consumption.sourceBatchId) }} ·
-                    {{ consumption.quantity | number: '1.0-6' }}
+                    {{ formatDecimal(consumption.quantity) }}
                   </li>
                 }
               </ul>
@@ -99,11 +99,11 @@
                     <li>
                       <strong>{{ itemName(overview.inventoryItemId) }}</strong>
                       <span>
-                        Saldo atual: {{ overview.totalCurrentQuantity | number: '1.0-6' }}
+                        Saldo atual: {{ formatDecimal(overview.totalCurrentQuantity) }}
                         {{ unitLabel(overview.unitOfMeasure) }}
                       </span>
                       <span>
-                        Disponível: {{ overview.availableQuantity | number: '1.0-6' }}
+                        Disponível: {{ formatDecimal(overview.availableQuantity) }}
                         {{ unitLabel(overview.unitOfMeasure) }}
                       </span>
                     </li>
@@ -151,7 +151,7 @@
                 <div>
                   <dt>Quantidade produzida</dt>
                   <dd>
-                    {{ currentReview.request.outputQuantity | number: '1.0-6' }}
+                    {{ formatDecimal(currentReview.request.outputQuantity) }}
                     {{ unitLabel(currentReview.context.formula.outputUnitOfMeasure) }}
                   </dd>
                 </div>
@@ -189,7 +189,7 @@
                       <strong>{{ allocation.inventoryItem.name }}</strong>
                       <span>Lote: {{ allocation.batch.lotCode || allocation.batch.batchId }}</span>
                       <span>
-                        Quantidade informada: {{ allocation.quantity | number: '1.0-6' }}
+                        Quantidade informada: {{ formatDecimal(allocation.quantity) }}
                         {{ unitLabel(allocation.inventoryItem.unitOfMeasure) }}
                       </span>
                     </li>
@@ -224,7 +224,7 @@
                     @for (option of loadState.options; track option.formula.id) {
                       <mat-option [value]="option.formula.id">
                         {{ option.outputItem.name }} · referência
-                        {{ option.formula.outputQuantity | number: '1.0-6' }}
+                        {{ formatDecimal(option.formula.outputQuantity) }}
                         {{ unitLabel(option.formula.outputUnitOfMeasure) }}
                       </mat-option>
                     }
@@ -352,7 +352,7 @@
                     <mat-card-title>{{ selectedContext.context.outputItem.name }}</mat-card-title>
                     <mat-card-subtitle>
                       Saída de referência da fórmula:
-                      {{ selectedContext.context.formula.outputQuantity | number: '1.0-6' }}
+                      {{ formatDecimal(selectedContext.context.formula.outputQuantity) }}
                       {{ unitLabel(selectedContext.context.formula.outputUnitOfMeasure) }}
                     </mat-card-subtitle>
                   </mat-card-header>
@@ -377,7 +377,7 @@
                         <mat-card-title>{{ ingredient.item.name }}</mat-card-title>
                         <mat-card-subtitle>
                           Referência da fórmula:
-                          {{ ingredient.ingredient.quantity | number: '1.0-6' }}
+                          {{ formatDecimal(ingredient.ingredient.quantity) }}
                           {{ unitLabel(ingredient.ingredient.unitOfMeasure) }}
                         </mat-card-subtitle>
                       </mat-card-header>
@@ -400,7 +400,7 @@
                                 @for (batch of ingredient.batches; track batch.batchId) {
                                   <mat-option [value]="batch.batchId">
                                     {{ batch.lotCode || 'Sem código de lote' }} ·
-                                    {{ batch.currentQuantity | number: '1.0-6' }} ·
+                                    {{ formatDecimal(batch.currentQuantity) }} ·
                                     {{ batchStatusLabel(batch.status) }}
                                   </mat-option>
                                 }
@@ -441,7 +441,7 @@
                             ) {
                               <p class="batch-facts">
                                 Status informado pelo backend: {{ batchStatusLabel(batch.status) }} ·
-                                saldo atual: {{ batch.currentQuantity | number: '1.0-6' }}
+                                saldo atual: {{ formatDecimal(batch.currentQuantity) }}
                                 {{ unitLabel(ingredient.item.unitOfMeasure) }}
                                 @if (batch.expiresAt) {
                                   · validade: {{ formatLocalDate(batch.expiresAt) }}

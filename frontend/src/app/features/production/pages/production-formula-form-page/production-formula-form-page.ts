@@ -226,9 +226,9 @@ export class ProductionFormulaFormPage {
 
     const itemById = new Map(items.map((item) => [item.id, item]));
     this.formulaForm.controls.outputInventoryItem.setValue(itemById.get(formula.outputInventoryItemId) ?? null);
-    this.formulaForm.controls.outputQuantity.setValue(String(formula.outputQuantity));
+    this.formulaForm.controls.outputQuantity.setValue(formula.outputQuantity);
     formula.ingredients.forEach((ingredient) => {
-      this.ingredients.push(createIngredientForm(itemById.get(ingredient.inventoryItemId) ?? null, String(ingredient.quantity)));
+      this.ingredients.push(createIngredientForm(itemById.get(ingredient.inventoryItemId) ?? null, ingredient.quantity));
     });
     this.formulaForm.markAsPristine();
   }
@@ -241,10 +241,10 @@ export class ProductionFormulaFormPage {
 
     return {
       outputInventoryItemId: value.outputInventoryItem.id,
-      outputQuantity: Number(value.outputQuantity.trim()),
+      outputQuantity: value.outputQuantity.trim(),
       ingredients: value.ingredients.map((ingredient) => ({
         inventoryItemId: ingredient.inventoryItem!.id,
-        quantity: Number(ingredient.quantity.trim()),
+        quantity: ingredient.quantity.trim(),
       })),
     };
   }
@@ -271,7 +271,7 @@ function positiveDecimal(control: AbstractControl<string>): ValidationErrors | n
   }
 
   const [integerPart] = normalized.split('.');
-  if (integerPart.replace(/^0+/, '').length > 13 || Number(normalized) <= 0) {
+  if (integerPart.replace(/^0+/, '').length > 13 || !/[1-9]/.test(normalized)) {
     return { decimal: true };
   }
 
