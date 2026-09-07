@@ -104,7 +104,7 @@ export class ProductionGenealogyPage {
       this.batchId.set(null);
       this.state.set({
         kind: 'error',
-        error: { kind: 'validation', message: 'Missing batch ID.' },
+        error: { kind: 'validation', message: 'ID do lote não informado.' },
       });
       return;
     }

@@ -464,7 +464,7 @@ export class ProductionRegistrationPage {
         error: {
           kind: 'not-found',
           code: 'PRODUCTION_FORMULA_NOT_FOUND',
-          message: 'Production formula was not found.',
+          message: 'Fórmula de produção não encontrada.',
         },
       });
     }
