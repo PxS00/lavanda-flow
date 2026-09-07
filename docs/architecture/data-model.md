@@ -2,7 +2,9 @@
 
 ## Purpose
 
-This document describes the V1 relational model and the minimum conceptual relationships required for inventory, production, and recursive batch genealogy. Established inventory structures remain concrete; new production structures stay conceptual until an implementation issue or ADR decides their physical design.
+This document describes the implemented V1 relational model for inventory, production, and recursive batch
+genealogy. Flyway V10-V13 define the production metadata, formula, lot-sequence, execution, and consumption
+structures.
 
 PostgreSQL is the source of truth, and Flyway controls every schema change.
 
@@ -48,9 +50,10 @@ Represents an immutable, auditable quantity change for one inventory batch. Esta
 
 A movement has a positive exact-decimal quantity and required occurrence time. Corrections create new movements rather than changing historical records.
 
-## Minimum production relationships
+## Production relationships
 
-The physical table and column names below the established inventory model are deliberately unspecified. The relational design must represent at least these concepts and cardinalities:
+`production_formula`, `production_formula_ingredient`, `production_lot_sequence`, `production_execution`,
+and `production_consumption` implement these concepts and cardinalities:
 
 ```text
 Formula / recipe
@@ -128,6 +131,9 @@ Items and suppliers with history should be deactivated rather than deleted. Oper
 
 Automatic unit conversion is not part of V1. A batch uses its item's unit; all formula and consumption quantities must be compatible with that unit.
 
-## Physical design left open
+## Implemented physical design
 
-Production implementation work must decide exact table and column names, keys, indexes, foreign-key layout, constraints, formula versioning needs, and generated-sequence strategy. Those decisions must preserve the conceptual cardinalities and invariants above without changing current module boundaries implicitly.
+Flyway V10 adds immutable production reference metadata to `inventory_item`; V11 creates formulas and
+ingredients; V12 creates generated-lot sequence allocation; and V13 creates executions and immutable
+consumptions. The schema uses stable identifiers and foreign keys rather than lot-code parsing. Formula
+versioning beyond the implemented minimum definition remains outside V1.

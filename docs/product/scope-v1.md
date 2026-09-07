@@ -119,7 +119,11 @@ For example, `BDS-014-003-12-2026` means:
 
 The lot code is a human operational identifier. It is neither database identity nor the source of genealogy.
 
-Automatic generation is recommended but optional. A future interface may offer **Generate automatically (recommended)** or **Enter manually**. For automatic generation, the backend assigns the definitive code when production is successfully registered and prevents concurrent allocations from receiving the same code. The frontend may show a preview but must neither reserve nor authoritatively calculate the next sequence. Explicit manual entry remains allowed and is not required to encode genealogy.
+Automatic generation is recommended but optional. The production registration interface offers generated or
+manual lot-code entry. For automatic generation, the backend assigns the definitive code when production is
+successfully registered and prevents concurrent allocations from receiving the same code. The frontend must
+neither reserve nor authoritatively calculate the next sequence. Explicit manual entry remains allowed and
+is not required to encode genealogy.
 
 ### Search and operational dashboard
 

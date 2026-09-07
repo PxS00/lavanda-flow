@@ -2,7 +2,10 @@
 
 Lavanda Flow is the inventory and production management system for Céu de Lavanda.
 
-The V1 scope focuses on controlled inventory: catalog items, suppliers, batches, stock movements, expiration dates, FEFO allocation, and operational alerts. Formulas, automated production, cost calculation, and complete traceability remain later evolutions and are not part of the initial implementation scope.
+V1 delivers controlled inventory and minimum internal production: catalog items, suppliers, batches, stock
+movements, expiration dates, FEFO allocation, operational alerts, formulas, atomic production registration,
+backend-generated or manual output lots, and recursive batch genealogy. Cost calculation and broader
+manufacturing automation remain outside V1.
 
 ## Repository layout
 
@@ -103,10 +106,11 @@ pnpm build
 
 The backend is a modular monolith organized by feature/domain under `com.ceudelavanda.lavandaflow`.
 
-Initial modules:
+V1 modules:
 
 - `catalog`
 - `inventory`
+- `production`
 - `suppliers`
 - `shared`
 
@@ -145,4 +149,5 @@ Issue pull requests target `develop` and are squash merged. Releases use `releas
 
 ## Status
 
-Foundation bootstrap is in progress. Product functionality should be implemented only through its approved issue and milestone scope.
+The v0.5.0 release candidate contains the completed V1 operational inventory and production scope. Release
+stabilization remains governed by issue #139.

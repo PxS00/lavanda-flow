@@ -59,9 +59,9 @@ ADR [0009](decisions/0009-define-v1-production-module-boundaries.md) establishes
 
 The package-by-feature convention, internal `domain`/`application`/`infrastructure` responsibilities, and current dependency rules remain defined in `backend-structure.md`.
 
-## V1 production architecture requirements
+## V1 production implementation
 
-The eventual implementation must preserve one inventory and batch model for raw materials (`matéria-prima`), intermediate products (`produto intermediário`), and finalized products (`produto finalizado`). An inventory batch may be externally supplied or produced internally; external manufacturer or supplier lot codes are preserved.
+The implemented V1 architecture uses one inventory and batch model for raw materials (`matéria-prima`), intermediate products (`produto intermediário`), and finalized products (`produto finalizado`). An inventory batch may be externally supplied or produced internally; external manufacturer or supplier lot codes are preserved.
 
 A formula describes required inventory items and proportions. A production execution records the concrete source batches and quantities actually consumed and creates exactly one distinct output batch. Produced intermediate batches can be consumed by later executions, so explicit relationships must support recursive genealogy at arbitrary depth in both upstream and downstream directions.
 
@@ -89,13 +89,13 @@ persist explicit genealogy relationships
 commit all or roll back all
 ```
 
-Concurrent operations must not produce negative balances, lost updates, duplicate generated internal lot codes, or partial production state. The implementation specification must select the concrete concurrency strategy; this document does not prescribe optimistic versus pessimistic locking or a physical sequence design.
+Concurrent operations must not produce negative balances, lost updates, duplicate generated internal lot codes, or partial production state. The implemented transaction and locking behavior is covered by production rollback and concurrency tests.
 
 ## API boundaries
 
-Frontend/backend communication uses REST over JSON, initially versioned under `/api/v1`. HTTP boundaries use specific DTOs and input validation, return consistent errors, and never expose JPA entities directly. This scope decision does not define production routes, DTOs, wire values, or authorization rules.
+Frontend/backend communication uses REST over JSON, initially versioned under `/api/v1`. HTTP boundaries use specific DTOs and input validation, return consistent errors, and never expose JPA entities directly. V1 includes inventory, formula-management, production-registration, and recursive-genealogy contracts; authorization remains a deployment decision.
 
-The frontend may recommend or preview an automatically generated internal lot code, but it cannot reserve or authoritatively calculate the next sequence. The backend assigns the definitive code only when production succeeds. Explicit manual lot-code entry remains an allowed future UI path.
+The production UI supports backend-confirmed generated allocation and explicit manual lot entry. It cannot reserve or authoritatively calculate the next sequence; the backend assigns the definitive generated code only when production succeeds.
 
 ## Persistence and consistency
 
@@ -109,7 +109,7 @@ The frontend may recommend or preview an automatically generated internal lot co
 - FEFO, expiration, available stock, and consumption eligibility remain backend-authoritative;
 - date-dependent rules use the application `Clock`.
 
-Database constraints should enforce integrity where applicable. Exact production tables, columns, indexes, foreign keys, and sequence-allocation mechanics remain implementation decisions.
+Database constraints enforce production integrity where applicable. Flyway V10-V13 define the production metadata, formula, lot-sequence, execution, and consumption schema.
 
 ## Security and observability
 
@@ -124,13 +124,8 @@ Initial observability consists of useful structured logs, health checks, and dis
 - API tests cover approved contracts and error cases;
 - Spring Modulith tests verify boundaries and cycles.
 
-## Deliberately open implementation decisions
+## Deliberately open post-V1 decisions
 
-Future implementation issues or ADRs must decide, when required:
-
-- exact REST endpoints, DTOs, and authorization rules;
-- persistence entities and physical schema details;
-- concurrency and automatic lot-sequence allocation mechanisms;
-- UI component structure.
-
-Automatic unit conversion, speculative events, and unrelated ERP capabilities are not implied by the approved production scope.
+Authentication and authorization for public deployment remain a separate deployment decision. Automatic unit
+conversion, speculative events, and unrelated ERP capabilities are not implied by the approved production
+scope.
