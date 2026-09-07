@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
-import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
+import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
 import { InventoryItemSelector } from './inventory-item-selector';
 
 describe('InventoryItemSelector', () => {

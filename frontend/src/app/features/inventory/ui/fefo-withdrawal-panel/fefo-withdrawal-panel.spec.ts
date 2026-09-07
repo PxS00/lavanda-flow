@@ -10,13 +10,13 @@ describe('FefoWithdrawalPanel', () => {
   const inventoryItemId = 'bd194732-51cf-4f73-bc5d-3a9f9337adcc';
   const singleAllocation: RegisterFefoWithdrawalDto = {
     inventoryItemId,
-    requestedQuantity: 25.5,
-    allocatedQuantity: 25.5,
+    requestedQuantity: '25.5',
+    allocatedQuantity: '25.5',
     allocations: [
       {
         batchId: 'b78247ac-5e22-4097-a609-d396c81fab64',
         movementId: '2b459b94-25e0-4fbf-bb6e-8bd2d92446ff',
-        quantity: 25.5,
+        quantity: '25.5',
       },
     ],
   };
@@ -42,7 +42,7 @@ describe('FefoWithdrawalPanel', () => {
     fixture.componentRef.setInput('inventoryItemId', inventoryItemId);
     fixture.componentRef.setInput('itemName', 'Lavender Essence');
     fixture.componentRef.setInput('unitOfMeasure', 'MILLILITER');
-    fixture.componentRef.setInput('availableQuantity', 2);
+    fixture.componentRef.setInput('availableQuantity', '2');
     fixture.componentRef.setInput('active', true);
     fixture.componentInstance.withdrawalCompleted.subscribe(completed);
     fixture.detectChanges();
@@ -52,8 +52,6 @@ describe('FefoWithdrawalPanel', () => {
     ['', 'Quantidade é obrigatória.'],
     ['0', 'quantidade positiva'], ['-1', 'quantidade positiva'], ['1e3', 'quantidade positiva'],
     ['10000000000000', 'no máximo 13 dígitos inteiros'], ['1.1234567', 'até 6 casas decimais'],
-    ['9007199254740.000001', 'não pode ser representada com segurança'],
-    ['9999999999999.999999', 'não pode ser representada com segurança'],
   ])('should reject invalid quantity %s before confirmation', (quantity, message) => {
     setForm(quantity, '');
 
@@ -64,19 +62,22 @@ describe('FefoWithdrawalPanel', () => {
   });
 
   it.each([
-    ['0.1', 0.1],
-    ['0.2', 0.2],
-    ['0.3', 0.3],
-    ['0.100000', 0.1],
-    ['1.000001', 1.000001],
-    ['25.500000', 25.5],
-  ])('should accept a JSON-safe decimal quantity %s', (quantity, expectedQuantity) => {
+    ['0.000001'],
+    ['50'],
+    ['100.5'],
+    ['100.000001'],
+    ['8589934591.999999'],
+    ['8589934592.000001'],
+    ['9999999999999.123456'],
+    ['9999999999999.999999'],
+    ['0001.230000'],
+  ])('should preserve exact decimal quantity %s', (quantity) => {
     setForm(quantity, 'Production');
 
     click('Revisar saída'); click('Confirmar saída');
 
     expect(register).toHaveBeenCalledWith(inventoryItemId, {
-      quantity: expectedQuantity,
+      quantity,
       reason: 'Production',
     });
   });
@@ -100,7 +101,7 @@ describe('FefoWithdrawalPanel', () => {
 
     click('Confirmar saída');
 
-    expect(register).toHaveBeenCalledWith(inventoryItemId, { quantity: 1.000001, reason: null });
+    expect(register).toHaveBeenCalledWith(inventoryItemId, { quantity: '1.000001', reason: null });
   });
 
   it('should return from confirmation to editing without posting', () => {
@@ -164,7 +165,7 @@ describe('FefoWithdrawalPanel', () => {
     setForm('3', 'Production');
     click('Revisar saída'); click('Confirmar saída');
 
-    expect(register).toHaveBeenCalledWith(inventoryItemId, { quantity: 3, reason: 'Production' });
+    expect(register).toHaveBeenCalledWith(inventoryItemId, { quantity: '3', reason: 'Production' });
     expect(fixture.nativeElement.textContent).toContain('Estoque disponível: 2 Mililitro');
     expect(completed).not.toHaveBeenCalled();
   });
@@ -202,11 +203,11 @@ describe('FefoWithdrawalPanel', () => {
     response.next({
       ...singleAllocation,
       allocations: [
-        { ...singleAllocation.allocations[0], quantity: 10 },
+        { ...singleAllocation.allocations[0], quantity: '10' },
         {
           batchId: '5184d508-35eb-42de-a2a0-44c4f6c9b9ae',
           movementId: '12bf0c0d-93db-4a78-bb05-b9e5d0a1e15d',
-          quantity: 15.5,
+          quantity: '15.5',
         },
       ],
     });

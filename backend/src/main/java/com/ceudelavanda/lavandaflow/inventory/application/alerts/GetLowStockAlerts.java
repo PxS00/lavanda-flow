@@ -40,7 +40,12 @@ public class GetLowStockAlerts {
 
     @Transactional(readOnly = true)
     public LowStockAlertsResult execute() {
-        var asOfDate = LocalDate.now(clock);
+        return execute(LocalDate.now(clock));
+    }
+
+    /** Retrieves alerts using a caller-resolved business date. */
+    @Transactional(readOnly = true)
+    public LowStockAlertsResult execute(LocalDate asOfDate) {
         var levels = minimumStockLevelRepository.findAll();
         var itemIds = levels.stream().map(MinimumStockLevel::getInventoryItemId).toList();
         var itemsById = inventoryItemLookup.findByIds(itemIds).stream()

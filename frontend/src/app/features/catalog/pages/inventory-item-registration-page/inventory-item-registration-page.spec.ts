@@ -18,6 +18,8 @@ describe('InventoryItemRegistrationPage', () => {
     category: 'ESSENCE',
     unitOfMeasure: 'MILLILITER',
     active: true,
+    essenceReference: null,
+    productionTypeCode: null,
   };
 
   let fixture: ComponentFixture<InventoryItemRegistrationPage>;
@@ -59,8 +61,8 @@ describe('InventoryItemRegistrationPage', () => {
     expect(register).not.toHaveBeenCalled();
   });
 
-  it('should send the exact request and normalize a blank description to null', () => {
-    setValidModel({ description: '   ' });
+  it('should send the exact request, including optional production metadata', () => {
+    setValidModel({ description: '   ', essenceReference: '027', productionTypeCode: 'BDS' });
 
     submitForm();
 
@@ -69,6 +71,8 @@ describe('InventoryItemRegistrationPage', () => {
       description: null,
       category: 'ESSENCE',
       unitOfMeasure: 'MILLILITER',
+      essenceReference: '027',
+      productionTypeCode: 'BDS',
     });
   });
 
@@ -152,6 +156,8 @@ describe('InventoryItemRegistrationPage', () => {
       description: 'Floral raw material',
       category: 'ESSENCE',
       unitOfMeasure: 'MILLILITER',
+      essenceReference: '',
+      productionTypeCode: '',
       ...overrides,
     });
     fixture.detectChanges();

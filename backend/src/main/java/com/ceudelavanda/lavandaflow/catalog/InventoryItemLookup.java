@@ -11,6 +11,12 @@ import java.util.UUID;
  */
 public interface InventoryItemLookup {
 
+    /** Returns whether the catalog contains any inventory item, active or inactive. */
+    boolean existsAny();
+
+    /** Returns all active inventory items in one catalog read. */
+    List<InventoryItemSnapshot> findAllActive();
+
     Optional<InventoryItemSnapshot> findById(UUID inventoryItemId);
 
     List<InventoryItemSnapshot> findByIds(Collection<UUID> inventoryItemIds);

@@ -1,54 +1,22 @@
-# Arquitetura
+# Architecture
 
-## Estilo arquitetural
+## Architectural style
 
-O Lavanda Flow será desenvolvido como um **monólito modular**.
+Lavanda Flow is a modular monolith. This keeps deployment and operations simple while preserving clear domain responsibilities and boundaries. Microservices are not part of the initial architecture.
 
-O objetivo é manter simplicidade operacional e de deploy, sem abrir mão de separação de responsabilidades e fronteiras de domínio claras.
+The backend is organized by feature or domain, not by global technical layers. Spring Modulith verifies module boundaries; one module communicates with another only through public APIs and never imports another module's internal infrastructure.
 
-Não serão utilizados microsserviços na fase inicial.
+## Technology stack
 
-## Stack
+- **Frontend:** Angular 22, TypeScript, Angular Router, Signals, Reactive Forms, and Angular's native HTTP client;
+- **Backend:** Java 25 LTS, Spring Boot 4.1, Spring Modulith, Spring Web, Validation, Data JPA, Security, and Flyway;
+- **Data:** PostgreSQL;
+- **Tests:** JUnit 5, Mockito, and Testcontainers;
+- **Infrastructure:** Docker, Docker Compose, and GitHub Actions.
 
-### Frontend
+The interface is mobile-first and may evolve into a PWA when operational requirements justify it.
 
-- Angular 22;
-- TypeScript;
-- Angular Router;
-- Signals;
-- Reactive Forms;
-- cliente HTTP nativo do Angular.
-
-A aplicação deve ser mobile-first e preparada para evolução para PWA.
-
-### Backend
-
-- Java 25 LTS;
-- Spring Boot 4.1;
-- Spring Modulith;
-- Spring Web;
-- Spring Validation;
-- Spring Data JPA;
-- Spring Security;
-- Flyway.
-
-### Dados
-
-- PostgreSQL.
-
-### Testes
-
-- JUnit 5;
-- Mockito;
-- Testcontainers.
-
-### Infraestrutura
-
-- Docker;
-- Docker Compose;
-- GitHub Actions.
-
-## Visão de alto nível
+## High-level view
 
 ```text
 ┌─────────────────────────────┐
@@ -65,12 +33,9 @@ A aplicação deve ser mobile-first e preparada para evolução para PWA.
 ├─────────────────────────────┤
 │ catalog                     │
 │ inventory                   │
-│ suppliers                   │
-│                             │
-│ future:                     │
-│ formulas                    │
 │ production                  │
-│ traceability                │
+│ suppliers                   │
+│ shared                      │
 └──────────────┬──────────────┘
                │
                ▼
@@ -80,200 +45,87 @@ A aplicação deve ser mobile-first e preparada para evolução para PWA.
 └─────────────────────────────┘
 ```
 
-## Organização do backend
+## V1 module boundaries
 
-A estrutura deve seguir **package by feature/domain**, evitando organização global baseada apenas em camada técnica.
+The V1 Spring Modulith modules are:
 
-Exemplo:
+- `catalog`: item registration, classification, unit of measure, and active state;
+- `inventory`: batches, balances, movements, FEFO, expiration, and stock alerts;
+- `production`: formulas, production executions and consumptions, internal lot-code allocation, and recursive genealogy;
+- `suppliers`: supplier registration and association with externally supplied batches;
+- `shared`: strictly cross-cutting configuration, errors, and security concerns.
 
-```text
-com.ceudelavanda.lavandaflow
-├── catalog
-│   ├── domain
-│   ├── application
-│   └── infrastructure
-├── inventory
-│   ├── domain
-│   ├── application
-│   └── infrastructure
-├── suppliers
-│   ├── domain
-│   ├── application
-│   └── infrastructure
-└── shared
-```
+ADR [0009](decisions/0009-define-v1-production-module-boundaries.md) establishes `production` as one cohesive module. Formula and traceability responsibilities remain inside it; separate `formulas` and `traceability` modules are not justified for V1. `inventory` retains ownership of batches and every stock invariant.
 
-Não utilizar como estrutura principal:
+The package-by-feature convention, internal `domain`/`application`/`infrastructure` responsibilities, and current dependency rules remain defined in `backend-structure.md`.
 
-```text
-controller/
-service/
-repository/
-entity/
-```
+## V1 production implementation
 
-Essa organização tende a espalhar um único caso de negócio por todo o projeto e enfraquecer fronteiras entre módulos.
+The implemented V1 architecture uses one inventory and batch model for raw materials (`matéria-prima`), intermediate products (`produto intermediário`), and finalized products (`produto finalizado`). An inventory batch may be externally supplied or produced internally; external manufacturer or supplier lot codes are preserved.
 
-## Responsabilidades das camadas internas
+A formula describes required inventory items and proportions. A production execution records the concrete source batches and quantities actually consumed and creates exactly one distinct output batch. Produced intermediate batches can be consumed by later executions, so explicit relationships must support recursive genealogy at arbitrary depth in both upstream and downstream directions.
 
-### Domain
+Lot codes are human operational identifiers, not database identities or genealogy storage. Genealogy must come from explicit production, consumption, source-batch, and output-batch relationships.
 
-Contém regras e conceitos de negócio.
+`production` depends on the public APIs of `catalog` and `inventory`; it never accesses their domain or infrastructure internals. `catalog` owns stable inventory-item metadata, including stable essence references. `inventory` creates the internally produced output batch and applies every stock effect through a production-facing public contract. Cross-module references use stable identifiers and public contract values rather than direct JPA entity relationships.
 
-Deve evitar dependência desnecessária de detalhes HTTP ou infraestrutura.
+## Application and transaction boundaries
 
-### Application
+Application use cases orchestrate domain behavior and own transaction boundaries. The production application use case owns the complete production transaction and synchronously invokes inventory's public contract inside that transaction. Business rules such as negative-stock prevention, FEFO, expiration eligibility, source-batch allocation, production atomicity, and generated lot-code sequencing do not belong in controllers or frontend components.
 
-Orquestra casos de uso e transações.
-
-Exemplos:
-
-- registrar entrada;
-- registrar consumo;
-- ajustar estoque;
-- consultar vencimentos.
-
-### Infrastructure
-
-Contém detalhes técnicos, como:
-
-- controllers REST;
-- persistência JPA;
-- configurações;
-- integrações externas.
-
-## Fronteiras de módulos
-
-### catalog
-
-Responsável pelo cadastro e classificação dos itens controlados.
-
-### inventory
-
-Responsável por:
-
-- lotes;
-- saldo;
-- movimentações;
-- FEFO;
-- validade;
-- estoque mínimo.
-
-### suppliers
-
-Responsável pelo cadastro e consulta de fornecedores.
-
-### future: formulas
-
-Responsável por fórmulas e versionamento.
-
-### future: production
-
-Responsável por ordens e lotes de produção e consumo automático de materiais.
-
-### future: traceability
-
-Responsável por consultas de rastreabilidade entre lotes de matéria-prima e produtos produzidos.
-
-## API
-
-A comunicação frontend/backend será feita por REST sobre JSON.
-
-Princípios:
-
-- DTOs específicos nas fronteiras HTTP;
-- entidades JPA não devem ser expostas diretamente;
-- validação de entrada no boundary;
-- respostas de erro consistentes;
-- versionamento inicial sob `/api/v1`;
-- regras de negócio não devem residir em controllers.
-
-## Persistência
-
-- PostgreSQL será a fonte de verdade;
-- Flyway será a única forma suportada de evolução de schema em ambientes controlados;
-- Hibernate não deve alterar schema automaticamente em produção;
-- operações de estoque devem respeitar transações ACID;
-- restrições de integridade devem existir também no banco quando aplicável.
-
-## Quantidades
-
-Quantidades físicas não devem utilizar ponto flutuante binário.
-
-Backend:
+Registering production is one atomic business operation:
 
 ```text
-BigDecimal
+validate formula and concrete source allocations
+                    ↓
+lock or otherwise protect affected stock and generated sequence
+                    ↓
+record source-batch consumption and stock movements
+                    ↓
+create the one output batch and its stock history
+                    ↓
+persist explicit genealogy relationships
+                    ↓
+commit all or roll back all
 ```
 
-Banco:
+Concurrent operations must not produce negative balances, lost updates, duplicate generated internal lot codes, or partial production state. The implemented transaction and locking behavior is covered by production rollback and concurrency tests.
 
-```text
-NUMERIC / DECIMAL
-```
+## API boundaries
 
-A escala será definida conforme a necessidade do domínio durante a modelagem física.
+Frontend/backend communication uses REST over JSON, initially versioned under `/api/v1`. HTTP boundaries use specific DTOs and input validation, return consistent errors, and never expose JPA entities directly. V1 includes inventory, formula-management, production-registration, and recursive-genealogy contracts; authorization remains a deployment decision.
 
-## Concorrência e consistência
+The production UI supports backend-confirmed generated allocation and explicit manual lot entry. It cannot reserve or authoritatively calculate the next sequence; the backend assigns the definitive generated code only when production succeeds.
 
-Movimentações concorrentes não podem produzir saldo negativo ou perda silenciosa de atualização.
+## Persistence and consistency
 
-A implementação deverá definir estratégia explícita de concorrência antes da funcionalidade de baixa de estoque ser considerada concluída.
+- PostgreSQL is the source of truth;
+- Flyway is the only supported schema-evolution mechanism in controlled environments;
+- Hibernate does not modify production schemas automatically;
+- quantities use `BigDecimal` in the backend and `NUMERIC`/`DECIMAL` in PostgreSQL;
+- every stock change has immutable, auditable movement history;
+- stock balance and movement persistence occur atomically;
+- production consumption, output creation, and genealogy persistence occur atomically;
+- FEFO, expiration, available stock, and consumption eligibility remain backend-authoritative;
+- date-dependent rules use the application `Clock`.
 
-Possibilidades incluem locking otimista ou pessimista conforme comportamento observado e requisitos de uso.
+Database constraints enforce production integrity where applicable. Flyway V10-V13 define the production metadata, formula, lot-sequence, execution, and consumption schema.
 
-Não otimizar prematuramente, mas não ignorar consistência.
+## Security and observability
 
-## Segurança
+V1 requires authentication before public exposure, secure password storage, externalized secrets, least privilege, validated payloads, explicit CORS, and logs without sensitive data. A detailed production authorization model is not decided by this issue.
 
-A V1 deverá possuir autenticação antes de exposição pública.
+Initial observability consists of useful structured logs, health checks, and distinguishable business and infrastructure errors. Distributed tracing is not a V1 priority for this monolith.
 
-Princípios:
+## Testing strategy
 
-- senhas nunca armazenadas em texto puro;
-- secrets fora do repositório;
-- princípio do menor privilégio;
-- validação de payloads;
-- CORS explícito;
-- logs sem dados sensíveis;
-- dependências mantidas atualizadas.
+- unit tests cover domain rules such as balances, FEFO, expiration, quantities, production atomicity, and lot-code allocation;
+- integration tests use PostgreSQL through Testcontainers for persistence, transactions, constraints, concurrency, and recursive genealogy;
+- API tests cover approved contracts and error cases;
+- Spring Modulith tests verify boundaries and cycles.
 
-Autorização complexa por papéis não é requisito inicial enquanto houver apenas poucos usuários administrativos.
+## Deliberately open post-V1 decisions
 
-## Observabilidade
-
-Inicialmente:
-
-- logs estruturados suficientes para diagnosticar operações;
-- health checks;
-- identificação de erros de negócio e infraestrutura.
-
-Métricas e tracing distribuído não são prioridade na V1.
-
-## Estratégia de testes
-
-### Unitários
-
-Cobrir regras de domínio, principalmente:
-
-- saldo;
-- FEFO;
-- validade;
-- movimentações;
-- validações de quantidade.
-
-### Integração
-
-Usar Testcontainers para validar comportamento real com PostgreSQL.
-
-Evitar depender apenas de banco H2 para testar persistência quando o ambiente real utiliza PostgreSQL.
-
-### API
-
-Cobrir principais contratos HTTP e cenários de erro.
-
-## Evolução
-
-O monólito modular deverá permitir aumento gradual de funcionalidades sem distribuição prematura.
-
-A adoção de microsserviços só deverá ser considerada caso existam requisitos concretos de escala, deploy independente ou isolamento operacional que justifiquem seu custo.
+Authentication and authorization for public deployment remain a separate deployment decision. Automatic unit
+conversion, speculative events, and unrelated ERP capabilities are not implied by the approved production
+scope.

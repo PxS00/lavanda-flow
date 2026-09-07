@@ -45,6 +45,20 @@ class RegisterInventoryItemTest {
     }
 
     @Test
+    void shouldRegisterProductionReferenceMetadata() {
+        when(inventoryItemRepository.save(any(InventoryItem.class)))
+            .thenAnswer(invocation -> invocation.getArgument(0));
+        var useCase = new RegisterInventoryItem(inventoryItemRepository);
+
+        var result = useCase.execute(new RegisterInventoryItemCommand(
+            "Lavender Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, "014", "ESS"
+        ));
+
+        assertThat(result.essenceReference()).isEqualTo("014");
+        assertThat(result.productionTypeCode()).isEqualTo("ESS");
+    }
+
+    @Test
     void shouldRejectBlankNameBeforePersistence() {
         var useCase = new RegisterInventoryItem(inventoryItemRepository);
 

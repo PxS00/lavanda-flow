@@ -23,6 +23,7 @@ import com.ceudelavanda.lavandaflow.inventory.application.stock.GetCurrentStockQ
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.*;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
+import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -54,7 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     StockMovementController.class,
     FefoWithdrawalController.class
 })
-@Import(ClockConfig.class)
+@Import({ClockConfig.class, ExactDecimalJsonConfiguration.class})
 @WithMockUser
 class InventoryControllerTest {
 
@@ -96,7 +97,7 @@ class InventoryControllerTest {
                 .with(csrf()).contentType("application/json").content("{ \"minimumQuantity\": 250 }"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.inventoryItemId").value(itemId.toString()))
-            .andExpect(jsonPath("$.minimumQuantity").value(250));
+            .andExpect(jsonPath("$.minimumQuantity").value("250.000000"));
 
         when(configureMinimumStockLevel.execute(itemId, new BigDecimal("300")))
             .thenReturn(new MinimumStockLevelUpdateResult(new MinimumStockLevelResult(itemId, new BigDecimal("300")), false));
@@ -107,7 +108,7 @@ class InventoryControllerTest {
         when(getMinimumStockLevel.execute(itemId)).thenReturn(level);
         mockMvc.perform(get("/api/v1/inventory/items/{inventoryItemId}/minimum-stock-level", itemId))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.minimumQuantity").value(250));
+            .andExpect(jsonPath("$.minimumQuantity").value("250.000000"));
 
         mockMvc.perform(delete("/api/v1/inventory/items/{inventoryItemId}/minimum-stock-level", itemId).with(csrf()))
             .andExpect(status().isNoContent());
@@ -159,11 +160,11 @@ class InventoryControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.inventoryItemId").value(itemId.toString()))
             .andExpect(jsonPath("$.active").value(true))
-            .andExpect(jsonPath("$.totalCurrentQuantity").value(180.500000))
+            .andExpect(jsonPath("$.totalCurrentQuantity").value("180.500000"))
             .andExpect(jsonPath("$.batches[0].batchId").value(batchId.toString()))
             .andExpect(jsonPath("$.batches[0].supplierId").value(supplierId.toString()))
             .andExpect(jsonPath("$.batches[0].lotCode").value("ESS-LAV-042"))
-            .andExpect(jsonPath("$.batches[0].currentQuantity").value(30.500000))
+            .andExpect(jsonPath("$.batches[0].currentQuantity").value("30.500000"))
             .andExpect(jsonPath("$.batches[0].receivedAt").value("2026-06-10"))
             .andExpect(jsonPath("$.batches[0].expiresAt").value("2026-09-15"))
             .andExpect(jsonPath("$.batches[1].supplierId").doesNotExist())
@@ -240,8 +241,8 @@ class InventoryControllerTest {
             .andExpect(jsonPath("$.movementId").value(movementId.toString()))
             .andExpect(jsonPath("$.batchId").value(batchId.toString()))
             .andExpect(jsonPath("$.type").value("ENTRY"))
-            .andExpect(jsonPath("$.quantity").value(50))
-            .andExpect(jsonPath("$.resultingBalance").value(150))
+            .andExpect(jsonPath("$.quantity").value("50"))
+            .andExpect(jsonPath("$.resultingBalance").value("150"))
             .andExpect(jsonPath("$.reason").value("Supplier replenishment"))
             .andExpect(jsonPath("$.occurredAt").value("2026-08-25T16:00:00Z"));
 
@@ -423,8 +424,8 @@ class InventoryControllerTest {
             .andExpect(jsonPath("$.movementId").value(movementId.toString()))
             .andExpect(jsonPath("$.batchId").value(batchId.toString()))
             .andExpect(jsonPath("$.type").value("CONSUMPTION"))
-            .andExpect(jsonPath("$.quantity").value(50))
-            .andExpect(jsonPath("$.resultingBalance").value(50))
+            .andExpect(jsonPath("$.quantity").value("50"))
+            .andExpect(jsonPath("$.resultingBalance").value("50"))
             .andExpect(jsonPath("$.reason").value("Inventory use"))
             .andExpect(jsonPath("$.occurredAt").value("2026-08-25T16:00:00Z"));
 
@@ -638,8 +639,8 @@ class InventoryControllerTest {
             .andExpect(jsonPath("$.movementId").value(movementId.toString()))
             .andExpect(jsonPath("$.batchId").value(batchId.toString()))
             .andExpect(jsonPath("$.type").value("ADJUSTMENT_IN"))
-            .andExpect(jsonPath("$.quantity").value(25))
-            .andExpect(jsonPath("$.resultingBalance").value(125))
+            .andExpect(jsonPath("$.quantity").value("25"))
+            .andExpect(jsonPath("$.resultingBalance").value("125"))
             .andExpect(jsonPath("$.reason").value("Physical count correction"))
             .andExpect(jsonPath("$.occurredAt").value("2026-08-25T16:00:00Z"));
 
@@ -687,8 +688,8 @@ class InventoryControllerTest {
             .andExpect(jsonPath("$.movementId").value(movementId.toString()))
             .andExpect(jsonPath("$.batchId").value(batchId.toString()))
             .andExpect(jsonPath("$.type").value("ADJUSTMENT_OUT"))
-            .andExpect(jsonPath("$.quantity").value(25))
-            .andExpect(jsonPath("$.resultingBalance").value(75))
+            .andExpect(jsonPath("$.quantity").value("25"))
+            .andExpect(jsonPath("$.resultingBalance").value("75"))
             .andExpect(jsonPath("$.reason").value("Physical count correction"))
             .andExpect(jsonPath("$.occurredAt").value("2026-08-25T16:00:00Z"));
 
@@ -878,14 +879,14 @@ class InventoryControllerTest {
             """))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.inventoryItemId").value(itemId.toString()))
-            .andExpect(jsonPath("$.requestedQuantity").value(80.000))
-            .andExpect(jsonPath("$.allocatedQuantity").value(80.000))
+            .andExpect(jsonPath("$.requestedQuantity").value("80.000"))
+            .andExpect(jsonPath("$.allocatedQuantity").value("80.000"))
             .andExpect(jsonPath("$.allocations[0].batchId").value(firstBatchId.toString()))
             .andExpect(jsonPath("$.allocations[0].movementId").value(firstMovementId.toString()))
-            .andExpect(jsonPath("$.allocations[0].quantity").value(15.000))
+            .andExpect(jsonPath("$.allocations[0].quantity").value("15.000"))
             .andExpect(jsonPath("$.allocations[1].batchId").value(secondBatchId.toString()))
             .andExpect(jsonPath("$.allocations[1].movementId").value(secondMovementId.toString()))
-            .andExpect(jsonPath("$.allocations[1].quantity").value(65.000));
+            .andExpect(jsonPath("$.allocations[1].quantity").value("65.000"));
 
         var captor = org.mockito.ArgumentCaptor.forClass(RegisterFefoWithdrawalCommand.class);
         verify(registerFefoWithdrawal).execute(captor.capture());

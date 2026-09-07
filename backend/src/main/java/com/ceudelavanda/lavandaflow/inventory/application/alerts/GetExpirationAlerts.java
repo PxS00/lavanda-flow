@@ -26,13 +26,18 @@ public class GetExpirationAlerts {
 
     @Transactional(readOnly = true)
     public ExpirationAlertsResult execute(GetExpirationAlertsQuery query) {
-        var today = LocalDate.now(clock);
-        var cutoff = today.plusDays(query.windowDays());
+        return execute(query, LocalDate.now(clock));
+    }
+
+    /** Retrieves alerts using a caller-resolved business date. */
+    @Transactional(readOnly = true)
+    public ExpirationAlertsResult execute(GetExpirationAlertsQuery query, LocalDate asOfDate) {
+        var cutoff = asOfDate.plusDays(query.windowDays());
         var alerts = batchRepository.findWithPositiveBalanceExpiringOnOrBefore(cutoff).stream()
             .sorted(ALERT_ORDER)
-            .map(batch -> toAlert(batch, today))
+            .map(batch -> toAlert(batch, asOfDate))
             .toList();
-        return new ExpirationAlertsResult(today, query.windowDays(), alerts);
+        return new ExpirationAlertsResult(asOfDate, query.windowDays(), alerts);
     }
 
     private ExpirationAlertEntryResult toAlert(Batch batch, LocalDate today) {

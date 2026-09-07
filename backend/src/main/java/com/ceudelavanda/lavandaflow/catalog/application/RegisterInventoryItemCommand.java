@@ -8,6 +8,16 @@ public record RegisterInventoryItemCommand(
     String name,
     String description,
     Category category,
-    UnitOfMeasure unitOfMeasure
+    UnitOfMeasure unitOfMeasure,
+    String essenceReference,
+    String productionTypeCode
 ) {
+    public RegisterInventoryItemCommand(
+        String name,
+        String description,
+        Category category,
+        UnitOfMeasure unitOfMeasure
+    ) {
+        this(name, description, category, unitOfMeasure, null, null);
+    }
 }

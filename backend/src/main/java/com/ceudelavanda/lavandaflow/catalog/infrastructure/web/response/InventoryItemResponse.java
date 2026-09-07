@@ -14,7 +14,9 @@ public record InventoryItemResponse(
     String description,
     Category category,
     UnitOfMeasure unitOfMeasure,
-    boolean active
+    boolean active,
+    String essenceReference,
+    String productionTypeCode
 ) {
     public static InventoryItemResponse from(InventoryItemResult result) {
         return new InventoryItemResponse(
@@ -23,7 +25,9 @@ public record InventoryItemResponse(
             result.description(),
             result.category(),
             result.unitOfMeasure(),
-            result.active()
+            result.active(),
+            result.essenceReference(),
+            result.productionTypeCode()
         );
     }
 }

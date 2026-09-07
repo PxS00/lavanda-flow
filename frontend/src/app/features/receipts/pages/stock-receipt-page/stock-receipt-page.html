@@ -18,7 +18,7 @@
         <dl>
           <div><dt>ID do lote</dt><dd>{{ receipt.batchId }}</dd></div>
           <div><dt>ID da movimentação</dt><dd>{{ receipt.movementId }}</dd></div>
-          <div><dt>Quantidade</dt><dd>{{ receipt.quantity | number: '1.0-6' }}</dd></div>
+          <div><dt>Quantidade</dt><dd>{{ formatDecimal(receipt.quantity) }}</dd></div>
           <div><dt>Entrada em</dt><dd>{{ formatLocalDate(receipt.receivedAt) }}</dd></div>
           @if (receipt.expiresAt) {
             <div><dt>Validade</dt><dd>{{ formatLocalDate(receipt.expiresAt) }}</dd></div>

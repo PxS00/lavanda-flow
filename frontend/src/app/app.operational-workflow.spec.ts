@@ -12,7 +12,7 @@ describe('operational UI workflow', () => {
   const itemId = 'item-1';
   const item = {
     id: itemId, name: 'Essência de lavanda', description: null, category: 'ESSENCE',
-    unitOfMeasure: 'MILLILITER', active: true,
+    unitOfMeasure: 'MILLILITER', active: true, essenceReference: '027', productionTypeCode: 'BDS',
   };
   let http: HttpTestingController;
 
@@ -30,6 +30,11 @@ describe('operational UI workflow', () => {
 
   it('composes shell, catalog, receipt, workspace refresh, FEFO, alerts, and stable item navigation', async () => {
     const harness = await RouterTestingHarness.create('/dashboard');
+    http.expectOne(`${apiUrl}/inventory/dashboard`).flush({
+      asOfDate: '2026-09-01', expirationWindowDays: 30, activeItemCount: 1,
+      lowStockItemCount: 1, outOfStockItemCount: 0, expiringSoonBatchCount: 0, expiredBatchCount: 0,
+    });
+    harness.fixture.detectChanges();
     expect(harness.routeNativeElement?.textContent).toContain('Painel');
     findLink(harness, 'Estoque').click();
     await harness.fixture.whenStable();
@@ -79,12 +84,12 @@ describe('operational UI workflow', () => {
 
     const withdrawal = http.expectOne(`${apiUrl}/inventory/items/${itemId}/withdrawals`);
     expect(withdrawal.request.method).toBe('POST');
-    expect(withdrawal.request.body).toEqual({ quantity: 30, reason: null });
+    expect(withdrawal.request.body).toEqual({ quantity: '30', reason: null });
     withdrawal.flush({
-      inventoryItemId: itemId, requestedQuantity: 30, allocatedQuantity: 30,
+      inventoryItemId: itemId, requestedQuantity: '30', allocatedQuantity: '30',
       allocations: [
-        { batchId: 'batch-a', movementId: 'movement-a', quantity: 10 },
-        { batchId: 'batch-b', movementId: 'movement-b', quantity: 20 },
+        { batchId: 'batch-a', movementId: 'movement-a', quantity: '10' },
+        { batchId: 'batch-b', movementId: 'movement-b', quantity: '20' },
       ],
     });
     flushWorkspace(http, 10, false);
@@ -97,7 +102,7 @@ describe('operational UI workflow', () => {
     await harness.fixture.whenStable();
     http.expectOne(`${apiUrl}/inventory/alerts/low-stock`).flush({
       asOfDate: '2026-09-01', alerts: [{ inventoryItemId: itemId, name: item.name,
-        unitOfMeasure: 'MILLILITER', availableQuantity: 10, minimumQuantity: 50, deficitQuantity: 40 }],
+        unitOfMeasure: 'MILLILITER', availableQuantity: '10', minimumQuantity: '50', deficitQuantity: '40' }],
     });
     http.expectOne(`${apiUrl}/inventory/alerts/expiration`).flush({
       asOfDate: '2026-09-01', windowDays: 30, alerts: [],
@@ -137,19 +142,19 @@ function flushWorkspace(
   const overview = http.expectOne('https://api.example.test/api/v1/inventory/items/item-1/overview');
   overview.flush({ inventoryItemId: 'item-1', name: 'Essência de lavanda', category: 'ESSENCE',
     unitOfMeasure: 'MILLILITER', active: true, asOfDate: '2026-09-01', expirationWindowDays: 30,
-    totalCurrentQuantity: availableQuantity, availableQuantity, minimumQuantity: 50, lowStock: true,
+    totalCurrentQuantity: String(availableQuantity), availableQuantity: String(availableQuantity), minimumQuantity: '50', lowStock: true,
     outOfStock: false, nonZeroBatchCount: 2, nearestExpiration: '2026-09-15', expiredBatchCount: 0,
     expiringSoonBatchCount: 1 });
   http.expectOne('https://api.example.test/api/v1/inventory/items/item-1/batches').flush({ inventoryItemId: 'item-1',
     asOfDate: '2026-09-01', batches: [{ batchId: 'batch-initial', inventoryItemId: 'item-1', supplierId: null,
-      lotCode: 'LOTE-INICIAL', initialQuantity: 80, currentQuantity: availableQuantity, receivedAt: '2026-08-01',
+      lotCode: 'LOTE-INICIAL', initialQuantity: '80', currentQuantity: String(availableQuantity), receivedAt: '2026-08-01',
       expiresAt: '2026-09-15', status: 'AVAILABLE' }] });
   if (includeMinimum) {
-    http.expectOne('https://api.example.test/api/v1/inventory/items/item-1/minimum-stock-level').flush({ inventoryItemId: 'item-1', minimumQuantity: 50 });
+    http.expectOne('https://api.example.test/api/v1/inventory/items/item-1/minimum-stock-level').flush({ inventoryItemId: 'item-1', minimumQuantity: '50' });
   }
   http.expectOne('https://api.example.test/api/v1/inventory/movements?inventoryItemId=item-1&page=0&size=20').flush(page([{ movementId: 'movement-initial', inventoryItemId: 'item-1', inventoryItemName: 'Essência de lavanda',
     unitOfMeasure: 'MILLILITER', inventoryItemActive: true, batchId: 'batch-initial', lotCode: 'LOTE-INICIAL',
-    type: 'ENTRY', quantity: 80, reason: 'Inventário inicial', occurredAt: '2026-08-01T10:00:00Z' }]));
+    type: 'ENTRY', quantity: '80', reason: 'Inventário inicial', occurredAt: '2026-08-01T10:00:00Z' }]));
 }
 
 function findButton(harness: RouterTestingHarness, text: string): HTMLButtonElement {
@@ -172,6 +177,6 @@ function apiError(code: string) {
 
 function receiptSuccess() {
   return { batchId: 'batch-new', movementId: 'movement-new', inventoryItemId: 'item-1', supplierId: null,
-    lotCode: null, quantity: 25, receivedAt: '2026-09-01', expiresAt: null, reason: null,
+    lotCode: null, quantity: '25', receivedAt: '2026-09-01', expiresAt: null, reason: null,
     occurredAt: '2026-09-01T12:00:00Z' };
 }

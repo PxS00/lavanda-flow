@@ -2,7 +2,7 @@ export interface RegisterStockReceiptRequest {
   readonly inventoryItemId: string;
   readonly supplierId: string | null;
   readonly lotCode: string | null;
-  readonly quantity: number;
+  readonly quantity: string;
   readonly receivedAt: string;
   readonly expiresAt: string | null;
   readonly reason: string | null;
@@ -15,7 +15,7 @@ export interface RegisterStockReceiptDto {
   readonly inventoryItemId: string;
   readonly supplierId: string | null;
   readonly lotCode: string | null;
-  readonly quantity: number;
+  readonly quantity: string;
   readonly receivedAt: string;
   readonly expiresAt: string | null;
   readonly reason: string | null;

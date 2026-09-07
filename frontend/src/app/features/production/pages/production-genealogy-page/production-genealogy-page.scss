@@ -1,0 +1,65 @@
+:host {
+  display: block;
+}
+
+.genealogy-page,
+.page-header,
+.relationships {
+  display: grid;
+  gap: 20px;
+}
+
+.page-header {
+  justify-items: start;
+  gap: 8px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.page-header p,
+dt {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.direction-control {
+  display: grid;
+  gap: 6px;
+  max-width: 320px;
+  font-weight: 600;
+}
+
+select {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--mat-sys-outline);
+  border-radius: 4px;
+  color: var(--mat-sys-on-surface);
+  background: var(--mat-sys-surface);
+  font: inherit;
+}
+
+.origin {
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.root-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 16px;
+  margin: 20px 0 0;
+}
+
+dt {
+  font: var(--mat-sys-label-medium);
+}
+
+dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}

@@ -22,6 +22,11 @@ class JpaInventoryItemRepository
     }
 
     @Override
+    public boolean existsAny() {
+        return repository.count() > 0;
+    }
+
+    @Override
     public InventoryItem save(InventoryItem item) {
         var entity = InventoryItemMapper.toEntity(item);
         var savedEntity = repository.save(entity);
@@ -33,6 +38,13 @@ class JpaInventoryItemRepository
     public Optional<InventoryItem> findById(UUID id) {
         return repository.findById(id)
             .map(InventoryItemMapper::toDomain);
+    }
+
+    @Override
+    public List<InventoryItem> findAllActive() {
+        return repository.findAllByActiveTrue().stream()
+            .map(InventoryItemMapper::toDomain)
+            .toList();
     }
 
     @Override

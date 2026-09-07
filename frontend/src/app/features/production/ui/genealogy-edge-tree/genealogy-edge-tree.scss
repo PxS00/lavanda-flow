@@ -1,0 +1,67 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.edge-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+  border-left: 2px solid var(--mat-sys-outline-variant);
+}
+
+summary {
+  padding: 8px 0;
+  cursor: pointer;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+details > app-genealogy-edge-tree {
+  display: block;
+  margin: 12px 0 0 16px;
+}
+
+dl,
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+}
+
+dl {
+  margin: 0 0 16px;
+}
+
+dt,
+small {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+dt {
+  font: var(--mat-sys-label-medium);
+}
+
+dd,
+h4,
+p {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 599px) {
+  .edge-list {
+    padding-left: 10px;
+  }
+
+  details > app-genealogy-edge-tree {
+    margin-left: 6px;
+  }
+
+  dl,
+  .batch-grid {
+    grid-template-columns: 1fr;
+  }
+}

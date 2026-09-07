@@ -1,242 +1,148 @@
-# Modelo de Domínio
+# Domain Model
 
-## Visão geral
+## Overview
 
-O domínio inicial do Lavanda Flow representa estoque por item, lote e movimentação.
+Lavanda Flow models inventory through items, batches, and auditable stock movements. V1 also models the minimum formula and production concepts needed to create internally produced batches and trace their genealogy.
 
-O saldo não deve ser tratado como um número isolado sem contexto. Todo item pode possuir múltiplos lotes e toda alteração relevante de quantidade deve ser auditável por meio de movimentações.
+Raw materials (`matéria-prima`), intermediate products (`produto intermediário`), and finalized products (`produto finalizado`) use one coherent inventory and batch model. A batch may come from an external supplier or from internal Céu de Lavanda production.
 
-## Conceitos principais
+The concept names below describe domain responsibilities. They do not freeze class, package, API, or persistence names for implementation.
 
-### InventoryItem
+## Core concepts
 
-Representa qualquer item controlado pelo estoque.
+### Inventory item
 
-Exemplos:
+Represents anything controlled in inventory, including an essence, chemical input, internally produced base, finalized Body Splash, bottle, valve, or label.
 
-- essência Good Girl;
-- álcool de cereais;
-- base para body splash;
-- corante;
-- frasco de 200 ml;
-- válvula;
-- rótulo.
-
-Responsabilidades:
-
-- identificar o item;
-- definir sua categoria;
-- definir sua unidade de medida padrão;
-- definir se está ativo;
-- opcionalmente definir estoque mínimo.
-
-Um `InventoryItem` não representa uma compra específica.
+It identifies the item, category, standard unit of measure, active status, and optional minimum stock. One item may have many batches; an item does not represent a purchase or production execution.
 
 ### Batch
 
-Representa um lote físico recebido ou existente de determinado item.
+Represents identifiable physical stock of one inventory item. A batch has exactly one origin:
 
-Um mesmo `InventoryItem` pode possuir vários `Batch`.
+- **external**: received from a supplier or manufacturer and retaining that source's lot code; or
+- **internal**: the output of exactly one production execution and identified operationally by an internal lot code.
 
-Exemplo:
+Different receipts and production executions create distinct batches. The same product, formula, source batches, and month used in a later execution still produce a new batch.
 
-```text
-Essência Good Girl
-├── lote GG-2026-01 — validade 10/2027
-└── lote GG-2026-02 — validade 05/2028
-```
+A batch records the information needed to identify its item, origin, lot code, relevant dates, initial quantity, and available quantity. Supplier lot codes are not automatically replaced by internal codes.
 
-Responsabilidades:
+### Stock movement
 
-- relacionar item e fornecedor;
-- guardar identificação do lote;
-- guardar data de entrada;
-- guardar validade;
-- guardar quantidade inicial;
-- permitir apuração da quantidade disponível.
+Represents every auditable stock change, including entry, consumption, positive or negative adjustment, loss, and expired disposal. It identifies the affected batch, type, exact decimal quantity, occurrence time, and reason when required.
 
-### StockMovement
-
-Representa qualquer alteração auditável de estoque.
-
-Tipos iniciais:
-
-- `ENTRY`;
-- `CONSUMPTION`;
-- `ADJUSTMENT_IN`;
-- `ADJUSTMENT_OUT`;
-- `LOSS`;
-- `EXPIRED_DISPOSAL`.
-
-Responsabilidades:
-
-- identificar o lote afetado;
-- registrar tipo e quantidade;
-- registrar data/hora;
-- registrar motivo quando necessário.
-
-Movimentações são históricas e não devem ser apagadas para corrigir saldo. Correções devem gerar novas movimentações de ajuste.
+Confirmed movements are historical. Corrections create new adjustment movements instead of rewriting or deleting history.
 
 ### Supplier
 
-Representa a origem comercial de um lote.
+Represents the commercial source of externally supplied stock. It supports basic identification and contact information and allows externally supplied batches to be located by supplier. An internally produced batch has a production origin rather than a supplier origin.
 
-Responsabilidades:
+### Category and unit of measure
 
-- identificar fornecedor;
-- armazenar dados básicos de contato quando necessários;
-- permitir localizar quais lotes foram fornecidos por determinada empresa.
+Categories organize items and may include essence, chemical input, base, alcohol, colorant, fixative, bottle, valve, cap, label, packaging, and other. Classification does not create separate inventory models or determine every business rule.
 
-### Category
+Quantities use exact decimal representation: `BigDecimal` in the backend and an appropriate `NUMERIC`/`DECIMAL` database type. Automatic conversion between units is not part of V1.
 
-Classifica um item de estoque.
+### Formula or recipe
 
-Categorias iniciais:
+Defines which inventory items and proportions are required to produce an output item. It describes requirements, not the concrete source batches used by an execution.
 
-- `ESSENCE`;
-- `CHEMICAL_INPUT`;
-- `BASE`;
-- `ALCOHOL`;
-- `COLORANT`;
-- `FIXATIVE`;
-- `BOTTLE`;
-- `VALVE`;
-- `CAP`;
-- `LABEL`;
-- `PACKAGING`;
-- `OTHER`.
+Only the minimum formula information needed to register production is approved in V1. Detailed lifecycle and versioning decisions remain for implementation specifications.
 
-A classificação não deve determinar toda a regra de negócio. Ela serve principalmente para organização, filtros e comportamentos específicos quando necessários.
+### Production execution
 
-### UnitOfMeasure
+Represents one completed internal production operation. It references the applicable formula or recipe, records the produced item and quantity, creates exactly one output batch, and contains the actual source-batch consumptions.
 
-Representa a unidade usada para controlar quantidade.
+Each execution is distinct. Repeating identical inputs later never reuses the earlier output batch.
 
-Unidades iniciais:
+### Production consumption
 
-- `MILLILITER`;
-- `LITER`;
-- `GRAM`;
-- `KILOGRAM`;
-- `UNIT`.
+Records one concrete source batch and the exact quantity consumed by one production execution. A production may consume:
 
-Quantidade deve usar representação decimal exata. No backend, utilizar `BigDecimal`; no banco, utilizar tipo `NUMERIC`/`DECIMAL` apropriado.
+- externally supplied batches;
+- internally produced batches;
+- more than one batch of the same inventory item when needed.
 
-## Relacionamentos
+The production record therefore captures actual allocation, while the formula captures required items and proportions.
+
+## Relationships and genealogy
 
 ```text
-Supplier
-   │
-   │ 1:N
-   ▼
- Batch ◄──────── InventoryItem
-   │                 │
-   │ 1:N             │ 1:N
-   ▼                 ▼
-StockMovement      Batch
+External or previously produced source batches + exact quantities
+                              │ consumed by
+                              ▼
+                    Production execution A
+                              │ creates exactly one
+                              ▼
+                  Intermediate output batch
+                              │ may later be consumed by
+                              ▼
+                    Production execution B
+                              │ creates exactly one
+                              ▼
+                    Finalized output batch
 ```
 
-Formalmente:
+An internally produced intermediate batch may be a source batch for a later production. Repeating this relationship forms a directed genealogy of arbitrary depth; it is not hard-coded to raw material -> base -> final.
 
-- um `InventoryItem` possui zero ou muitos `Batch`;
-- um `Batch` pertence a exatamente um `InventoryItem`;
-- um `Supplier` pode fornecer zero ou muitos `Batch`;
-- um `Batch` pode possuir um fornecedor associado;
-- um `Batch` possui muitas `StockMovement`;
-- uma `StockMovement` pertence a exatamente um `Batch`.
+Genealogy is explicit and bidirectional:
 
-## Invariantes iniciais
+- **upstream**: from a produced batch, follow its production execution and consumptions recursively to all supplier or earlier produced source batches;
+- **downstream**: from any source batch, follow every consuming production and its output batch recursively to all produced descendants.
 
-### Quantidade
+Lot codes and notes may help operators recognize stock but are not database identity and must not be used to infer genealogy.
 
-- quantidades devem ser maiores que zero em movimentações normais;
-- o estoque disponível nunca deve ficar negativo;
-- `double` e `float` não devem ser usados para quantidades;
-- unidade da movimentação deve ser compatível com a unidade do item/lote.
+## Invariants
 
-### Lotes
+### Quantities and stock
 
-- compras diferentes do mesmo item não devem sobrescrever lotes anteriores;
-- um lote vencido não deve ser selecionado automaticamente para consumo;
-- código de lote pode ser desconhecido em dados legados, mas o modelo deve suportá-lo quando informado.
+- movement and consumption quantities are greater than zero;
+- available stock never becomes negative;
+- `double` and `float` are never used for quantities;
+- movement and consumption units are compatible with their items and batches;
+- FEFO and inventory eligibility are backend-authoritative;
+- expired batches are excluded from normal consumption; `expiresAt <= today` means expired;
+- date-dependent rules use the application `Clock`.
 
-### Movimentações
+### Batches and history
 
-- toda entrada ou retirada de estoque gera histórico;
-- movimentação confirmada é imutável do ponto de vista de negócio;
-- correções são realizadas através de nova movimentação de ajuste;
-- operações que alteram saldo devem ser transacionais.
+- separate receipts and production executions never overwrite earlier batches;
+- external batches preserve manufacturer or supplier lot codes;
+- every stock change creates an auditable movement;
+- corrections create new adjustment movements;
+- operational batches and movements are not deleted merely to clean up data.
 
-### Validade e FEFO
+### Production atomicity
 
-Quando houver validade informada:
+A production execution is one atomic business operation. It must validate and persist all of the following in one successful transaction:
 
-1. lotes vencidos são excluídos da seleção normal de consumo;
-2. entre lotes válidos, deve ser priorizado o de vencimento mais próximo;
-3. lotes sem validade exigem regra explícita de ordenação e não devem invalidar os lotes com validade conhecida.
+1. exact source-batch allocations and quantities;
+2. source-batch balance reductions and consumption history;
+3. the distinct output batch and its stock-creating history;
+4. the explicit relationships that support genealogy.
 
-A estratégia é FEFO (*First Expired, First Out*).
+If any part fails, no source balance reduction, consumption record, output batch, or partial production state remains. PostgreSQL is the source of truth, and Flyway controls schema evolution.
 
-## Casos de uso da V1
+## Internal production lot policy
 
-### Cadastrar item
+Internally produced batches use the operational format `TTT-EEE-LLL-MM-YYYY`, for example `BDS-014-003-12-2026`:
 
-Cria um novo item controlável pelo estoque.
+- `TTT` is a stable three-letter product-type code such as `BDS`, `SBN`, or `BAS`;
+- `EEE` is a stable essence reference: `000` means no essence; actual references use `001` through `999`, are never recycled, and survive display-name changes;
+- `LLL` is a sequence from `001` through `999` for the relevant `TTT-EEE` prefix in a calendar month/year; every production execution receives a new sequence, reset when month/year changes;
+- `MM` and `YYYY` are the production month and year.
 
-### Registrar entrada
+Automatic generation is recommended but optional. For generated codes, the backend authoritatively assigns the definitive collision-free sequence when the transaction succeeds; a frontend preview does not reserve it. Manual entry remains available for explicit operational cases and need not encode genealogy.
 
-Cria ou seleciona um lote e registra entrada de quantidade.
+## V1 use cases
 
-### Registrar consumo
+- register and classify an inventory item;
+- register externally supplied stock while preserving its source lot code;
+- register consumption, adjustment, loss, and expired disposal;
+- query balances, expiration, and movement history by item or batch;
+- define the minimum formula or recipe inputs for production;
+- register one production execution with exact source-batch allocations and one new output batch;
+- consume a produced intermediate batch in a later production;
+- navigate batch genealogy recursively upstream and downstream.
 
-Retira uma quantidade do estoque, respeitando as regras de saldo e seleção de lote.
-
-Quando a quantidade necessária exceder o saldo de um único lote, o caso de uso poderá consumir múltiplos lotes válidos seguindo FEFO.
-
-### Registrar ajuste
-
-Corrige divergências físicas através de movimentação explícita e justificativa.
-
-### Consultar estoque
-
-Retorna saldo agregado por item e detalhamento por lote.
-
-### Consultar vencimentos
-
-Retorna lotes vencidos e próximos do vencimento.
-
-### Consultar histórico
-
-Retorna todas as movimentações relacionadas a um item ou lote.
-
-## Evolução futura
-
-O modelo deve permitir incorporar posteriormente:
-
-```text
-Formula
-FormulaVersion
-ProductionOrder
-ProductionBatch
-ProductionConsumption
-FinishedProduct
-Cost
-```
-
-Fluxo futuro esperado:
-
-```text
-Matéria-prima / lote
-        ↓
-     Fórmula
-        ↓
-Produção da base
-        ↓
-   Lote da base
-        ↓
-Produção do produto
-        ↓
-Lote do produto final
-```
-
-A V1 não implementará esse fluxo, mas as decisões atuais não devem impedir sua introdução.
+Business rules belong in the domain or application layer. Controllers and frontend components only validate their boundaries, invoke use cases, and present results.

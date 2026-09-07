@@ -9,9 +9,9 @@ import { mapHttpError } from '../../../../core/http/map-http-error';
 import { UiError } from '../../../../core/http/ui-error';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../../../shared/ui/loading-state/loading-state';
-import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
-import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
-import { inventoryItemUnitLabel } from '../../../catalog/inventory-item-display';
+import { InventoryItemDto } from '../../data-access/inventory-item.dto';
+import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
+import { inventoryItemUnitLabel } from '../../inventory-item-display';
 
 const SEARCH_PAGE_SIZE = 10;
 

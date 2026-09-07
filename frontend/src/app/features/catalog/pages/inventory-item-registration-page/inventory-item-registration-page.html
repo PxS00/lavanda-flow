@@ -83,6 +83,51 @@
       <p id="unit-of-measure-backend-error" class="field-error" role="alert">{{ error }}</p>
     }
 
+    <mat-form-field appearance="outline">
+      <mat-label>Referência da essência</mat-label>
+      <input
+        matInput
+        inputmode="numeric"
+        [formField]="registrationForm.essenceReference"
+        autocomplete="off"
+        [attr.aria-describedby]="
+          backendFieldError('essenceReference') ? 'essence-reference-backend-error' : null
+        "
+      />
+      <mat-hint>Opcional · de 001 a 999</mat-hint>
+      @if (
+        registrationForm.essenceReference().touched() &&
+        registrationForm.essenceReference().invalid()
+      ) {
+        <mat-error>{{ registrationForm.essenceReference().errors()[0].message }}</mat-error>
+      }
+    </mat-form-field>
+    @if (backendFieldError('essenceReference'); as error) {
+      <p id="essence-reference-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Código do tipo de produção</mat-label>
+      <input
+        matInput
+        [formField]="registrationForm.productionTypeCode"
+        autocomplete="off"
+        [attr.aria-describedby]="
+          backendFieldError('productionTypeCode') ? 'production-type-code-backend-error' : null
+        "
+      />
+      <mat-hint>Opcional · 3 letras maiúsculas</mat-hint>
+      @if (
+        registrationForm.productionTypeCode().touched() &&
+        registrationForm.productionTypeCode().invalid()
+      ) {
+        <mat-error>{{ registrationForm.productionTypeCode().errors()[0].message }}</mat-error>
+      }
+    </mat-form-field>
+    @if (backendFieldError('productionTypeCode'); as error) {
+      <p id="production-type-code-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
     <div class="form-actions">
       <button mat-flat-button type="submit" [disabled]="isSubmitting()">
         {{ isSubmitting() ? 'Cadastrando...' : 'Cadastrar item' }}

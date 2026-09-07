@@ -20,6 +20,8 @@ describe('InventoryItemApiService', () => {
     category: 'ESSENCE',
     unitOfMeasure: 'MILLILITER',
     active: true,
+    essenceReference: '027',
+    productionTypeCode: 'BDS',
   };
   const page: InventoryItemPageDto = {
     content: [item],
@@ -125,6 +127,8 @@ describe('InventoryItemApiService', () => {
       description: 'Floral raw material',
       category: 'ESSENCE',
       unitOfMeasure: 'MILLILITER',
+      essenceReference: '027',
+      productionTypeCode: 'BDS',
     };
     let result: InventoryItemDto | undefined;
 

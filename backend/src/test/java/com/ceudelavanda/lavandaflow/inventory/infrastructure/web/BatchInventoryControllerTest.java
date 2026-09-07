@@ -6,6 +6,7 @@ import com.ceudelavanda.lavandaflow.inventory.application.batch.BatchOperational
 import com.ceudelavanda.lavandaflow.inventory.application.batch.GetBatchInventory;
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InventoryItemNotFoundException;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
+import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -25,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(BatchInventoryController.class)
-@Import(ClockConfig.class)
+@Import({ClockConfig.class, ExactDecimalJsonConfiguration.class})
 @WithMockUser
 class BatchInventoryControllerTest {
 
@@ -60,8 +61,8 @@ class BatchInventoryControllerTest {
             .andExpect(jsonPath("$.batches[0].batchId").value(batchId.toString()))
             .andExpect(jsonPath("$.batches[0].supplierId").value(supplierId.toString()))
             .andExpect(jsonPath("$.batches[0].lotCode").value("LOT-95"))
-            .andExpect(jsonPath("$.batches[0].initialQuantity").value(100.0))
-            .andExpect(jsonPath("$.batches[0].currentQuantity").value(30.5))
+            .andExpect(jsonPath("$.batches[0].initialQuantity").value("100.000000"))
+            .andExpect(jsonPath("$.batches[0].currentQuantity").value("30.500000"))
             .andExpect(jsonPath("$.batches[0].status").value("AVAILABLE"));
     }
 

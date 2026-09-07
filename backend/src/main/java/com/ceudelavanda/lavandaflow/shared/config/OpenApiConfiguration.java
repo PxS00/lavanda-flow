@@ -2,14 +2,25 @@ package com.ceudelavanda.lavandaflow.shared.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.StringSchema;
+import org.springdoc.core.utils.SpringDocUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.math.BigDecimal;
 
 /**
  * Defines stable metadata for the Lavanda Flow HTTP API contract.
  */
 @Configuration(proxyBeanMethods = false)
 public class OpenApiConfiguration {
+
+    static {
+        SpringDocUtils.getConfig().replaceWithSchema(
+            BigDecimal.class,
+            new StringSchema().format("decimal")
+        );
+    }
 
     @Bean
     OpenAPI lavandaFlowOpenApi() {

@@ -23,6 +23,29 @@ class CatalogInventoryItemLookupTest {
     private InventoryItemRepository inventoryItemRepository;
 
     @Test
+    void shouldReportAnyActiveOrInactiveCatalogItem() {
+        when(inventoryItemRepository.existsAny()).thenReturn(true);
+
+        assertThat(new CatalogInventoryItemLookup(inventoryItemRepository).existsAny()).isTrue();
+
+        verify(inventoryItemRepository).existsAny();
+    }
+
+    @Test
+    void shouldRetrieveAllActiveItemsInOneCatalogRead() {
+        var first = InventoryItem.create("First", null, Category.ESSENCE, UnitOfMeasure.MILLILITER);
+        var second = InventoryItem.create("Second", null, Category.BOTTLE, UnitOfMeasure.UNIT);
+        when(inventoryItemRepository.findAllActive()).thenReturn(List.of(first, second));
+
+        var snapshots = new CatalogInventoryItemLookup(inventoryItemRepository).findAllActive();
+
+        verify(inventoryItemRepository).findAllActive();
+        assertThat(snapshots).extracting(snapshot -> snapshot.id())
+            .containsExactly(first.getId(), second.getId());
+        assertThat(snapshots).allMatch(snapshot -> snapshot.active());
+    }
+
+    @Test
     void shouldRetrieveRequestedItemsInOneBulkLookup() {
         var first = InventoryItem.create("First", null, Category.ESSENCE, UnitOfMeasure.MILLILITER);
         var second = InventoryItem.create("Second", null, Category.BOTTLE, UnitOfMeasure.UNIT);

@@ -51,7 +51,9 @@ public class InventoryItemController {
             request.name(),
             request.description(),
             request.category(),
-            request.unitOfMeasure()
+            request.unitOfMeasure(),
+            request.essenceReference(),
+            request.productionTypeCode()
         ));
         return ResponseEntity
             .status(HttpStatus.CREATED)

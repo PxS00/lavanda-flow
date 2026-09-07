@@ -18,9 +18,9 @@ export interface InventoryItemOverviewDto {
   readonly active: boolean;
   readonly asOfDate: string;
   readonly expirationWindowDays: number;
-  readonly totalCurrentQuantity: number;
-  readonly availableQuantity: number;
-  readonly minimumQuantity: number | null;
+  readonly totalCurrentQuantity: string;
+  readonly availableQuantity: string;
+  readonly minimumQuantity: string | null;
   readonly lowStock: boolean;
   readonly outOfStock: boolean;
   readonly nonZeroBatchCount: number;
@@ -34,8 +34,8 @@ export interface BatchInventoryEntryDto {
   readonly inventoryItemId: string;
   readonly supplierId: string | null;
   readonly lotCode: string | null;
-  readonly initialQuantity: number;
-  readonly currentQuantity: number;
+  readonly initialQuantity: string;
+  readonly currentQuantity: string;
   readonly receivedAt: string;
   readonly expiresAt: string | null;
   readonly status: BatchOperationalStatus;
@@ -49,11 +49,11 @@ export interface BatchInventoryDto {
 
 export interface MinimumStockLevelDto {
   readonly inventoryItemId: string;
-  readonly minimumQuantity: number;
+  readonly minimumQuantity: string;
 }
 
 export interface ConfigureMinimumStockLevelRequest {
-  readonly minimumQuantity: number;
+  readonly minimumQuantity: string;
 }
 
 export interface MovementHistoryEntryDto {
@@ -65,7 +65,7 @@ export interface MovementHistoryEntryDto {
   readonly batchId: string;
   readonly lotCode: string | null;
   readonly type: InventoryMovementType;
-  readonly quantity: number;
+  readonly quantity: string;
   readonly reason: string | null;
   readonly occurredAt: string;
 }

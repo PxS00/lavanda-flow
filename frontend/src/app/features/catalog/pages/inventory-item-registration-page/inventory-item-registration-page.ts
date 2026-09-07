@@ -28,6 +28,8 @@ interface RegistrationModel {
   readonly description: string;
   readonly category: InventoryItemCategory | null;
   readonly unitOfMeasure: InventoryItemUnitOfMeasure | null;
+  readonly essenceReference: string;
+  readonly productionTypeCode: string;
 }
 
 type RegistrationField = keyof RegistrationModel;
@@ -37,6 +39,8 @@ const INLINE_ERROR_FIELDS: readonly RegistrationField[] = [
   'description',
   'category',
   'unitOfMeasure',
+  'essenceReference',
+  'productionTypeCode',
 ];
 
 const EMPTY_REGISTRATION: RegistrationModel = {
@@ -44,6 +48,8 @@ const EMPTY_REGISTRATION: RegistrationModel = {
   description: '',
   category: null,
   unitOfMeasure: null,
+  essenceReference: '',
+  productionTypeCode: '',
 };
 
 @Component({
@@ -76,6 +82,22 @@ export class InventoryItemRegistrationPage {
     );
     required(item.category, { message: 'Categoria é obrigatória.' });
     required(item.unitOfMeasure, { message: 'Unidade de medida é obrigatória.' });
+    maxLength(item.essenceReference, 3, {
+      message: 'Referência da essência deve ter 3 dígitos.',
+    });
+    validate(item.essenceReference, ({ value }) =>
+      optionalValueMatches(value(), /^(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})$/)
+        ? undefined
+        : { kind: 'essence-reference', message: 'Use uma referência de 001 a 999.' },
+    );
+    maxLength(item.productionTypeCode, 3, {
+      message: 'Código do tipo de produção deve ter 3 letras.',
+    });
+    validate(item.productionTypeCode, ({ value }) =>
+      optionalValueMatches(value(), /^[A-Z]{3}$/)
+        ? undefined
+        : { kind: 'production-type-code', message: 'Use 3 letras maiúsculas.' },
+    );
   });
   protected readonly categoryOptions = INVENTORY_ITEM_CATEGORY_OPTIONS;
   protected readonly unitOptions = INVENTORY_ITEM_UNIT_OPTIONS;
@@ -118,6 +140,8 @@ export class InventoryItemRegistrationPage {
       description: normalizeDescription(model.description),
       category: model.category,
       unitOfMeasure: model.unitOfMeasure,
+      essenceReference: normalizeOptionalText(model.essenceReference),
+      productionTypeCode: normalizeOptionalText(model.productionTypeCode),
     };
 
     this.isSubmitting.set(true);
@@ -140,5 +164,15 @@ export class InventoryItemRegistrationPage {
 }
 
 function normalizeDescription(description: string): string | null {
-  return description.trim() ? description : null;
+  return normalizeOptionalText(description);
+}
+
+function normalizeOptionalText(value: string): string | null {
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function optionalValueMatches(value: string, pattern: RegExp): boolean {
+  const normalized = value.trim();
+  return normalized.length === 0 || pattern.test(normalized);
 }

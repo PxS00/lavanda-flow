@@ -33,6 +33,8 @@ export interface InventoryItemDto {
   readonly category: InventoryItemCategory;
   readonly unitOfMeasure: InventoryItemUnitOfMeasure;
   readonly active: boolean;
+  readonly essenceReference: string | null;
+  readonly productionTypeCode: string | null;
 }
 
 /** Transport representation of one paginated catalog API response. */
@@ -59,4 +61,6 @@ export interface RegisterInventoryItemRequest {
   readonly description: string | null;
   readonly category: InventoryItemCategory;
   readonly unitOfMeasure: InventoryItemUnitOfMeasure;
+  readonly essenceReference: string | null;
+  readonly productionTypeCode: string | null;
 }

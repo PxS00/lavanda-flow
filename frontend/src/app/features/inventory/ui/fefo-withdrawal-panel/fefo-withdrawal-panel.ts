@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, input, linkedSignal, output } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormField, form, maxLength, required, validate } from '@angular/forms/signals';
@@ -26,7 +25,7 @@ interface WithdrawalFormModel {
 }
 
 interface PendingWithdrawal {
-  readonly quantity: number;
+  readonly quantity: string;
   readonly reason: string | null;
 }
 
@@ -37,7 +36,6 @@ const EMPTY_FORM: WithdrawalFormModel = { quantity: '', reason: '' };
 @Component({
   selector: 'app-fefo-withdrawal-panel',
   imports: [
-    DecimalPipe,
     ErrorState,
     FormField,
     MatButtonModule,
@@ -55,7 +53,7 @@ export class FefoWithdrawalPanel {
   readonly inventoryItemId = input.required<string>();
   readonly itemName = input.required<string>();
   readonly unitOfMeasure = input.required<InventoryUnitOfMeasure>();
-  readonly availableQuantity = input.required<number>();
+  readonly availableQuantity = input.required<string>();
   readonly active = input.required<boolean>();
   readonly withdrawalCompleted = output<void>();
 
@@ -90,6 +88,7 @@ export class FefoWithdrawalPanel {
     return false;
   });
   protected readonly unitLabel = inventoryItemUnitLabel;
+  protected readonly formatDecimal = formatDecimalString;
   protected readonly effectivelyActive = computed(
     () => this.active() && !this.serverConfirmedInactive(),
   );
@@ -127,7 +126,7 @@ export class FefoWithdrawalPanel {
 
     const model = this.withdrawalModel();
     this.pendingWithdrawal.set({
-      quantity: Number(model.quantity.trim()),
+      quantity: model.quantity.trim(),
       reason: normalizeOptional(model.reason),
     });
     this.submissionError.set(null);
@@ -226,29 +225,14 @@ function validateQuantity(
   }
 
   const [integerPart] = normalized.split('.');
-  if (integerPart.replace(/^0+/, '').length > 13 || Number(normalized) <= 0) {
+  if (integerPart.replace(/^0+/, '').length > 13 || !/[1-9]/.test(normalized)) {
     return {
       kind: 'quantity-range',
       message: 'Use uma quantidade positiva com no máximo 13 dígitos inteiros e 6 casas decimais.',
     };
   }
 
-  const quantity = Number(normalized);
-  if (!Number.isFinite(quantity) || normalizeDecimal(JSON.stringify(quantity)) !== normalizeDecimal(normalized)) {
-    return {
-      kind: 'unsafe-number',
-      message: 'Esta quantidade não pode ser representada com segurança pelo contrato numérico atual.',
-    };
-  }
-
   return undefined;
-}
-
-function normalizeDecimal(value: string): string {
-  const [rawIntegerPart, rawFractionPart] = value.split('.');
-  const integerPart = rawIntegerPart.replace(/^0+(?=\d)/, '');
-  const fractionPart = rawFractionPart?.replace(/0+$/, '') ?? '';
-  return fractionPart.length > 0 ? `${integerPart}.${fractionPart}` : integerPart;
 }
 
 function hasEditableFieldError(error: UiError): boolean {

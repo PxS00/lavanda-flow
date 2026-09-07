@@ -54,6 +54,14 @@
       >
         Entradas
       </a>
+      <a
+        mat-list-item
+        routerLink="/production/formulas"
+        routerLinkActive="active-link"
+        (click)="isHandset() && sidenav.close()"
+      >
+        Produção
+      </a>
       <span mat-list-item>Saídas</span>
       <a
         mat-list-item

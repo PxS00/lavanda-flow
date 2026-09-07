@@ -5,6 +5,7 @@ import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 
 public record RegisterInventoryItemRequest(
     @NotBlank
@@ -14,6 +15,10 @@ public record RegisterInventoryItemRequest(
     @NotNull
     Category category,
     @NotNull
-    UnitOfMeasure unitOfMeasure
+    UnitOfMeasure unitOfMeasure,
+    @Pattern(regexp = "(?:00[1-9]|0[1-9][0-9]|[1-9][0-9]{2})")
+    String essenceReference,
+    @Pattern(regexp = "[A-Z]{3}")
+    String productionTypeCode
 ) {
 }

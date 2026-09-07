@@ -27,6 +27,13 @@ interface SpringDataBatchRepository extends JpaRepository<BatchJpaEntity, UUID> 
         """)
     Optional<BatchJpaEntity> findByIdForUpdate(@Param("id") UUID id);
 
+    @Query("""
+        select batch.inventoryItemId
+        from BatchJpaEntity batch
+        where batch.id = :id
+        """)
+    Optional<UUID> findInventoryItemIdById(@Param("id") UUID id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         select batch
