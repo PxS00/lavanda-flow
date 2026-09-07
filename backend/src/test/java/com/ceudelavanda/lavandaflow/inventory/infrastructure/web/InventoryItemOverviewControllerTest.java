@@ -7,6 +7,7 @@ import com.ceudelavanda.lavandaflow.inventory.application.overview.InventoryItem
 import com.ceudelavanda.lavandaflow.inventory.domain.exception.InventoryItemNotFoundException;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.config.InventoryAlertProperties;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
+import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -25,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(InventoryItemOverviewController.class)
-@Import(ClockConfig.class)
+@Import({ClockConfig.class, ExactDecimalJsonConfiguration.class})
 @WithMockUser
 class InventoryItemOverviewControllerTest {
 
@@ -51,9 +52,9 @@ class InventoryItemOverviewControllerTest {
             .andExpect(jsonPath("$.name").value("Lavender Essence"))
             .andExpect(jsonPath("$.category").value("ESSENCE"))
             .andExpect(jsonPath("$.unitOfMeasure").value("MILLILITER"))
-            .andExpect(jsonPath("$.totalCurrentQuantity").value(20.0))
-            .andExpect(jsonPath("$.availableQuantity").value(8.0))
-            .andExpect(jsonPath("$.minimumQuantity").value(10.0))
+            .andExpect(jsonPath("$.totalCurrentQuantity").value("20.000000"))
+            .andExpect(jsonPath("$.availableQuantity").value("8.000000"))
+            .andExpect(jsonPath("$.minimumQuantity").value("10.000000"))
             .andExpect(jsonPath("$.lowStock").value(true))
             .andExpect(jsonPath("$.outOfStock").value(false))
             .andExpect(jsonPath("$.nonZeroBatchCount").value(3))

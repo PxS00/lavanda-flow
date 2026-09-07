@@ -7,6 +7,7 @@ import com.ceudelavanda.lavandaflow.inventory.application.history.MovementHistor
 import com.ceudelavanda.lavandaflow.inventory.application.history.MovementHistoryResult;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
+import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -27,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MovementHistoryController.class)
-@Import(ClockConfig.class)
+@Import({ClockConfig.class, ExactDecimalJsonConfiguration.class})
 @WithMockUser
 class MovementHistoryControllerTest {
 
@@ -96,7 +97,7 @@ class MovementHistoryControllerTest {
             .andExpect(jsonPath("$.content[0].batchId").value(batchId.toString()))
             .andExpect(jsonPath("$.content[0].lotCode").value("GG-01"))
             .andExpect(jsonPath("$.content[0].type").value("CONSUMPTION"))
-            .andExpect(jsonPath("$.content[0].quantity").value(25.5))
+            .andExpect(jsonPath("$.content[0].quantity").value("25.500000"))
             .andExpect(jsonPath("$.content[0].reason").value("Perfume production"))
             .andExpect(jsonPath("$.content[0].occurredAt").value(occurredAt.toString()));
 

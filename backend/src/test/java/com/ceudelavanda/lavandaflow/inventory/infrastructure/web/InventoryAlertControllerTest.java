@@ -11,6 +11,7 @@ import com.ceudelavanda.lavandaflow.inventory.application.alerts.LowStockAlertEn
 import com.ceudelavanda.lavandaflow.inventory.application.alerts.LowStockAlertsResult;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.config.InventoryAlertProperties;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
+import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -34,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(InventoryAlertController.class)
-@Import(ClockConfig.class)
+@Import({ClockConfig.class, ExactDecimalJsonConfiguration.class})
 @WithMockUser
 class InventoryAlertControllerTest {
 
@@ -65,9 +66,9 @@ class InventoryAlertControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.asOfDate").value("2026-08-26"))
             .andExpect(jsonPath("$.alerts[0].inventoryItemId").value(itemId.toString()))
-            .andExpect(jsonPath("$.alerts[0].availableQuantity").value(0))
-            .andExpect(jsonPath("$.alerts[0].minimumQuantity").value(250))
-            .andExpect(jsonPath("$.alerts[0].deficitQuantity").value(250));
+            .andExpect(jsonPath("$.alerts[0].availableQuantity").value("0"))
+            .andExpect(jsonPath("$.alerts[0].minimumQuantity").value("250"))
+            .andExpect(jsonPath("$.alerts[0].deficitQuantity").value("250"));
     }
 
     @Test
@@ -111,7 +112,7 @@ class InventoryAlertControllerTest {
             .andExpect(jsonPath("$.alerts[0].inventoryItemId").value(itemId.toString()))
             .andExpect(jsonPath("$.alerts[0].batchId").value(expiredBatchId.toString()))
             .andExpect(jsonPath("$.alerts[0].lotCode").value("EXPIRED"))
-            .andExpect(jsonPath("$.alerts[0].currentQuantity").value(25.500000))
+            .andExpect(jsonPath("$.alerts[0].currentQuantity").value("25.500000"))
             .andExpect(jsonPath("$.alerts[0].expiresAt").value("2026-08-26"))
             .andExpect(jsonPath("$.alerts[0].daysUntilExpiration").value(0))
             .andExpect(jsonPath("$.alerts[0].status").value("EXPIRED"))
