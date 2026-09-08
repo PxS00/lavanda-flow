@@ -22,6 +22,8 @@ class StockQuantityRequestValidationTest {
         assertValid(new RegisterStockEntryRequest(quantity, null));
         assertValid(new RegisterStockWithdrawalRequest(quantity, null));
         assertValid(new RegisterStockAdjustmentRequest(quantity, "Inventory count"));
+        assertValid(new RegisterStockLossRequest(quantity, "Damaged"));
+        assertValid(new RegisterExpiredStockDisposalRequest(quantity, "Discarded"));
         assertValid(new RegisterFefoWithdrawalRequest(quantity, null));
     }
 
@@ -32,6 +34,8 @@ class StockQuantityRequestValidationTest {
         assertInvalidQuantity(new RegisterStockEntryRequest(quantity, null));
         assertInvalidQuantity(new RegisterStockWithdrawalRequest(quantity, null));
         assertInvalidQuantity(new RegisterStockAdjustmentRequest(quantity, "Inventory count"));
+        assertInvalidQuantity(new RegisterStockLossRequest(quantity, "Damaged"));
+        assertInvalidQuantity(new RegisterExpiredStockDisposalRequest(quantity, "Discarded"));
         assertInvalidQuantity(new RegisterFefoWithdrawalRequest(quantity, null));
     }
 
@@ -42,7 +46,19 @@ class StockQuantityRequestValidationTest {
         assertInvalidQuantity(new RegisterStockEntryRequest(quantity, null));
         assertInvalidQuantity(new RegisterStockWithdrawalRequest(quantity, null));
         assertInvalidQuantity(new RegisterStockAdjustmentRequest(quantity, "Inventory count"));
+        assertInvalidQuantity(new RegisterStockLossRequest(quantity, "Damaged"));
+        assertInvalidQuantity(new RegisterExpiredStockDisposalRequest(quantity, "Discarded"));
         assertInvalidQuantity(new RegisterFefoWithdrawalRequest(quantity, null));
+    }
+
+    @Test
+    void shouldRequireNonBlankReasonWithinMaximumLengthForMaintenanceRequests() {
+        assertInvalidReason(new RegisterStockLossRequest(BigDecimal.ONE, null));
+        assertInvalidReason(new RegisterStockLossRequest(BigDecimal.ONE, "  "));
+        assertInvalidReason(new RegisterStockLossRequest(BigDecimal.ONE, "a".repeat(256)));
+        assertInvalidReason(new RegisterExpiredStockDisposalRequest(BigDecimal.ONE, null));
+        assertInvalidReason(new RegisterExpiredStockDisposalRequest(BigDecimal.ONE, "  "));
+        assertInvalidReason(new RegisterExpiredStockDisposalRequest(BigDecimal.ONE, "a".repeat(256)));
     }
 
     private void assertValid(Object request) {
@@ -53,6 +69,13 @@ class StockQuantityRequestValidationTest {
         assertThat(validator.validate(request))
             .anySatisfy(violation ->
                 assertThat(violation.getPropertyPath().toString()).isEqualTo("quantity")
+            );
+    }
+
+    private void assertInvalidReason(Object request) {
+        assertThat(validator.validate(request))
+            .anySatisfy(violation ->
+                assertThat(violation.getPropertyPath().toString()).isEqualTo("reason")
             );
     }
 }
