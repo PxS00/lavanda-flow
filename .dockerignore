@@ -1,0 +1,16 @@
+.git
+.github
+.idea
+.vscode
+graphify-out
+**/node_modules
+**/target
+frontend/dist
+frontend/.angular
+.env
+.env.*
+*.local
+*.log
+coverage
+reports
+postgres-data
