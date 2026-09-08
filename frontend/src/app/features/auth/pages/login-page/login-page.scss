@@ -1,0 +1,22 @@
+.login-page {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100%;
+  padding: 1.5rem;
+}
+
+mat-card {
+  max-width: 28rem;
+  width: 100%;
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.login-error {
+  color: var(--mat-sys-error);
+}
