@@ -33,13 +33,15 @@ They map to the repository workflows as follows:
 | Required context | Workflow | Responsibility |
 | --- | --- | --- |
 | `validate-title` | Pull Request Title | Enforces the project PR-title convention. |
-| `repository-quality` | Repository Quality | Verifies repository documentation and whitespace rules. |
+| `repository-quality` | Repository Quality | Aggregates repository/documentation quality checks and path-aware operational runtime validation. |
 | `Maven verify` | Backend Verification | Runs backend verification when backend-related files change and otherwise completes successfully as a no-op gate. |
 | `Angular verify` | Frontend Verification | Runs frontend verification when frontend-related files change and otherwise completes successfully as a no-op gate. |
 
 Required checks must always reach a terminal state for pull requests targeting a protected branch. For this reason, pull-request path filters are not used on required workflows.
 
 Backend and frontend workflows remain path-aware internally. They detect whether their respective scope changed and skip expensive setup/build steps when verification is not relevant to the pull request while keeping the required job successful.
+
+`repository-quality` follows the same terminal-gate pattern: it aggregates repository/documentation quality checks with path-aware operational runtime configuration and clean-image build validation. Its required context remains unchanged.
 
 Push triggers may continue using path filters because required merge gates are evaluated on pull requests.
 
