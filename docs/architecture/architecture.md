@@ -18,32 +18,32 @@ The interface is mobile-first and may evolve into a PWA when operational require
 
 ## High-level view
 
+The v0.6.0 operational profile is an operator-hosted local-first deployment. The operator notebook hosts the application and PostgreSQL; the operator and an optional tablet access the same origin from the trusted LAN. The application is not publicly internet-accessible in this profile. ADR [0010](decisions/0010-adopt-local-first-operator-hosted-runtime.md) records the runtime, network, security, recovery, and future-hosting boundary.
+
 ```text
-┌─────────────────────────────┐
-│          Angular 22         │
-│        Web / Mobile         │
-└──────────────┬──────────────┘
-               │ HTTPS / REST / JSON
-               ▼
-┌─────────────────────────────┐
-│       Spring Boot 4.1       │
-│        Java 25 LTS          │
-│                             │
-│      Modular Monolith       │
-├─────────────────────────────┤
-│ catalog                     │
-│ inventory                   │
-│ production                  │
-│ suppliers                   │
-│ shared                      │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│         PostgreSQL          │
-│          Flyway             │
-└─────────────────────────────┘
+                    trusted local network
+
+       operator laptop browser / tablet browser
+                         │ HTTP / same origin
+                         ▼
+┌─────────────────────────────────────────────────┐
+│ operator laptop host                             │
+│  Docker Compose                                  │
+│  ┌───────────────────────────────────────────┐  │
+│  │ lavanda-flow-app                          │  │
+│  │ Angular production assets + Spring Boot   │  │
+│  │ REST / JSON under /api/v1                 │  │
+│  │ Modular Monolith: catalog, inventory,     │  │
+│  │ production, suppliers, shared             │  │
+│  └─────────────────────┬─────────────────────┘  │
+│                        │ Compose-private network │
+│  ┌─────────────────────▼─────────────────────┐  │
+│  │ PostgreSQL + Flyway (persistent storage)  │  │
+│  └───────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
 ```
+
+Docker Compose is the repository-owned runtime boundary with `lavanda-flow-app` and PostgreSQL as its two services. Spring Boot serves Angular's production static assets and `/api/v1` from one origin; PostgreSQL is internal to the Compose network and is not host/LAN-published. The supported local profile uses trusted-LAN HTTP, not unconditional HTTPS. Future public or hosted deployment requires HTTPS before exposure and is a later runtime/security-profile decision, not a change to business-module boundaries.
 
 ## V1 module boundaries
 
@@ -93,7 +93,7 @@ Concurrent operations must not produce negative balances, lost updates, duplicat
 
 ## API boundaries
 
-Frontend/backend communication uses REST over JSON, initially versioned under `/api/v1`. HTTP boundaries use specific DTOs and input validation, return consistent errors, and never expose JPA entities directly. V1 includes inventory, formula-management, production-registration, and recursive-genealogy contracts; authorization remains a deployment decision.
+Frontend/backend communication uses REST over JSON, initially versioned under `/api/v1`. HTTP boundaries use specific DTOs and input validation, return consistent errors, and never expose JPA entities directly. V1 includes inventory, formula-management, production-registration, and recursive-genealogy contracts. The v0.6.0 baseline uses same-origin Spring Security stateful operator sessions: `POST /api/v1/auth/login` and `GET /api/v1/auth/session` are the public bootstrap contracts, `POST /api/v1/auth/logout` requires authentication, and other operational `/api/v1/**` routes require authentication unless a later explicit contract states otherwise.
 
 The production UI supports backend-confirmed generated allocation and explicit manual lot entry. It cannot reserve or authoritatively calculate the next sequence; the backend assigns the definitive generated code only when production succeeds.
 
@@ -113,9 +113,11 @@ Database constraints enforce production integrity where applicable. Flyway V10-V
 
 ## Security and observability
 
-V1 requires authentication before public exposure, secure password storage, externalized secrets, least privilege, validated payloads, explicit CORS, and logs without sensitive data. A detailed production authorization model is not decided by this issue.
+V1 requires stateful Spring Security operator authentication, adaptive one-way password hashes, externalized secrets, validated payloads, and logs without sensitive data. The local operational profile uses a 12-hour idle server-side session with `HttpOnly`, `SameSite=Lax`, and application-wide cookie path; `Secure=false` only for its trusted-LAN HTTP profile, while HTTPS profiles require `Secure=true`. CSRF remains enabled through the Spring Security/Angular same-origin XSRF pattern. Credentials and session identifiers are never stored in Angular browser storage; public registration, JWT, OAuth, SSO, MFA, and complex RBAC are outside this baseline.
 
-Initial observability consists of useful structured logs, health checks, and distinguishable business and infrastructure errors. Distributed tracing is not a V1 priority for this monolith.
+Only the application HTTP entry point is LAN-published; PostgreSQL and secondary backend ports are not. Router port forwarding and public internet exposure are unsupported. Plain HTTP accepts the residual risk that a malicious trusted-LAN observer can see credentials/session traffic; this profile is not equivalent to HTTPS and must not be used for untrusted or public access.
+
+Initial observability consists of useful structured logs, health checks, and distinguishable business and infrastructure errors. `/actuator/health` may be unauthenticated only with minimal, non-sensitive status; detailed health is not public. Swagger UI, OpenAPI JSON, and Prometheus scraping are disabled or not LAN-exposed by default in the operational profile, while development may retain the documented capabilities. Distributed tracing is not a V1 priority for this monolith.
 
 ## Testing strategy
 
@@ -124,8 +126,6 @@ Initial observability consists of useful structured logs, health checks, and dis
 - API tests cover approved contracts and error cases;
 - Spring Modulith tests verify boundaries and cycles.
 
-## Deliberately open post-V1 decisions
+## Deliberately open deployment decisions
 
-Authentication and authorization for public deployment remain a separate deployment decision. Automatic unit
-conversion, speculative events, and unrelated ERP capabilities are not implied by the approved production
-scope.
+OS-specific startup and stable-LAN-endpoint configuration remain real-workstation work for #186. Backup/restore, runtime implementation, and installation/update validation belong to their owning v0.6.0 issues. Public/cloud deployment, remote access, public DNS/TLS, high availability, and the corresponding transport and authorization reassessment remain deferred; a future hosted move must preserve the existing modular monolith and business-module boundaries. Automatic unit conversion, speculative events, and unrelated ERP capabilities are not implied by the approved production scope.
