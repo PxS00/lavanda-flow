@@ -18,7 +18,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(StockReceiptController.class)
+@WebMvcTest(
+    controllers = StockReceiptController.class,
+    properties = "springdoc.api-docs.enabled=true"
+)
 @Import({ClockConfig.class, ExactDecimalJsonConfiguration.class, OpenApiConfiguration.class})
 @ImportAutoConfiguration({
     SpringDocConfiguration.class,
