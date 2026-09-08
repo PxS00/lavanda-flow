@@ -6,6 +6,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/config/api-base-url.token';
+import { AuthSessionService } from './core/auth/auth-session.service';
+import { authenticatedOperatorSession } from './core/auth/testing/authenticated-operator-session';
 
 describe('operational UI workflow', () => {
   const apiUrl = 'https://api.example.test/api/v1';
@@ -21,6 +23,7 @@ describe('operational UI workflow', () => {
       providers: [
         provideRouter(routes), provideHttpClient(), provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: apiUrl },
+        { provide: AuthSessionService, useValue: authenticatedOperatorSession() },
       ],
     });
     http = TestBed.inject(HttpTestingController);

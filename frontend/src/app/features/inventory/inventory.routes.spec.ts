@@ -4,6 +4,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 
 import { routes } from '../../app.routes';
+import { AuthSessionService } from '../../core/auth/auth-session.service';
+import { authenticatedOperatorSession } from '../../core/auth/testing/authenticated-operator-session';
 import { InventoryItemOperationsApiService } from './data-access/inventory-item-operations-api.service';
 import { FefoWithdrawalApiService } from './data-access/fefo-withdrawal-api.service';
 import { InventoryAlertApiService } from './data-access/inventory-alert-api.service';
@@ -16,6 +18,7 @@ describe('inventory routes', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter(routes),
+        { provide: AuthSessionService, useValue: authenticatedOperatorSession() },
         {
           provide: InventoryItemOperationsApiService,
           useValue: {
