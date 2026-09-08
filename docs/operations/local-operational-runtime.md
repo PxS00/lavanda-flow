@@ -71,3 +71,7 @@ docker compose -f compose.operational.yaml --env-file .env.operational up -d
 The `lavanda-flow-operational_postgres-data` volume survives browser closure, container/runtime restart, normal `down`/`up`, image rebuild, and notebook reboot when Docker storage is preserved.
 
 Do not use `docker compose ... down -v` as a normal command. The `-v` option deletes the PostgreSQL volume and its database data. Backup and restore are implemented by #184 and must be completed before go-live or schema upgrades.
+
+## Backup and recovery
+
+Create a successful PostgreSQL logical backup before every application or schema upgrade and follow the recurring backup baseline. Use the guarded disposable restore-verification harness before relying on a backup for recovery. The full maintainer procedure, destructive-recovery warning, off-notebook copy requirement, and retention baseline are in [PostgreSQL backup and restore](postgresql-backup-restore.md).
