@@ -170,6 +170,6 @@ Rejected as an operational prerequisite. CI reproducibility is required, but one
 - #178 implements authentication, session, CSRF, bootstrap, and recovery contracts;
 - #179 consumes those contracts in the frontend;
 - #182 defines the repository runtime implementation and must surface any static-serving blocker;
-- #183 validates installation/update behavior, #184 backup/restore, #185 operational security, #186 real workstation/OS/network integration, and #187 measured resource use;
+- #183 validates the local operational runtime in CI, #184 implements backup/restore, #185 documents the local go-live runbook, #186 prepares the real workstation/OS/network integration, and #187 performs final local go-live validation including resource observations;
 - remote access should prefer a private VPN/tunnel over raw router port forwarding if later required;
 - public/cloud deployment, public DNS/TLS, high availability, PWA/offline behavior, and numeric resource guarantees remain outside v0.6.0.
