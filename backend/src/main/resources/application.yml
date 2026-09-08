@@ -8,17 +8,37 @@ spring:
   flyway:
     enabled: true
 
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health
 
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: never
 
 lavanda:
+  security:
+    bootstrap:
+      enabled: false
+
   inventory:
     alerts:
       expiration-window-days: ${EXPIRATION_ALERT_WINDOW_DAYS:30}
+
+server:
+  servlet:
+    session:
+      timeout: 12h
+      cookie:
+        http-only: true
+        same-site: lax
+        path: /
+        secure: ${LAVANDA_SESSION_COOKIE_SECURE:false}

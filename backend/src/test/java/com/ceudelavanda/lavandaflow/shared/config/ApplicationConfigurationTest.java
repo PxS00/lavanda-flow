@@ -36,5 +36,13 @@ class ApplicationConfigurationTest {
             assertThat(propertySource.getProperty("spring.docker.compose.enabled"))
                 .isEqualTo(true)
         );
+        assertThat(propertySources).anySatisfy(propertySource -> {
+            assertThat(propertySource.getProperty("springdoc.api-docs.enabled"))
+                .isEqualTo(true);
+            assertThat(propertySource.getProperty("springdoc.swagger-ui.enabled"))
+                .isEqualTo(true);
+            assertThat(propertySource.getProperty("management.endpoints.web.exposure.include"))
+                .isEqualTo("health,info,prometheus");
+        });
     }
 }
