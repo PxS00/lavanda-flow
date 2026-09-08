@@ -1,0 +1,114 @@
+<h2 mat-dialog-title>Manutenção de estoque</h2>
+
+<mat-dialog-content>
+  <dl class="batch-context">
+    <div>
+      <dt>Lote</dt>
+      <dd>{{ batch.lotCode || 'Lote sem código' }}</dd>
+    </div>
+    <div>
+      <dt>Quantidade atual</dt>
+      <dd>{{ formatDecimal(batch.currentQuantity) }}</dd>
+    </div>
+    <div>
+      <dt>Status</dt>
+      <dd>{{ batchStatusLabel(batch.status) }}</dd>
+    </div>
+    @if (batch.expiresAt) {
+      <div>
+        <dt>Validade</dt>
+        <dd>{{ formatLocalDate(batch.expiresAt) }}</dd>
+      </div>
+    }
+  </dl>
+
+  @if (isConfirming()) {
+    @let pending = pendingMaintenance();
+    @if (pending !== null) {
+      <section class="confirmation" aria-labelledby="maintenance-confirmation-heading">
+        <h3 id="maintenance-confirmation-heading">Confirmar redução de estoque</h3>
+        <p>
+          Esta operação reduzirá o saldo do lote {{ batch.lotCode || 'selecionado' }} em
+          {{ formatDecimal(pending.quantity.startsWith('-') ? pending.quantity.slice(1) : pending.quantity) }}
+          e criará uma movimentação auditável. Deseja continuar?
+        </p>
+        @if (globalSubmissionError(); as error) {
+          <app-error-state [error]="error" />
+        }
+      </section>
+    }
+  } @else {
+    <form [formGroup]="maintenanceForm" (ngSubmit)="submit()" novalidate>
+      <fieldset>
+        <legend>Operação</legend>
+        <mat-radio-group
+          formControlName="operation"
+          aria-label="Tipo de manutenção de estoque"
+          [disabled]="isSubmitting()"
+        >
+          <mat-radio-button value="ADJUSTMENT">Correção de estoque</mat-radio-button>
+          <mat-radio-button value="LOSS">Perda física</mat-radio-button>
+          <mat-radio-button value="EXPIRED_DISPOSAL">Descarte por vencimento</mat-radio-button>
+        </mat-radio-group>
+      </fieldset>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Quantidade</mat-label>
+        <input
+          matInput
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          formControlName="quantity"
+          [disabled]="isSubmitting()"
+          [attr.aria-describedby]="fieldError('quantity') ? 'maintenance-quantity-error' : null"
+        />
+        <mat-hint>Até 13 dígitos inteiros e 6 casas decimais</mat-hint>
+        @if (controlError('quantity'); as error) {
+          <mat-error>{{ error }}</mat-error>
+        }
+      </mat-form-field>
+      @if (fieldError('quantity'); as error) {
+        <p id="maintenance-quantity-error" class="field-error" role="alert">{{ error }}</p>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Motivo</mat-label>
+        <textarea
+          matInput
+          rows="3"
+          formControlName="reason"
+          [disabled]="isSubmitting()"
+          [attr.aria-describedby]="fieldError('reason') ? 'maintenance-reason-error' : null"
+        ></textarea>
+        <mat-hint>Obrigatório · máximo de 255 caracteres</mat-hint>
+        @if (controlError('reason'); as error) {
+          <mat-error>{{ error }}</mat-error>
+        }
+      </mat-form-field>
+      @if (fieldError('reason'); as error) {
+        <p id="maintenance-reason-error" class="field-error" role="alert">{{ error }}</p>
+      }
+
+      @if (globalSubmissionError(); as error) {
+        <app-error-state [error]="error" />
+      }
+    </form>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (isConfirming()) {
+    <button mat-button type="button" [disabled]="isSubmitting()" (click)="cancelConfirmation()">
+      Cancelar
+    </button>
+    <button mat-flat-button type="button" [disabled]="isSubmitting()" (click)="confirm()">
+      {{ isSubmitting() ? 'Registrando...' : 'Confirmar' }}
+    </button>
+  } @else {
+    <button mat-button type="button" [disabled]="isSubmitting()" (click)="close()">Cancelar</button>
+    <button mat-flat-button type="button" [disabled]="isSubmitting()" (click)="submit()">
+      {{ isSubmitting() ? 'Registrando...' : 'Registrar manutenção' }}
+    </button>
+  }
+</mat-dialog-actions>
