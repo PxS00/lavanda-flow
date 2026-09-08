@@ -16,7 +16,10 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   INSUFFICIENT_ELIGIBLE_STOCK: 'Não há estoque elegível suficiente para concluir a saída.',
   INSUFFICIENT_STOCK: 'Um dos lotes selecionados não possui saldo suficiente.',
   BATCH_NOT_FOUND: 'Lote não encontrado.',
+  BATCH_NOT_EXPIRED: 'Este lote ainda não está vencido e não pode ser descartado por vencimento.',
   EXPIRED_BATCH: 'Um dos lotes selecionados está vencido e não pode ser consumido.',
+  INVALID_STOCK_MOVEMENT_REASON: 'Informe um motivo válido para a movimentação.',
+  INVALID_STOCK_ADJUSTMENT: 'Informe um ajuste de estoque diferente de zero.',
   MINIMUM_STOCK_LEVEL_NOT_FOUND: 'Estoque mínimo não configurado.',
   INVALID_MINIMUM_STOCK_QUANTITY: 'Informe uma quantidade mínima válida.',
   INVALID_BATCH_DATA: 'Os dados do lote são inválidos.',
@@ -48,7 +51,9 @@ const KIND_MESSAGES: Readonly<Record<UiError['kind'], string>> = {
 export function localizeUiError(error: UiError): UiErrorPresentation {
   return {
     message:
-      error.code === undefined ? KIND_MESSAGES[error.kind] : (CODE_MESSAGES[error.code] ?? KIND_MESSAGES[error.kind]),
+      error.code === undefined
+        ? KIND_MESSAGES[error.kind]
+        : (CODE_MESSAGES[error.code] ?? KIND_MESSAGES[error.kind]),
   };
 }
 
@@ -56,6 +61,12 @@ export function localizeFieldError(error: UiError | null, field: string): string
   return error?.details?.[field] === undefined ? undefined : 'Verifique o valor informado.';
 }
 
-export function hasUnhandledDetails(error: UiError | null, inlineFields: readonly string[]): boolean {
-  return error !== null && Object.keys(error.details ?? {}).some((field) => !inlineFields.includes(field));
+export function hasUnhandledDetails(
+  error: UiError | null,
+  inlineFields: readonly string[],
+): boolean {
+  return (
+    error !== null &&
+    Object.keys(error.details ?? {}).some((field) => !inlineFields.includes(field))
+  );
 }

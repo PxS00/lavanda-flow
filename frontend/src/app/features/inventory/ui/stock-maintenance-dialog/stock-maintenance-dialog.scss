@@ -1,0 +1,41 @@
+:host {
+  display: block;
+}
+
+.batch-context {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+.batch-context div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.batch-context dt {
+  font-weight: 600;
+}
+.batch-context dd {
+  margin: 0;
+  text-align: end;
+}
+form,
+mat-radio-group {
+  display: grid;
+  gap: 1rem;
+}
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+mat-radio-group {
+  margin-top: 0.5rem;
+}
+.field-error {
+  color: var(--mat-sys-error);
+  margin: -1rem 0 1rem;
+}
+.confirmation {
+  max-width: 34rem;
+}
