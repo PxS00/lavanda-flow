@@ -45,4 +45,20 @@ class ApplicationConfigurationTest {
                 .isEqualTo("health,info,prometheus");
         });
     }
+
+    @Test
+    void shouldKeepOperationalProfileIndependentFromDevelopmentCompose() throws IOException {
+        var propertySources = loader.load(
+            "application-operational",
+            new ClassPathResource("application-operational.yml")
+        );
+
+        assertThat(propertySources).anySatisfy(propertySource -> {
+            assertThat(propertySource.getProperty("spring.profiles.active")).isNull();
+            assertThat(propertySource.getProperty("spring.docker.compose.enabled"))
+                .isEqualTo(false);
+            assertThat(propertySource.getProperty("spring.jpa.hibernate.ddl-auto"))
+                .isEqualTo("validate");
+        });
+    }
 }
