@@ -1,0 +1,25 @@
+package com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response;
+
+import com.ceudelavanda.lavandaflow.inventory.application.movement.StockMovementResult;
+import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+public record RegisterExpiredStockDisposalResponse(
+    UUID movementId,
+    UUID batchId,
+    MovementType type,
+    BigDecimal quantity,
+    BigDecimal resultingBalance,
+    String reason,
+    Instant occurredAt
+) {
+    public static RegisterExpiredStockDisposalResponse from(StockMovementResult result) {
+        return new RegisterExpiredStockDisposalResponse(
+            result.movementId(), result.batchId(), result.type(), result.quantity(),
+            result.resultingBalance(), result.reason(), result.occurredAt()
+        );
+    }
+}

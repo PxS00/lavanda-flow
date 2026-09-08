@@ -13,6 +13,10 @@ import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStock
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockAdjustmentCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockEntry;
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockEntryCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterExpiredStockDisposal;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterExpiredStockDisposalCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockLoss;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockLossCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockWithdrawal;
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.movement.StockMovementResult;
@@ -82,6 +86,12 @@ class InventoryControllerTest {
 
     @MockitoBean
     private RegisterStockWithdrawal registerStockWithdrawal;
+
+    @MockitoBean
+    private RegisterStockLoss registerStockLoss;
+
+    @MockitoBean
+    private RegisterExpiredStockDisposal registerExpiredStockDisposal;
 
     @MockitoBean
     private RegisterFefoWithdrawal registerFefoWithdrawal;
@@ -974,6 +984,92 @@ class InventoryControllerTest {
             .andExpect(jsonPath("$.details.availableQuantity").value("55.000"));
     }
 
+    @Test
+    void shouldRegisterStockLossWithExactDecimalStrings() throws Exception {
+        var batchId = UUID.randomUUID();
+        var movementId = UUID.randomUUID();
+        when(registerStockLoss.execute(any(RegisterStockLossCommand.class))).thenReturn(new StockMovementResult(
+            movementId, batchId, MovementType.LOSS, new BigDecimal("12.500000"), new BigDecimal("0.000000"),
+            "Bottle broke during handling", Instant.parse("2026-08-25T16:00:00Z")
+        ));
+
+        mockMvc.perform(maintenanceRequest(batchId, "losses", """
+            { "quantity": "12.500000", "reason": "Bottle broke during handling" }
+            """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.movementId").value(movementId.toString()))
+            .andExpect(jsonPath("$.batchId").value(batchId.toString()))
+            .andExpect(jsonPath("$.type").value("LOSS"))
+            .andExpect(jsonPath("$.quantity").value("12.500000"))
+            .andExpect(jsonPath("$.resultingBalance").value("0.000000"))
+            .andExpect(jsonPath("$.reason").value("Bottle broke during handling"));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(RegisterStockLossCommand.class);
+        verify(registerStockLoss).execute(captor.capture());
+        assertThat(captor.getValue().batchId()).isEqualTo(batchId);
+        assertThat(captor.getValue().quantity()).isEqualByComparingTo("12.500000");
+    }
+
+    @Test
+    void shouldRegisterExpiredStockDisposalWithExactDecimalStrings() throws Exception {
+        var batchId = UUID.randomUUID();
+        var movementId = UUID.randomUUID();
+        when(registerExpiredStockDisposal.execute(any(RegisterExpiredStockDisposalCommand.class))).thenReturn(new StockMovementResult(
+            movementId, batchId, MovementType.EXPIRED_DISPOSAL, new BigDecimal("20.000000"), new BigDecimal("80.000000"),
+            "Expired stock physically discarded", Instant.parse("2026-08-25T16:00:00Z")
+        ));
+
+        mockMvc.perform(maintenanceRequest(batchId, "expired-disposals", """
+            { "quantity": "20.000000", "reason": "Expired stock physically discarded" }
+            """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.movementId").value(movementId.toString()))
+            .andExpect(jsonPath("$.batchId").value(batchId.toString()))
+            .andExpect(jsonPath("$.type").value("EXPIRED_DISPOSAL"))
+            .andExpect(jsonPath("$.quantity").value("20.000000"))
+            .andExpect(jsonPath("$.resultingBalance").value("80.000000"));
+
+        var captor = org.mockito.ArgumentCaptor.forClass(RegisterExpiredStockDisposalCommand.class);
+        verify(registerExpiredStockDisposal).execute(captor.capture());
+        assertThat(captor.getValue().reason()).isEqualTo("Expired stock physically discarded");
+    }
+
+    @Test
+    void shouldRejectInvalidLossAndDisposalRequests() throws Exception {
+        for (var operation : List.of("losses", "expired-disposals")) {
+            assertInvalidMaintenanceRequest(operation, "{ \"quantity\": 0, \"reason\": \"Discarded\" }", "quantity");
+            assertInvalidMaintenanceRequest(operation, "{ \"quantity\": -1, \"reason\": \"Discarded\" }", "quantity");
+            assertInvalidMaintenanceRequest(operation, "{ \"quantity\": \"1.1234567\", \"reason\": \"Discarded\" }", "quantity");
+            assertInvalidMaintenanceRequest(operation, "{ \"quantity\": 1, \"reason\": \"  \" }", "reason");
+        }
+    }
+
+    @Test
+    void shouldMapLossAndDisposalBusinessErrors() throws Exception {
+        var lossBatchId = UUID.randomUUID();
+        when(registerStockLoss.execute(any(RegisterStockLossCommand.class))).thenThrow(
+            new InsufficientStockException(lossBatchId, new BigDecimal("2"), BigDecimal.ONE)
+        );
+        mockMvc.perform(maintenanceRequest(lossBatchId, "losses", "{ \"quantity\": 2, \"reason\": \"Damaged\" }"))
+            .andExpect(status().isUnprocessableContent())
+            .andExpect(jsonPath("$.code").value("INSUFFICIENT_STOCK"));
+
+        var missingBatchId = UUID.randomUUID();
+        when(registerStockLoss.execute(any(RegisterStockLossCommand.class))).thenThrow(new BatchNotFoundException(missingBatchId));
+        mockMvc.perform(maintenanceRequest(missingBatchId, "losses", "{ \"quantity\": 1, \"reason\": \"Damaged\" }"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("BATCH_NOT_FOUND"));
+
+        var disposalBatchId = UUID.randomUUID();
+        when(registerExpiredStockDisposal.execute(any(RegisterExpiredStockDisposalCommand.class))).thenThrow(
+            new BatchNotExpiredException(disposalBatchId)
+        );
+        mockMvc.perform(maintenanceRequest(disposalBatchId, "expired-disposals", "{ \"quantity\": 1, \"reason\": \"Discarded\" }"))
+            .andExpect(status().isUnprocessableContent())
+            .andExpect(jsonPath("$.code").value("BATCH_NOT_EXPIRED"))
+            .andExpect(jsonPath("$.details.batchId").value(disposalBatchId.toString()));
+    }
+
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder fefoWithdrawal(
         UUID inventoryItemId,
         String requestBody
@@ -982,6 +1078,25 @@ class InventoryControllerTest {
             .contentType("application/json")
             .with(csrf())
             .content(requestBody);
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder maintenanceRequest(
+        UUID batchId,
+        String operation,
+        String requestBody
+    ) {
+        return post("/api/v1/inventory/batches/{batchId}/{operation}", batchId, operation)
+            .contentType("application/json")
+            .with(csrf())
+            .content(requestBody);
+    }
+
+    private void assertInvalidMaintenanceRequest(String operation, String requestBody, String field) throws Exception {
+        var batchId = UUID.randomUUID();
+        mockMvc.perform(maintenanceRequest(batchId, operation, requestBody))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.details." + field).exists());
     }
 
     private void assertInvalidFefoRequest(String requestBody, String field) throws Exception {
