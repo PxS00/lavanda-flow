@@ -1,12 +1,16 @@
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { map } from 'rxjs';
+
+import { AuthSessionService } from '../../auth/auth-session.service';
+import { localizeUiError } from '../../http/localize-ui-error';
+import { mapHttpError } from '../../http/map-http-error';
 
 @Component({
   selector: 'app-application-shell',
@@ -24,9 +28,33 @@ import { map } from 'rxjs';
 })
 export class ApplicationShell {
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly authSession = inject(AuthSessionService);
+  private readonly router = inject(Router);
 
   protected readonly isHandset = toSignal(
     this.breakpointObserver.observe(Breakpoints.Handset).pipe(map((result) => result.matches)),
     { initialValue: false },
   );
+  protected readonly username = this.authSession.username;
+  protected readonly loggingOut = signal(false);
+  protected readonly logoutError = signal<string | null>(null);
+
+  protected logout(): void {
+    if (this.loggingOut()) {
+      return;
+    }
+
+    this.loggingOut.set(true);
+    this.logoutError.set(null);
+    this.authSession.logout().subscribe({
+      next: () => {
+        this.loggingOut.set(false);
+        void this.router.navigateByUrl('/login');
+      },
+      error: (error: unknown) => {
+        this.loggingOut.set(false);
+        this.logoutError.set(localizeUiError(mapHttpError(error)).message);
+      },
+    });
+  }
 }

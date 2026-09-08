@@ -5,6 +5,10 @@ export interface UiErrorPresentation {
 }
 
 const CODE_MESSAGES: Readonly<Record<string, string>> = {
+  AUTHENTICATION_FAILED: 'Usuário ou senha incorretos.',
+  AUTHENTICATION_REQUIRED: 'Sua sessão expirou. Entre novamente.',
+  ACCESS_DENIED: 'Você não tem acesso a esta operação.',
+  CSRF_VALIDATION_FAILED: 'Não foi possível confirmar a segurança da operação. Tente novamente.',
   INVENTORY_ITEM_NOT_FOUND: 'Item de estoque não encontrado.',
   SUPPLIER_NOT_FOUND: 'Fornecedor não encontrado.',
   INACTIVE_INVENTORY_ITEM: 'Este item de estoque está inativo.',

@@ -11,7 +11,17 @@
   }
 
   <strong>Lavanda Flow</strong>
+  @if (username() !== null) {
+    <span class="operator-name">{{ username() }}</span>
+  }
+  <button mat-button type="button" [disabled]="loggingOut()" (click)="logout()">
+    {{ loggingOut() ? 'Saindo...' : 'Sair' }}
+  </button>
 </mat-toolbar>
+
+@if (logoutError() !== null) {
+  <div class="shell-error" role="alert">{{ logoutError() }}</div>
+}
 
 <mat-sidenav-container class="shell-container">
   <mat-sidenav

@@ -33,4 +33,13 @@ describe('localizeUiError', () => {
       message: 'Ocorreu um erro no servidor. Tente novamente.',
     });
   });
+
+  it.each([
+    ['AUTHENTICATION_FAILED', 'Usuário ou senha incorretos.'],
+    ['AUTHENTICATION_REQUIRED', 'Sua sessão expirou. Entre novamente.'],
+    ['ACCESS_DENIED', 'Você não tem acesso a esta operação.'],
+    ['CSRF_VALIDATION_FAILED', 'Não foi possível confirmar a segurança da operação. Tente novamente.'],
+  ])('localizes security code %s', (code, message) => {
+    expect(localizeUiError({ kind: 'unknown', code, message: 'Backend message' })).toEqual({ message });
+  });
 });

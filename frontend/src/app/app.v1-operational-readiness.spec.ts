@@ -7,6 +7,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/config/api-base-url.token';
+import { AuthSessionService } from './core/auth/auth-session.service';
+import { authenticatedOperatorSession } from './core/auth/testing/authenticated-operator-session';
 import { InventoryItemDto } from './features/catalog/data-access/inventory-item.dto';
 import { ProductionExecutionDto } from './features/production/data-access/production-execution.dto';
 import { ProductionFormulaDto } from './features/production/data-access/production-formula.dto';
@@ -56,6 +58,7 @@ describe('V1 operational readiness', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: apiUrl },
+        { provide: AuthSessionService, useValue: authenticatedOperatorSession() },
       ],
     });
     http = TestBed.inject(HttpTestingController);

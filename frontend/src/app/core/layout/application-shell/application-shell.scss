@@ -20,4 +20,11 @@ mat-sidenav {
     padding: 16px;
   }
 }
+.operator-name {
+  margin-left: auto;
+}
 
+.shell-error {
+  color: var(--mat-sys-error);
+  padding: 0.5rem 1rem;
+}
