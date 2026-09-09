@@ -30,6 +30,9 @@ import { UiError } from '../../../../core/http/ui-error';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../../../shared/ui/loading-state/loading-state';
+import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
+import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
+import { InventoryItemReferenceMetadata } from '../../../catalog/ui/inventory-item-reference-metadata/inventory-item-reference-metadata';
 import { InventoryItemOperationsApiService } from '../../data-access/inventory-item-operations-api.service';
 import {
   BatchInventoryDto,
@@ -79,17 +82,20 @@ type PanelState<T> =
     MatPaginatorModule,
     RouterLink,
     FefoWithdrawalPanel,
+    InventoryItemReferenceMetadata,
   ],
   templateUrl: './inventory-item-operational-page.html',
   styleUrl: './inventory-item-operational-page.scss',
 })
 export class InventoryItemOperationalPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly inventoryItemApi = inject(InventoryItemApiService);
   private readonly operationsApi = inject(InventoryItemOperationsApiService);
   private readonly movementHistoryApi = inject(MovementHistoryApiService);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly overviewRequests = new Subject<string>();
+  private readonly referenceRequests = new Subject<string>();
   private readonly batchRequests = new Subject<string>();
   private readonly minimumRequests = new Subject<string>();
   private readonly movementRequests = new Subject<InventoryItemMovementHistoryQuery>();
@@ -126,6 +132,7 @@ export class InventoryItemOperationalPage {
   protected readonly overviewState = signal<PanelState<InventoryItemOverviewDto>>({
     kind: 'loading',
   });
+  protected readonly referenceState = signal<PanelState<InventoryItemDto>>({ kind: 'loading' });
   protected readonly batchState = signal<PanelState<BatchInventoryDto>>({ kind: 'loading' });
   protected readonly minimumState = signal<PanelState<MinimumStockLevelDto | null>>({
     kind: 'loading',
@@ -155,6 +162,7 @@ export class InventoryItemOperationalPage {
   protected readonly stockStatusLabel = stockStatusLabel;
 
   constructor() {
+    this.bindReferenceRequests();
     this.bindOverviewRequests();
     this.bindBatchRequests();
     this.bindMinimumRequests();
@@ -172,6 +180,10 @@ export class InventoryItemOperationalPage {
 
   protected retryOverview(): void {
     this.emitForCurrentItem(this.overviewRequests);
+  }
+
+  protected retryReferences(): void {
+    this.emitForCurrentItem(this.referenceRequests);
   }
 
   protected retryBatches(): void {
@@ -328,6 +340,7 @@ export class InventoryItemOperationalPage {
     this.confirmingMinimumRemoval.set(false);
 
     this.overviewRequests.next(inventoryItemId);
+    this.referenceRequests.next(inventoryItemId);
     this.batchRequests.next(inventoryItemId);
     this.minimumRequests.next(inventoryItemId);
     this.loadMovements({ inventoryItemId, page: 0, size: DEFAULT_MOVEMENT_PAGE_SIZE });
@@ -374,6 +387,23 @@ export class InventoryItemOperationalPage {
           });
         }
       });
+  }
+
+  private bindReferenceRequests(): void {
+    this.referenceRequests
+      .pipe(
+        tap(() => this.referenceState.set({ kind: 'loading' })),
+        switchMap((inventoryItemId) =>
+          this.inventoryItemApi.getById(inventoryItemId).pipe(
+            map((data): PanelState<InventoryItemDto> => ({ kind: 'loaded', data })),
+            catchError((error: unknown) =>
+              of<PanelState<InventoryItemDto>>({ kind: 'error', error: mapHttpError(error) }),
+            ),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((state) => this.referenceState.set(state));
   }
 
   private bindBatchRequests(): void {

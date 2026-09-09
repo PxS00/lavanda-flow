@@ -142,6 +142,12 @@ function flushWorkspace(
   availableQuantity: number,
   includeMinimum = true,
 ): void {
+  if (includeMinimum) {
+    http.expectOne('https://api.example.test/api/v1/inventory-items/item-1').flush({
+      id: 'item-1', name: 'Essência de lavanda', description: null, category: 'ESSENCE',
+      unitOfMeasure: 'MILLILITER', active: true, essenceReference: '027', productionTypeCode: 'BDS',
+    });
+  }
   const overview = http.expectOne('https://api.example.test/api/v1/inventory/items/item-1/overview');
   overview.flush({ inventoryItemId: 'item-1', name: 'Essência de lavanda', category: 'ESSENCE',
     unitOfMeasure: 'MILLILITER', active: true, asOfDate: '2026-09-01', expirationWindowDays: 30,

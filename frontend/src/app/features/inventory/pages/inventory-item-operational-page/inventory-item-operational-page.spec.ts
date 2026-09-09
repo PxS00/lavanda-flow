@@ -7,6 +7,8 @@ import { By } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 
+import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
+import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
 import { InventoryItemOperationsApiService } from '../../data-access/inventory-item-operations-api.service';
 import {
   BatchInventoryDto,
@@ -80,6 +82,7 @@ describe('InventoryItemOperationalPage', () => {
   let fixture: ComponentFixture<InventoryItemOperationalPage>;
   let routeParams: Subject<ParamMap>;
   let overviewResponse: Subject<InventoryItemOverviewDto>;
+  let catalogResponse: Subject<InventoryItemDto>;
   let batchResponse: Subject<BatchInventoryDto>;
   let minimumResponse: Subject<MinimumStockLevelDto>;
   let movementResponse: Subject<MovementHistoryPageDto>;
@@ -87,6 +90,7 @@ describe('InventoryItemOperationalPage', () => {
   let deleteResponse: Subject<void>;
   let maintenanceResult: Subject<StockMaintenanceMovementDto | undefined>;
   let getOverview: ReturnType<typeof vi.fn<(id: string) => Observable<InventoryItemOverviewDto>>>;
+  let getCatalogItem: ReturnType<typeof vi.fn<(id: string) => Observable<InventoryItemDto>>>;
   let getBatches: ReturnType<typeof vi.fn<(id: string) => Observable<BatchInventoryDto>>>;
   let getMinimumStockLevel: ReturnType<
     typeof vi.fn<(id: string) => Observable<MinimumStockLevelDto>>
@@ -105,6 +109,7 @@ describe('InventoryItemOperationalPage', () => {
   beforeEach(async () => {
     routeParams = new Subject<ParamMap>();
     overviewResponse = new Subject<InventoryItemOverviewDto>();
+    catalogResponse = new Subject<InventoryItemDto>();
     batchResponse = new Subject<BatchInventoryDto>();
     minimumResponse = new Subject<MinimumStockLevelDto>();
     movementResponse = new Subject<MovementHistoryPageDto>();
@@ -113,6 +118,7 @@ describe('InventoryItemOperationalPage', () => {
     maintenanceResult = new Subject<StockMaintenanceMovementDto | undefined>();
 
     getOverview = vi.fn(() => overviewResponse);
+    getCatalogItem = vi.fn(() => catalogResponse);
     getBatches = vi.fn(() => batchResponse);
     getMinimumStockLevel = vi.fn(() => minimumResponse);
     configureMinimumStockLevel = vi.fn(() => configureResponse);
@@ -126,6 +132,7 @@ describe('InventoryItemOperationalPage', () => {
         { provide: MatPaginatorIntl, useFactory: createPtBrPaginatorIntl },
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { paramMap: routeParams } },
+        { provide: InventoryItemApiService, useValue: { getById: getCatalogItem } },
         {
           provide: InventoryItemOperationsApiService,
           useValue: {
@@ -155,6 +162,7 @@ describe('InventoryItemOperationalPage', () => {
   });
 
   it('should request every independent panel for the direct route item', () => {
+    expect(getCatalogItem).toHaveBeenCalledWith(inventoryItemId);
     expect(getOverview).toHaveBeenCalledWith(inventoryItemId);
     expect(getBatches).toHaveBeenCalledWith(inventoryItemId);
     expect(getMinimumStockLevel).toHaveBeenCalledWith(inventoryItemId);
@@ -162,6 +170,92 @@ describe('InventoryItemOperationalPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Carregando visão geral do estoque...');
     expect(fixture.nativeElement.textContent).toContain('Carregando lotes...');
     expect(fixture.nativeElement.textContent).toContain('Carregando histórico de movimentações...');
+  });
+
+  it('should render catalog references once at item identity level', () => {
+    overviewResponse.next(overview);
+    catalogResponse.next({
+      id: inventoryItemId,
+      name: overview.name,
+      description: null,
+      category: 'ESSENCE',
+      unitOfMeasure: 'MILLILITER',
+      active: overview.active,
+      essenceReference: '027',
+      productionTypeCode: 'BHC',
+    });
+    fixture.detectChanges();
+
+    const identity = fixture.nativeElement.querySelector('.item-identity') as HTMLElement;
+    expect(identity.textContent).toContain('Ref. essência:');
+    expect(identity.textContent).toContain('027');
+    expect(identity.textContent).toContain('Cód. produção:');
+    expect(identity.textContent).toContain('BHC');
+    expect(
+      fixture.nativeElement.querySelectorAll('app-inventory-item-reference-metadata'),
+    ).toHaveLength(1);
+  });
+
+  it('should keep stock operations available when the supplementary catalog read fails', () => {
+    overviewResponse.next(overview);
+    catalogResponse.error(apiError(500, 'INTERNAL_ERROR', 'Internal details'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Lavender Essence');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Ocorreu um erro no servidor. Tente novamente.',
+    );
+
+    catalogResponse = new Subject<InventoryItemDto>();
+    getCatalogItem.mockReturnValue(catalogResponse);
+    clickButton('Tentar carregar referências novamente');
+
+    expect(getCatalogItem).toHaveBeenLastCalledWith(inventoryItemId);
+    expect(getOverview).toHaveBeenCalledTimes(1);
+  });
+
+  it('should ignore stale catalog metadata after the route item changes', () => {
+    const itemBId = '5184d508-35eb-42de-a2a0-44c4f6c9b9ae';
+    const itemBOverviewResponse = new Subject<InventoryItemOverviewDto>();
+    const itemBCatalogResponse = new Subject<InventoryItemDto>();
+    getOverview.mockImplementation((id) =>
+      id === itemBId ? itemBOverviewResponse : overviewResponse,
+    );
+    getCatalogItem.mockImplementation((id) =>
+      id === itemBId ? itemBCatalogResponse : catalogResponse,
+    );
+
+    routeParams.next(convertToParamMap({ inventoryItemId: itemBId }));
+    itemBOverviewResponse.next({ ...overview, inventoryItemId: itemBId, name: 'Lavender Base' });
+    catalogResponse.next({
+      id: inventoryItemId,
+      name: overview.name,
+      description: null,
+      category: 'ESSENCE',
+      unitOfMeasure: 'MILLILITER',
+      active: true,
+      essenceReference: '027',
+      productionTypeCode: null,
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Lavender Base');
+    expect(fixture.nativeElement.textContent).not.toContain('027');
+
+    itemBCatalogResponse.next({
+      id: itemBId,
+      name: 'Lavender Base',
+      description: null,
+      category: 'BASE',
+      unitOfMeasure: 'MILLILITER',
+      active: true,
+      essenceReference: null,
+      productionTypeCode: 'BHC',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('BHC');
+    expect(fixture.nativeElement.textContent).not.toContain('027');
   });
 
   it('should render backend overview semantics without conflating physical and available stock', () => {
