@@ -3,8 +3,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: var(--lf-space-4);
   min-height: 160px;
+  padding: var(--lf-space-6);
+  border: 1px solid var(--lf-color-border);
+  border-radius: var(--lf-radius-medium);
+  background: var(--lf-color-surface-muted);
+  color: var(--lf-color-text-muted);
   text-align: center;
 }
 

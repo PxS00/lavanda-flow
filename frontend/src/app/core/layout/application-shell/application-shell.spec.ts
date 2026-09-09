@@ -1,7 +1,8 @@
+import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { ApplicationShell } from './application-shell';
@@ -11,13 +12,19 @@ describe('ApplicationShell', () => {
   let fixture: ComponentFixture<ApplicationShell>;
   let logout: ReturnType<typeof vi.fn>;
   let router: Router;
+  let breakpointState: BehaviorSubject<BreakpointState>;
 
   beforeEach(async () => {
     logout = vi.fn(() => of({ kind: 'unauthenticated' }));
+    breakpointState = new BehaviorSubject<BreakpointState>({ matches: false, breakpoints: {} });
     await TestBed.configureTestingModule({
       imports: [ApplicationShell],
       providers: [
         provideRouter([]),
+        {
+          provide: BreakpointObserver,
+          useValue: { observe: () => breakpointState },
+        },
         {
           provide: AuthSessionService,
           useValue: { username: signal('Operadora'), logout },
@@ -36,25 +43,54 @@ describe('ApplicationShell', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should link Inventory navigation to the catalog workspace', () => {
-    const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
-    const inventoryLink = links.find((link) => link.textContent?.trim() === 'Estoque');
+  it('should render grouped supported destinations without a fake output route', () => {
+    const headings = Array.from(
+      fixture.nativeElement.querySelectorAll('.nav-group h2'),
+      (heading: Element) => heading.textContent?.trim(),
+    );
+    const links = Array.from(
+      fixture.nativeElement.querySelectorAll('.primary-navigation a'),
+    ) as HTMLAnchorElement[];
 
-    expect(inventoryLink?.getAttribute('href')).toBe('/catalog');
+    expect(headings).toEqual(['Visão geral', 'Estoque', 'Produção', 'Cadastros']);
+    expect(links.map((link) => [link.textContent?.trim(), link.getAttribute('href')])).toEqual([
+      ['Painel', '/dashboard'],
+      ['Estoque', '/catalog'],
+      ['Entradas', '/receipts'],
+      ['Alertas', '/inventory/alerts'],
+      ['Produção', '/production/formulas'],
+      ['Fornecedores', '/suppliers'],
+    ]);
+    expect(fixture.nativeElement.textContent).not.toContain('Saídas');
+    expect(links.some((link) => link.getAttribute('href') === '/outputs')).toBe(false);
   });
 
-  it('should link Suppliers navigation to the supplier workspace', () => {
-    const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
-    const suppliersLink = links.find((link) => link.textContent?.trim() === 'Fornecedores');
+  it('should render a replaceable accessible brand slot', () => {
+    const brandSlot = fixture.nativeElement.querySelector('.brand-slot') as HTMLAnchorElement;
+    const brandLogo = brandSlot.querySelector('.brand-logo') as HTMLImageElement;
 
-    expect(suppliersLink?.getAttribute('href')).toBe('/suppliers');
+    expect(brandSlot.getAttribute('aria-label')).toBe('Lavanda Flow — Painel');
+    expect(brandSlot.getAttribute('href')).toBe('/dashboard');
+    expect(brandLogo).toBeTruthy();
+    expect(brandLogo.getAttribute('src')).toBe('/lavanda-flow-logo.svg');
+    expect(brandLogo.getAttribute('alt')).toBe('Lavanda Flow');
   });
 
-  it('should link Receipts navigation to the stock receipt workflow', () => {
-    const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLAnchorElement[];
-    const receiptsLink = links.find((link) => link.textContent?.trim() === 'Entradas');
+  it('should expose an accessible navigation trigger on narrow screens', async () => {
+    breakpointState.next({ matches: true, breakpoints: {} });
+    fixture.detectChanges();
+    const menuButton = fixture.nativeElement.querySelector(
+      'button[aria-label="Abrir navegação"]',
+    ) as HTMLButtonElement;
 
-    expect(receiptsLink?.getAttribute('href')).toBe('/receipts');
+    expect(menuButton).toBeTruthy();
+    expect(menuButton.getAttribute('aria-expanded')).toBe('false');
+
+    menuButton.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(menuButton.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('offers a Portuguese logout action', () => {

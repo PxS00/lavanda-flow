@@ -35,6 +35,9 @@ describe('LoginPage', () => {
   });
 
   it('renders Portuguese labels and credential-safe inputs', () => {
+    expect(fixture.nativeElement.querySelector('.login-brand')?.textContent).toContain(
+      'Lavanda Flow',
+    );
     expect(fixture.nativeElement.textContent).toContain('Entrar no Lavanda Flow');
     expect(input('username').getAttribute('autocomplete')).toBe('username');
     expect(input('password').getAttribute('type')).toBe('password');

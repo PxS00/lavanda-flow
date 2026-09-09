@@ -3,8 +3,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--lf-space-2);
   min-height: 160px;
+  padding: var(--lf-space-6);
+  border: 1px dashed var(--lf-color-border);
+  border-radius: var(--lf-radius-medium);
+  background: var(--lf-color-surface-muted);
   text-align: center;
 }
 
@@ -14,5 +18,5 @@
 }
 
 .empty-state p {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--lf-color-text-muted);
 }

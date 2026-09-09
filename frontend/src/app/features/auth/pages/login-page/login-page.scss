@@ -3,18 +3,45 @@
   display: flex;
   justify-content: center;
   min-height: 100%;
-  padding: 1.5rem;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  background: var(--lf-color-canvas);
 }
 
 mat-card {
+  padding: var(--lf-space-4);
   max-width: 28rem;
   width: 100%;
+  border-top: 4px solid var(--lf-color-accent);
+  border-radius: var(--lf-radius-large);
+  box-shadow: var(--lf-shadow-surface);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--lf-space-3);
+  padding: var(--lf-space-2) var(--lf-space-4) var(--lf-space-4);
+  color: var(--lf-color-text);
+  font-family: var(--lf-font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.login-brand-mark {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--lf-color-primary);
+  border-radius: var(--lf-radius-small);
+  background: var(--lf-color-accent-soft);
+  font-size: 1rem;
 }
 
 form {
   display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: var(--lf-space-4);
+  margin-top: var(--lf-space-4);
 }
 
 .login-error {
