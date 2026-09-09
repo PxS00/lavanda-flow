@@ -37,8 +37,8 @@ describe('ProductionFormulaListPage', () => {
         category: 'OTHER',
         unitOfMeasure: 'MILLILITER',
         active: false,
-        essenceReference: null,
-        productionTypeCode: 'EAU_DE_PARFUM',
+        essenceReference: '027',
+        productionTypeCode: 'BHC',
       }),
     );
 
@@ -74,6 +74,10 @@ describe('ProductionFormulaListPage', () => {
 
     expect(getById).toHaveBeenCalledWith('output-item');
     expect(fixture.nativeElement.textContent).toContain('Produto de lavanda');
+    expect(fixture.nativeElement.textContent).toContain('Ref. essência:');
+    expect(fixture.nativeElement.textContent).toContain('027');
+    expect(fixture.nativeElement.textContent).toContain('Cód. produção:');
+    expect(fixture.nativeElement.textContent).toContain('BHC');
     expect(fixture.nativeElement.textContent).not.toContain('output-item');
     expect(fixture.nativeElement.textContent).toContain('2 ingrediente(s)');
     const formulaLink = fixture.nativeElement.querySelector('mat-card a') as HTMLAnchorElement;

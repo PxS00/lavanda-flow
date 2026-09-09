@@ -14,6 +14,7 @@ import { LoadingState } from '../../../../shared/ui/loading-state/loading-state'
 import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
 import { inventoryItemUnitLabel } from '../../../catalog/inventory-item-display';
+import { InventoryItemReferenceMetadata } from '../../../catalog/ui/inventory-item-reference-metadata/inventory-item-reference-metadata';
 import { ProductionFormulaDto } from '../../data-access/production-formula.dto';
 import { ProductionFormulaApiService } from '../../data-access/production-formula-api.service';
 
@@ -33,6 +34,7 @@ interface FormulaListItem {
     EmptyState,
     ErrorState,
     LoadingState,
+    InventoryItemReferenceMetadata,
     MatButtonModule,
     MatCardModule,
     RouterLink,

@@ -11,8 +11,8 @@ import { ProductionFormulaFormPage } from './production-formula-form-page';
 
 describe('ProductionFormulaFormPage', () => {
   const items: readonly InventoryItemDto[] = [
-    item('output', 'Produto'),
-    item('ingredient-a', 'Essência A'),
+    { ...item('output', 'Produto'), productionTypeCode: 'BHC' },
+    { ...item('ingredient-a', 'Essência A'), essenceReference: '027' },
     item('ingredient-b', 'Essência B', false),
   ];
   const formula: ProductionFormulaDto = {
@@ -117,6 +117,10 @@ describe('ProductionFormulaFormPage', () => {
       ],
     });
     expect(fixture.nativeElement.textContent).toContain('Essência B');
+    expect(fixture.nativeElement.textContent).toContain('Cód. produção:');
+    expect(fixture.nativeElement.textContent).toContain('BHC');
+    expect(fixture.nativeElement.textContent).toContain('Ref. essência:');
+    expect(fixture.nativeElement.textContent).toContain('027');
 
     submit();
     expect(update).toHaveBeenCalledWith(formula.id, {
