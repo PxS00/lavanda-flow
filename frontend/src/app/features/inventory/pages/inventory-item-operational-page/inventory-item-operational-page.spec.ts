@@ -424,7 +424,17 @@ describe('InventoryItemOperationalPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum lote encontrado');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Registre uma entrada de estoque para criar o primeiro lote',
+    );
+    expect(fixture.nativeElement.textContent).toContain('o saldo não é editado diretamente');
     expect(fixture.nativeElement.textContent).toContain('Nenhuma movimentação encontrada');
+    expect(fixture.nativeElement.textContent).toContain(
+      'O histórico será exibido após uma operação auditável de estoque',
+    );
+    expect(fixture.nativeElement.textContent).toContain(
+      'as movimentações anteriores não são reescritas',
+    );
   });
 
   it('should keep usable overview data visible when a secondary panel fails', () => {

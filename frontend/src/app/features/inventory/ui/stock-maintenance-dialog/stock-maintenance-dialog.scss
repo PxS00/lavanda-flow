@@ -32,6 +32,10 @@ fieldset {
 mat-radio-group {
   margin-top: 0.5rem;
 }
+.operation-guidance {
+  margin: 0.75rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
 .field-error {
   color: var(--mat-sys-error);
   margin: -1rem 0 1rem;

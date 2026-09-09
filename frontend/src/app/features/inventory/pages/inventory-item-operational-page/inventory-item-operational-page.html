@@ -131,7 +131,7 @@
         @if (batches.data.batches.length === 0) {
           <app-empty-state
             title="Nenhum lote encontrado"
-            message="Este item não possui lotes registrados."
+            message="Registre uma entrada de estoque para criar o primeiro lote; o saldo não é editado diretamente."
           />
         } @else {
           <div class="table-scroll">
@@ -191,6 +191,10 @@
 
   <section class="panel minimum-panel" aria-labelledby="minimum-heading">
     <h2 id="minimum-heading">Estoque mínimo</h2>
+    <p class="semantics-note">
+      Esta quantidade é usada pelo sistema para monitorar o estoque; os alertas seguem os dados
+      confirmados pelo sistema.
+    </p>
     @let minimum = minimumState();
     @switch (minimum.kind) {
       @case ('loading') {
@@ -300,6 +304,10 @@
 
   <section class="panel" aria-labelledby="movements-heading">
     <h2 id="movements-heading">Histórico de movimentações</h2>
+    <p class="semantics-note">
+      Operações de estoque criam movimentações auditáveis. Para corrigir um saldo, registre uma
+      nova correção; as movimentações anteriores não são reescritas.
+    </p>
     @let movements = movementState();
     @switch (movements.kind) {
       @case ('loading') {
@@ -315,7 +323,7 @@
         @if (movements.data.content.length === 0) {
           <app-empty-state
             title="Nenhuma movimentação encontrada"
-            message="Nenhuma movimentação de estoque foi registrada para este item."
+            message="O histórico será exibido após uma operação auditável de estoque."
           />
         } @else {
           <div class="table-scroll">

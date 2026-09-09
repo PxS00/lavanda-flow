@@ -50,6 +50,25 @@
           <mat-radio-button value="LOSS">Perda física</mat-radio-button>
           <mat-radio-button value="EXPIRED_DISPOSAL">Descarte por vencimento</mat-radio-button>
         </mat-radio-group>
+        @switch (maintenanceForm.controls.operation.value) {
+          @case ('ADJUSTMENT') {
+            <p class="operation-guidance">
+              Registra uma correção de estoque como nova movimentação auditável, sem reescrever as
+              movimentações anteriores.
+            </p>
+          }
+          @case ('LOSS') {
+            <p class="operation-guidance">
+              Registra o estoque perdido fisicamente como nova movimentação auditável.
+            </p>
+          }
+          @case ('EXPIRED_DISPOSAL') {
+            <p class="operation-guidance">
+              Registra o descarte por vencimento como nova movimentação auditável. O sistema
+              confirma se o lote está elegível para esta operação.
+            </p>
+          }
+        }
       </fieldset>
 
       <mat-form-field appearance="outline">
@@ -63,7 +82,14 @@
           [disabled]="isSubmitting()"
           [attr.aria-describedby]="fieldError('quantity') ? 'maintenance-quantity-error' : null"
         />
-        <mat-hint>Até 13 dígitos inteiros e 6 casas decimais</mat-hint>
+        @if (maintenanceForm.controls.operation.value === 'ADJUSTMENT') {
+          <mat-hint>
+            Use valor positivo para aumentar ou negativo para reduzir · até 13 dígitos inteiros e
+            6 casas decimais
+          </mat-hint>
+        } @else {
+          <mat-hint>Valor positivo · até 13 dígitos inteiros e 6 casas decimais</mat-hint>
+        }
         @if (controlError('quantity'); as error) {
           <mat-error>{{ error }}</mat-error>
         }
@@ -81,7 +107,7 @@
           [disabled]="isSubmitting()"
           [attr.aria-describedby]="fieldError('reason') ? 'maintenance-reason-error' : null"
         ></textarea>
-        <mat-hint>Obrigatório · máximo de 255 caracteres</mat-hint>
+        <mat-hint>Contexto auditável da movimentação · obrigatório · máximo de 255 caracteres</mat-hint>
         @if (controlError('reason'); as error) {
           <mat-error>{{ error }}</mat-error>
         }
