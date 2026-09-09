@@ -17,7 +17,7 @@ form {
 
 .page-header div {
   display: grid;
-  gap: 4px;
+  gap: var(--lf-space-3);
 }
 
 h1,

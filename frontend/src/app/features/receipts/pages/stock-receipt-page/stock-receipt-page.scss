@@ -1,7 +1,7 @@
 .receipt-page,
 .receipt-form {
   display: grid;
-  gap: 1rem;
+  gap: var(--lf-space-5);
 }
 
 .page-header h1,
@@ -14,7 +14,7 @@
 .selection-grid,
 .fields-grid {
   display: grid;
-  gap: 1rem;
+  gap: var(--lf-space-5);
 }
 
 .fields-grid {
@@ -61,7 +61,7 @@ mat-form-field {
   align-items: center;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1024px) {
   .fields-grid,
   .success-card dl {
     grid-template-columns: 1fr;
