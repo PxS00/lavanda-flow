@@ -58,6 +58,13 @@ describe('ProductionFormulaFormPage', () => {
     fixture.detectChanges();
   }
 
+  it('should explain that formula references do not move stock', async () => {
+    await configure(null);
+
+    expect(fixture.nativeElement.textContent).toContain('quantidades de referência');
+    expect(fixture.nativeElement.textContent).toContain('não cria nem consome estoque');
+  });
+
   it('should create a formula with multiple ingredient quantities only after backend confirmation', async () => {
     await configure(null);
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);

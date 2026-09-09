@@ -28,7 +28,7 @@
         <mat-card appearance="outlined" class="success-card" aria-live="polite">
           <mat-card-header>
             <mat-card-title>Produção registrada</mat-card-title>
-            <mat-card-subtitle>O backend confirmou a execução e o lote definitivo.</mat-card-subtitle>
+            <mat-card-subtitle>O sistema confirmou a execução e o lote definitivo.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <dl class="summary-grid">
@@ -86,7 +86,7 @@
         @let refresh = refreshState();
         @switch (refresh.kind) {
           @case ('loading') {
-            <app-loading-state message="Atualizando o estoque confirmado pelo backend..." />
+            <app-loading-state message="Atualizando o estoque confirmado pelo sistema..." />
           }
           @case ('ready') {
             <mat-card appearance="outlined">
@@ -138,7 +138,7 @@
             <mat-card-header>
               <mat-card-title>Revisar produção</mat-card-title>
               <mat-card-subtitle>
-                Esta revisão confirma apenas os dados informados. O backend ainda validará fórmula,
+                Esta revisão confirma apenas os dados informados. O sistema ainda validará fórmula,
                 estoque, validade, elegibilidade e lote.
               </mat-card-subtitle>
             </mat-card-header>
@@ -300,7 +300,7 @@
                   </mat-radio-group>
                   @if (lotCodeMode() === 'GENERATED') {
                     <p class="field-hint">
-                      O código definitivo será gerado pelo backend somente quando a produção for
+                      O código definitivo será gerado pelo servidor somente quando a produção for
                       registrada com sucesso. Nenhuma sequência é reservada nesta tela.
                     </p>
                   }
@@ -359,7 +359,7 @@
                   <mat-card-content>
                     <p class="field-hint">
                       As quantidades de referência são apenas contexto. O escalonamento para a
-                      quantidade produzida será validado exclusivamente pelo backend.
+                      quantidade produzida será validado exclusivamente pelo sistema.
                     </p>
                   </mat-card-content>
                 </mat-card>
@@ -440,7 +440,7 @@
                               as batch
                             ) {
                               <p class="batch-facts">
-                                Status informado pelo backend: {{ batchStatusLabel(batch.status) }} ·
+                                Status informado pelo sistema: {{ batchStatusLabel(batch.status) }} ·
                                 saldo atual: {{ formatDecimal(batch.currentQuantity) }}
                                 {{ unitLabel(ingredient.item.unitOfMeasure) }}
                                 @if (batch.expiresAt) {

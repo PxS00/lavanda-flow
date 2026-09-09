@@ -65,6 +65,7 @@ describe('ProductionFormulaListPage', () => {
     ).find((link) => link.textContent?.includes('Registrar produção'));
 
     expect(registrationLink?.getAttribute('href')).toBe('/production/executions/new');
+    expect(fixture.nativeElement.textContent).toContain('Salvar uma fórmula não movimenta estoque');
   });
 
   it('should render formulas returned by the backend', () => {
@@ -84,6 +85,13 @@ describe('ProductionFormulaListPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhuma fórmula cadastrada');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Cadastre uma fórmula para definir as referências antes de registrar uma produção',
+    );
+    const registrationLink = Array.from(
+      fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>,
+    ).find((link) => link.textContent?.includes('Cadastrar fórmula'));
+    expect(registrationLink?.getAttribute('href')).toBe('/production/formulas/new');
   });
 
   it('should render an error when the output item lookup fails', () => {

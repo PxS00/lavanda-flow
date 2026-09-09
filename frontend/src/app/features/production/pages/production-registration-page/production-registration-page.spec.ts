@@ -111,6 +111,10 @@ describe('ProductionRegistrationPage', () => {
     await configure([]);
 
     expect(fixture.nativeElement.textContent).toContain('Nenhuma fórmula disponível');
+    const formulaLink = fixture.nativeElement.querySelector(
+      'a[href="/production/formulas/new"]',
+    ) as HTMLAnchorElement | null;
+    expect(formulaLink?.textContent).toContain('Cadastrar fórmula');
     expect(register).not.toHaveBeenCalled();
   });
 
@@ -122,7 +126,9 @@ describe('ProductionRegistrationPage', () => {
 
     expect(register).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Revisar produção');
+    expect(fixture.nativeElement.textContent).toContain('O sistema ainda validará fórmula');
     expect(fixture.nativeElement.textContent).toContain('definido pelo servidor ao concluir');
+    expect(fixture.nativeElement.textContent).not.toContain('backend');
     expect(fixture.nativeElement.textContent).not.toContain(execution.lotCode);
 
     clickButton('Confirmar produção');
