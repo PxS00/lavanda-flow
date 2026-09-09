@@ -67,10 +67,13 @@ describe('ApplicationShell', () => {
 
   it('should render a replaceable accessible brand slot', () => {
     const brandSlot = fixture.nativeElement.querySelector('.brand-slot') as HTMLAnchorElement;
+    const brandLogo = brandSlot.querySelector('.brand-logo') as HTMLImageElement;
 
     expect(brandSlot.getAttribute('aria-label')).toBe('Lavanda Flow — Painel');
     expect(brandSlot.getAttribute('href')).toBe('/dashboard');
-    expect(brandSlot.querySelector('.brand-mark')?.textContent).toContain('LF');
+    expect(brandLogo).toBeTruthy();
+    expect(brandLogo.getAttribute('src')).toBe('/lavanda-flow-logo.svg');
+    expect(brandLogo.getAttribute('alt')).toBe('Lavanda Flow');
   });
 
   it('should expose an accessible navigation trigger on narrow screens', async () => {
