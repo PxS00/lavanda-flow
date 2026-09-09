@@ -31,6 +31,26 @@
                   {{ enumLabel(overview.data.category) }} ·
                   {{ enumLabel(overview.data.unitOfMeasure) }}
                 </p>
+                @let references = referenceState();
+                @switch (references.kind) {
+                  @case ('loading') {
+                    <p class="reference-status">Carregando referências do item...</p>
+                  }
+                  @case ('error') {
+                    <div class="reference-error">
+                      <app-error-state [error]="references.error" />
+                      <button mat-button type="button" (click)="retryReferences()">
+                        Tentar carregar referências novamente
+                      </button>
+                    </div>
+                  }
+                  @case ('loaded') {
+                    <app-inventory-item-reference-metadata
+                      [essenceReference]="references.data.essenceReference"
+                      [productionTypeCode]="references.data.productionTypeCode"
+                    />
+                  }
+                }
               </div>
               <div class="item-actions">
                 <strong>{{ overview.data.active ? 'Ativo' : 'Inativo' }}</strong>

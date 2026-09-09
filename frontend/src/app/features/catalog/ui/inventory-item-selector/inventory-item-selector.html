@@ -23,9 +23,15 @@
   </mat-form-field>
 
   @if (selected(); as item) {
-    <p class="selected" aria-live="polite">
-      Selecionado: <strong>{{ item.name }}</strong> · Ativo · {{ unitLabel(item.unitOfMeasure) }}
-    </p>
+    <div class="selected" aria-live="polite">
+      <p>
+        Selecionado: <strong>{{ item.name }}</strong> · Ativo · {{ unitLabel(item.unitOfMeasure) }}
+      </p>
+      <app-inventory-item-reference-metadata
+        [essenceReference]="item.essenceReference"
+        [productionTypeCode]="item.productionTypeCode"
+      />
+    </div>
   }
 
   @let currentState = state();
@@ -45,6 +51,10 @@
           @for (item of currentState.items; track item.id) {
             <button mat-stroked-button type="button" [disabled]="disabled()" (click)="choose(item)">
               <span>{{ item.name }}</span>
+              <app-inventory-item-reference-metadata
+                [essenceReference]="item.essenceReference"
+                [productionTypeCode]="item.productionTypeCode"
+              />
               <small>Ativo · {{ unitLabel(item.unitOfMeasure) }}</small>
             </button>
           }

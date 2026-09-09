@@ -122,6 +122,12 @@ mat-radio-group {
   overflow-wrap: anywhere;
 }
 
+.identified-item,
+.confirmed-consumptions li {
+  display: grid;
+  gap: var(--lf-space-2);
+}
+
 .review-list,
 .overview-list,
 .confirmed-consumptions ul {

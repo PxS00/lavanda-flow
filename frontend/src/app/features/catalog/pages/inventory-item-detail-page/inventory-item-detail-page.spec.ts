@@ -62,6 +62,11 @@ describe('InventoryItemDetailPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Mililitro');
     expect(fixture.nativeElement.textContent).toContain('027');
     expect(fixture.nativeElement.textContent).toContain('BDS');
+    expect(
+      Array.from(fixture.nativeElement.querySelectorAll('code') as NodeListOf<HTMLElement>).map(
+        (element) => element.textContent,
+      ),
+    ).toEqual(['027', 'BDS']);
 
     const operationLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find(
       (link) => (link as HTMLAnchorElement).textContent?.includes('Abrir operações de estoque'),

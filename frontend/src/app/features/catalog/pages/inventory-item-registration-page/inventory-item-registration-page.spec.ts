@@ -52,6 +52,12 @@ describe('InventoryItemRegistrationPage', () => {
     expect(register).not.toHaveBeenCalled();
   });
 
+  it('should explain that optional references receive a stable deliberate assignment', () => {
+    expect(fixture.nativeElement.textContent).toContain('atribuição estável e deliberada');
+    expect(fixture.nativeElement.textContent).toContain('de 001 a 999');
+    expect(fixture.nativeElement.textContent).toContain('3 letras maiúsculas');
+  });
+
   it('should show max-length validation', () => {
     setValidModel({ name: 'x'.repeat(256) });
 

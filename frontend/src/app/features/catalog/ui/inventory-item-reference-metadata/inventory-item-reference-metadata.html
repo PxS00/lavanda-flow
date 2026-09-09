@@ -1,0 +1,14 @@
+@if (essenceReference() !== null || productionTypeCode() !== null) {
+  <span class="reference-metadata">
+    @if (essenceReference(); as reference) {
+      <span class="reference"
+        ><span class="label">Ref. essência:</span><code>{{ reference }}</code></span
+      >
+    }
+    @if (productionTypeCode(); as code) {
+      <span class="reference"
+        ><span class="label">Cód. produção:</span><code>{{ code }}</code></span
+      >
+    }
+  </span>
+}
