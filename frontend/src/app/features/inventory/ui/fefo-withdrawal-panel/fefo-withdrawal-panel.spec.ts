@@ -48,6 +48,20 @@ describe('FefoWithdrawalPanel', () => {
     fixture.detectChanges();
   });
 
+  it('should explain automatic FEFO allocation before confirmation without manual allocation controls', () => {
+    const text = fixture.nativeElement.textContent as string;
+
+    expect(text).toContain('Informe a quantidade desejada');
+    expect(text).toContain('seleciona automaticamente os lotes elegíveis por validade (FEFO)');
+    expect(text).toContain('não é alterada manualmente');
+    expect(text).toContain('mais de um lote');
+    expect(
+      fixture.nativeElement.querySelector(
+        'mat-select, input[type="radio"], input[type="checkbox"]',
+      ),
+    ).toBeNull();
+  });
+
   it.each([
     ['', 'Quantidade é obrigatória.'],
     ['0', 'quantidade positiva'], ['-1', 'quantidade positiva'], ['1e3', 'quantidade positiva'],

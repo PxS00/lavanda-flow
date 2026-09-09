@@ -34,6 +34,10 @@
     <form class="receipt-form" (submit)="submit($event)" novalidate>
       <mat-card appearance="outlined">
         <mat-card-content class="selection-grid">
+          <p class="selection-guidance">
+            Selecione o item que receberá o novo lote. Informe o fornecedor quando houver esse
+            vínculo na entrada.
+          </p>
           <app-inventory-item-selector
             [selected]="selectedItem()"
             [disabled]="isSubmitting()"
@@ -89,7 +93,7 @@
               [formField]="receiptForm.lotCode"
               [attr.aria-describedby]="backendFieldError('lotCode') ? 'receipt-lot-backend-error' : null"
             />
-            <mat-hint>Opcional · máximo de 255 caracteres</mat-hint>
+            <mat-hint>Identifica o lote recebido quando informado · opcional · máximo de 255 caracteres</mat-hint>
             @if (receiptForm.lotCode().touched() && receiptForm.lotCode().invalid()) {
               <mat-error>{{ receiptForm.lotCode().errors()[0].message }}</mat-error>
             }
@@ -136,7 +140,10 @@
               [formField]="receiptForm.reason"
               [attr.aria-describedby]="backendFieldError('reason') ? 'receipt-reason-backend-error' : null"
             ></textarea>
-            <mat-hint>Opcional · máximo de 255 caracteres</mat-hint>
+            <mat-hint>
+              Contexto auditável da entrada; não altera as regras de estoque · opcional · máximo de
+              255 caracteres
+            </mat-hint>
             @if (receiptForm.reason().touched() && receiptForm.reason().invalid()) {
               <mat-error>{{ receiptForm.reason().errors()[0].message }}</mat-error>
             }

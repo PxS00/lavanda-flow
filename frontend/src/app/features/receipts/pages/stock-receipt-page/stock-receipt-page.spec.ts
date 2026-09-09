@@ -93,6 +93,15 @@ describe('StockReceiptPage', () => {
     fixture.detectChanges();
   });
 
+  it('should explain receipt item, batch, expiration, and audit context without changing rules', () => {
+    const text = fixture.nativeElement.textContent as string;
+
+    expect(text).toContain('item que receberá o novo lote');
+    expect(text).toContain('Identifica o lote recebido quando informado');
+    expect(text).toContain('as regras de data do sistema permanecem válidas');
+    expect(text).toContain('Contexto auditável da entrada; não altera as regras de estoque');
+  });
+
   it('should submit one valid receipt and lock the completed transaction against repeat submission', () => {
     selectItem();
     selectSupplier();

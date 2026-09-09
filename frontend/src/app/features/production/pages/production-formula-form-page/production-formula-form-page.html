@@ -4,7 +4,10 @@
     <h1 id="formula-form-heading">
       {{ isEditing() ? 'Editar fórmula de produção' : 'Cadastrar fórmula de produção' }}
     </h1>
-    <p>Informe o item de saída e os requisitos de ingredientes para a produção.</p>
+    <p>
+      Informe o item de saída e as quantidades de referência dos ingredientes. Salvar a fórmula não
+      cria nem consome estoque.
+    </p>
   </header>
 
   @let currentState = state();

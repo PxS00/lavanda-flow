@@ -95,6 +95,22 @@ describe('StockMaintenanceDialog', () => {
     ).toEqual(['ADJUSTMENT', 'LOSS', 'EXPIRED_DISPOSAL']);
   });
 
+  it.each([
+    [
+      'ADJUSTMENT',
+      'nova movimentação auditável, sem reescrever as movimentações anteriores',
+    ],
+    ['LOSS', 'estoque perdido fisicamente como nova movimentação auditável'],
+    [
+      'EXPIRED_DISPOSAL',
+      'O sistema confirma se o lote está elegível para esta operação',
+    ],
+  ] as const)('should show distinct persistent guidance for %s', (operation, expectedCopy) => {
+    setForm(operation, '1', 'Motivo');
+
+    expect(fixture.nativeElement.textContent).toContain(expectedCopy);
+  });
+
   it('should send a positive adjustment with its exact decimal string without confirmation', () => {
     setForm('ADJUSTMENT', '9999999999999.123456', ' Contagem física ');
 
