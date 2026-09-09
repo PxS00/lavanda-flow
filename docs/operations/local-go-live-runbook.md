@@ -203,7 +203,13 @@ After start, restart, reboot, or upgrade, confirm health, open the stable LAN UR
 
 Use [PostgreSQL backup and restore](postgresql-backup-restore.md) as the authoritative recovery contract. Create a successful logical backup after every operating day with changed business data and immediately before every application/schema upgrade. Keep at least seven recent successful daily backups locally, retain the pre-upgrade backup until post-upgrade validation succeeds, and keep weekly copies outside the notebook for four weeks.
 
-Google Drive is the selected off-notebook mechanism. Copy both the `.dump` and `.dump.sha256` files, then verify the copied checksum. Backup operations remain maintainer procedures. The recovery document contains the destructive database-recreation warning; do not replace it with an automated restore or volume-removal shortcut.
+On the prepared Galaxy Book, the maintainer runs the validated backup path with Git Bash:
+
+```bash
+scripts/operations/backup-postgres.sh
+```
+
+Git Bash is maintenance tooling only and is never required for normal operator use. PostgreSQL dumps contain sensitive operational data; SHA-256 verifies integrity but does not encrypt a dump. Google Drive is the selected off-notebook mechanism: copy both the `.dump` and `.dump.sha256` artifacts, then verify the copied checksum after transfer. Backup operations remain maintainer procedures. The recovery document contains the destructive database-recreation warning; do not replace it with an automated restore or volume-removal shortcut.
 
 For an exact-tag upgrade:
 
@@ -234,6 +240,9 @@ Do not use the CSV as a second operational system or recurring import input.
 - [ ] The operator understands that closed-lid tablet access is available only while the notebook is plugged in.
 - [ ] A current local backup exists and its checksum is verified.
 - [ ] A current Google Drive off-notebook copy exists and its checksum is verified.
+- [ ] PostgreSQL remains private and TCP 5432 is not published.
+- [ ] The initial inventory migration is complete if it was genuinely required.
+- [ ] Representative non-destructive smoke checks are accepted.
 - [ ] The maintainer can identify the [PostgreSQL backup and restore](postgresql-backup-restore.md) recovery contract.
 - [ ] Operator credentials were delivered outside the repository.
 - [ ] Lavanda Flow/PostgreSQL is declared the operational source of truth.
