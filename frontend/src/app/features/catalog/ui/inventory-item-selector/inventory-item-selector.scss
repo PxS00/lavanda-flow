@@ -12,7 +12,7 @@
 
 .selector-heading h2,
 .selector-heading p,
-.selected,
+.selected p,
 .empty-results {
   margin: 0;
 }
@@ -35,6 +35,7 @@ mat-form-field {
 }
 
 .results button span,
+.results button app-inventory-item-reference-metadata,
 .results button small {
   display: block;
 }
@@ -44,6 +45,8 @@ mat-form-field {
 }
 
 .selected {
+  display: grid;
+  gap: var(--lf-space-2);
   padding: 0.75rem;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 0.5rem;

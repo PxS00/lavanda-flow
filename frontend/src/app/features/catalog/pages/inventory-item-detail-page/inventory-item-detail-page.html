@@ -37,11 +37,23 @@
             </div>
             <div>
               <dt>Referência da essência</dt>
-              <dd>{{ currentState.item.essenceReference || 'Não atribuída.' }}</dd>
+              <dd>
+                @if (currentState.item.essenceReference; as reference) {
+                  <code>{{ reference }}</code>
+                } @else {
+                  Não atribuída.
+                }
+              </dd>
             </div>
             <div>
               <dt>Código do tipo de produção</dt>
-              <dd>{{ currentState.item.productionTypeCode || 'Não atribuído.' }}</dd>
+              <dd>
+                @if (currentState.item.productionTypeCode; as code) {
+                  <code>{{ code }}</code>
+                } @else {
+                  Não atribuído.
+                }
+              </dd>
             </div>
           </dl>
         </mat-card-content>

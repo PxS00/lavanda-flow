@@ -67,6 +67,25 @@ describe('InventoryItemListPage', () => {
     expect(links.some((link) => link.getAttribute('href') === '/catalog/new')).toBe(true);
   });
 
+  it('should show assigned reference values and no compact placeholders for null values', () => {
+    response.next({
+      ...populatedPage,
+      content: [
+        { ...item, essenceReference: '027', productionTypeCode: 'BHC' },
+        { ...item, id: 'without-references', name: 'Base neutra' },
+      ],
+    });
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll('mat-card') as NodeListOf<HTMLElement>;
+    expect(cards[0].textContent).toContain('Ref. essência:');
+    expect(cards[0].textContent).toContain('027');
+    expect(cards[0].textContent).toContain('Cód. produção:');
+    expect(cards[0].textContent).toContain('BHC');
+    expect(cards[1].textContent).not.toContain('Ref. essência');
+    expect(cards[1].textContent).not.toMatch(/000|---|N\/A/);
+  });
+
   it('should guide an initially empty catalog toward the existing registration action', () => {
     response.next({ ...populatedPage, content: [], totalElements: 0, totalPages: 0 });
     fixture.detectChanges();
