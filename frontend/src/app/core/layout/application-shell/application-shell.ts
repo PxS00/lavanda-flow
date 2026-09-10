@@ -1,4 +1,4 @@
-import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,8 @@ import { map } from 'rxjs';
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { localizeUiError } from '../../http/localize-ui-error';
 import { mapHttpError } from '../../http/map-http-error';
+
+const persistentNavigationQuery = '(min-width: 960px) and (hover: hover) and (pointer: fine)';
 
 @Component({
   selector: 'app-application-shell',
@@ -31,9 +33,11 @@ export class ApplicationShell {
   private readonly authSession = inject(AuthSessionService);
   private readonly router = inject(Router);
 
-  protected readonly isHandset = toSignal(
-    this.breakpointObserver.observe(Breakpoints.Handset).pipe(map((result) => result.matches)),
-    { initialValue: false },
+  protected readonly usesOverlayNavigation = toSignal(
+    this.breakpointObserver
+      .observe(persistentNavigationQuery)
+      .pipe(map((result) => !result.matches)),
+    { initialValue: true },
   );
   protected readonly username = this.authSession.username;
   protected readonly loggingOut = signal(false);
