@@ -92,8 +92,8 @@ mat-nav-list {
 }
 
 .nav-link {
-  min-height: 3rem;
-  margin: 0 var(--lf-space-1);
+  min-height: 2.75rem;
+  margin: var(--lf-space-2);
   padding: 0 var(--lf-space-2);
   border-radius: var(--lf-radius-small);
 }
@@ -129,10 +129,26 @@ mat-nav-list {
   background: color-mix(in srgb, var(--lf-palette-lavender-light) 35%, transparent);
 }
 
+.nav-link:focus-visible,
+.nav-link.active-link {
+  color: var(--lf-palette-gold);
+}
+
+.nav-link:focus-visible {
+  outline-width: 2px;
+  outline-offset: 2px;
+}
+
 .nav-link.active-link {
   background: var(--lf-palette-lavender-light);
-  box-shadow: inset 0.1875rem 0 0 var(--lf-color-primary);
   font-weight: 700;
+}
+
+.nav-link:focus-visible .nav-label,
+.nav-link:focus-visible .nav-glyph,
+.nav-link.active-link .nav-label,
+.nav-link.active-link .nav-glyph {
+  color: var(--lf-palette-gold);
 }
 
 .persistent-navigation:not(:hover):not(:focus-within) .nav-group h2,
@@ -147,12 +163,21 @@ mat-nav-list {
 }
 
 .persistent-navigation:not(:hover):not(:focus-within) .nav-link {
+  margin: var(--lf-space-1) 0;
   padding: 0;
 }
 
 .persistent-navigation:not(:hover):not(:focus-within) .nav-link-content {
   display: flex;
   justify-content: center;
+}
+
+.persistent-navigation:not(:hover):not(:focus-within) .primary-navigation {
+  gap: 0;
+}
+
+.persistent-navigation:not(:hover):not(:focus-within) mat-nav-list {
+  padding: 0;
 }
 
 mat-sidenav-content {
