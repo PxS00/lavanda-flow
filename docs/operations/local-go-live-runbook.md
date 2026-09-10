@@ -136,7 +136,12 @@ Use it only when the approved external CSV is the cutover source and the importe
 
 The optional final `Retirada` field has the #136/#168 migration meaning only: it adjusts the opening quantity and never creates reconstructed withdrawal or `CONSUMPTION` history.
 
-The established import documentation uses a non-web Java invocation. A one-off Compose run using the already-built image and a read-only external CSV bind mount has not yet been proven on the prepared Windows host, so this runbook does not invent that command. #187 must validate a safe containerized invocation or explicitly retain the documented host-tooling procedure before cutover.
+The established import documentation uses a one-off non-web Compose container from the exact selected
+operational image, with the external CSV mounted read-only. It requires no host Java, Maven, or separately
+built JAR. For #187, follow the explicitly isolated disposable-project validation path in [Initial inventory
+snapshot import](initial-inventory-import.md#187-isolated-acceptance-validation); it must not use
+`.env.operational`, `lavanda-flow-operational`, or its volume. For #188, use the documented operational
+`DRY_RUN` then accepted `APPLY` path there, against the existing healthy private PostgreSQL service only.
 
 ## Automatic startup, availability, and shortcut
 

@@ -7,7 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class LavandaFlowApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(LavandaFlowApplication.class, args);
+		var context = SpringApplication.run(LavandaFlowApplication.class, args);
+		if (context.getEnvironment().getProperty("lavanda.inventory.initial-import.enabled", Boolean.class, false)) {
+			System.exit(SpringApplication.exit(context));
+		}
 	}
 
 }
