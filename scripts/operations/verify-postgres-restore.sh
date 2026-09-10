@@ -11,12 +11,21 @@ for command in docker curl openssl sha256sum; do
   }
 done
 
-if (($# != 1)); then
-  echo "Usage: $0 BACKUP.dump" >&2
+usage() {
+  echo "Usage: $0 [--strict-representative] BACKUP.dump" >&2
+}
+
+strict_representative=false
+if (($# == 2)) && [[ "$1" == "--strict-representative" ]]; then
+  strict_representative=true
+  backup_file="$2"
+elif (($# == 1)) && [[ "$1" != --* ]]; then
+  backup_file="$1"
+else
+  usage
   exit 2
 fi
 
-backup_file="$1"
 if [[ ! -f "$backup_file" ]]; then
   echo "Backup artifact not found: $backup_file" >&2
   exit 1
@@ -150,55 +159,6 @@ if [[ "$flyway_failures" != "0" ]]; then
   exit 1
 fi
 assert_positive_count 'Flyway history entries' 'SELECT count(*) FROM flyway_schema_history;'
-assert_positive_count 'inventory items' 'SELECT count(*) FROM inventory_item;'
-assert_positive_count 'inventory batches' 'SELECT count(*) FROM inventory_batch;'
-assert_positive_count 'stock movements' 'SELECT count(*) FROM stock_movement;'
-assert_positive_count 'production formulas' 'SELECT count(*) FROM production_formula;'
-assert_positive_count 'production formula ingredients' 'SELECT count(*) FROM production_formula_ingredient;'
-assert_positive_count 'production executions' 'SELECT count(*) FROM production_execution;'
-assert_positive_count 'production consumptions' 'SELECT count(*) FROM production_consumption;'
-assert_positive_count 'batch to catalog-item relationships' '
-  SELECT count(*)
-  FROM inventory_batch batch
-  JOIN inventory_item item ON item.id = batch.inventory_item_id;
-'
-assert_positive_count 'movement to batch relationships' '
-  SELECT count(*)
-  FROM stock_movement movement
-  JOIN inventory_batch batch ON batch.id = movement.batch_id;
-'
-assert_positive_count 'formula ingredient relationships' '
-  SELECT count(*)
-  FROM production_formula_ingredient ingredient
-  JOIN production_formula formula ON formula.id = ingredient.formula_id
-  JOIN inventory_item item ON item.id = ingredient.inventory_item_id;
-'
-assert_positive_count 'production output relationships' '
-  SELECT count(*)
-  FROM production_execution execution
-  JOIN production_formula formula ON formula.id = execution.formula_id
-  JOIN inventory_item item ON item.id = execution.output_inventory_item_id
-  JOIN inventory_batch batch ON batch.id = execution.output_batch_id
-  WHERE batch.inventory_item_id = execution.output_inventory_item_id
-    AND batch.lot_code = execution.lot_code;
-'
-assert_positive_count 'production consumption relationships' '
-  SELECT count(*)
-  FROM production_consumption consumption
-  JOIN production_execution execution ON execution.id = consumption.execution_id
-  JOIN inventory_batch source_batch ON source_batch.id = consumption.source_batch_id
-  JOIN inventory_item source_item ON source_item.id = consumption.source_inventory_item_id
-  JOIN stock_movement movement ON movement.id = consumption.movement_id
-  WHERE source_batch.inventory_item_id = source_item.id
-    AND movement.batch_id = source_batch.id;
-'
-assert_positive_count 'production genealogy paths' '
-  SELECT count(*)
-  FROM production_consumption consumption
-  JOIN inventory_batch source_batch ON source_batch.id = consumption.source_batch_id
-  JOIN production_execution execution ON execution.id = consumption.execution_id
-  JOIN inventory_batch output_batch ON output_batch.id = execution.output_batch_id;
-'
 assert_zero_count 'batches without catalog items' '
   SELECT count(*)
   FROM inventory_batch batch
@@ -254,6 +214,58 @@ assert_zero_count 'broken production genealogy paths' '
      OR execution.id IS NULL
      OR output_batch.id IS NULL;
 '
+
+if [[ "$strict_representative" == true ]]; then
+  assert_positive_count 'inventory items' 'SELECT count(*) FROM inventory_item;'
+  assert_positive_count 'inventory batches' 'SELECT count(*) FROM inventory_batch;'
+  assert_positive_count 'stock movements' 'SELECT count(*) FROM stock_movement;'
+  assert_positive_count 'production formulas' 'SELECT count(*) FROM production_formula;'
+  assert_positive_count 'production formula ingredients' 'SELECT count(*) FROM production_formula_ingredient;'
+  assert_positive_count 'production executions' 'SELECT count(*) FROM production_execution;'
+  assert_positive_count 'production consumptions' 'SELECT count(*) FROM production_consumption;'
+  assert_positive_count 'batch to catalog-item relationships' '
+    SELECT count(*)
+    FROM inventory_batch batch
+    JOIN inventory_item item ON item.id = batch.inventory_item_id;
+  '
+  assert_positive_count 'movement to batch relationships' '
+    SELECT count(*)
+    FROM stock_movement movement
+    JOIN inventory_batch batch ON batch.id = movement.batch_id;
+  '
+  assert_positive_count 'formula ingredient relationships' '
+    SELECT count(*)
+    FROM production_formula_ingredient ingredient
+    JOIN production_formula formula ON formula.id = ingredient.formula_id
+    JOIN inventory_item item ON item.id = ingredient.inventory_item_id;
+  '
+  assert_positive_count 'production output relationships' '
+    SELECT count(*)
+    FROM production_execution execution
+    JOIN production_formula formula ON formula.id = execution.formula_id
+    JOIN inventory_item item ON item.id = execution.output_inventory_item_id
+    JOIN inventory_batch batch ON batch.id = execution.output_batch_id
+    WHERE batch.inventory_item_id = execution.output_inventory_item_id
+      AND batch.lot_code = execution.lot_code;
+  '
+  assert_positive_count 'production consumption relationships' '
+    SELECT count(*)
+    FROM production_consumption consumption
+    JOIN production_execution execution ON execution.id = consumption.execution_id
+    JOIN inventory_batch source_batch ON source_batch.id = consumption.source_batch_id
+    JOIN inventory_item source_item ON source_item.id = consumption.source_inventory_item_id
+    JOIN stock_movement movement ON movement.id = consumption.movement_id
+    WHERE source_batch.inventory_item_id = source_item.id
+      AND movement.batch_id = source_batch.id;
+  '
+  assert_positive_count 'production genealogy paths' '
+    SELECT count(*)
+    FROM production_consumption consumption
+    JOIN inventory_batch source_batch ON source_batch.id = consumption.source_batch_id
+    JOIN production_execution execution ON execution.id = consumption.execution_id
+    JOIN inventory_batch output_batch ON output_batch.id = execution.output_batch_id;
+  '
+fi
 
 "${compose[@]}" up -d --build lavanda-flow-app
 for _ in {1..60}; do

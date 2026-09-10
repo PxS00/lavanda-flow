@@ -211,6 +211,12 @@ scripts/operations/backup-postgres.sh
 
 Git Bash is maintenance tooling only and is never required for normal operator use. PostgreSQL dumps contain sensitive operational data; SHA-256 verifies integrity but does not encrypt a dump. Google Drive is the selected off-notebook mechanism: copy both the `.dump` and `.dump.sha256` artifacts, then verify the copied checksum after transfer. Backup operations remain maintainer procedures. The recovery document contains the destructive database-recreation warning; do not replace it with an automated restore or volume-removal shortcut.
 
+For normal maintenance, verify a backup through the default disposable restore command in the recovery document.
+It accepts valid empty or sparse operational business data while checking Flyway, restored-row integrity, current
+application startup, and health. Use `--strict-representative` only for an acceptance backup that deliberately
+contains representative catalog, inventory, production, and genealogy data; it is expected to fail before those
+workflows exist.
+
 For an exact-tag upgrade:
 
 1. Confirm the current runtime is healthy and create/verify the pre-upgrade backup plus off-notebook checksum-verified copy.
