@@ -1,29 +1,41 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatSidenav } from '@angular/material/sidenav';
+import { By } from '@angular/platform-browser';
+import { provideRouter, Router } from '@angular/router';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 
 import { AuthSessionService } from '../../auth/auth-session.service';
 import { ApplicationShell } from './application-shell';
+
+const persistentNavigationQuery = '(min-width: 960px) and (hover: hover) and (pointer: fine)';
 
 describe('ApplicationShell', () => {
   let component: ApplicationShell;
   let fixture: ComponentFixture<ApplicationShell>;
   let logout: ReturnType<typeof vi.fn>;
   let router: Router;
-  let breakpointState: BehaviorSubject<BreakpointState>;
+  let persistentNavigationState: BehaviorSubject<BreakpointState>;
+  let observe: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     logout = vi.fn(() => of({ kind: 'unauthenticated' }));
-    breakpointState = new BehaviorSubject<BreakpointState>({ matches: false, breakpoints: {} });
+    persistentNavigationState = new BehaviorSubject<BreakpointState>({ matches: true, breakpoints: {} });
+    observe = vi.fn((query: string | readonly string[]) => {
+      if (query !== persistentNavigationQuery) {
+        throw new Error(`Unexpected breakpoint query: ${query}`);
+      }
+
+      return persistentNavigationState;
+    });
     await TestBed.configureTestingModule({
       imports: [ApplicationShell],
       providers: [
         provideRouter([]),
         {
           provide: BreakpointObserver,
-          useValue: { observe: () => breakpointState },
+          useValue: { observe },
         },
         {
           provide: AuthSessionService,
@@ -41,6 +53,16 @@ describe('ApplicationShell', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    expect(observe).toHaveBeenCalledWith(persistentNavigationQuery);
+  });
+
+  it('uses a persistent compact rail for a wide fine-pointer viewport', () => {
+    const sidenav = fixture.debugElement.query(By.directive(MatSidenav)).componentInstance as MatSidenav;
+
+    expect(sidenav.mode).toBe('side');
+    expect(sidenav.opened).toBe(true);
+    expect(fixture.nativeElement.querySelector('mat-sidenav').classList.contains('persistent-navigation')).toBe(true);
+    expect(fixture.nativeElement.querySelector('button[aria-label="Abrir navegação"]')).toBeNull();
   });
 
   it('should render grouped supported destinations without a fake output route', () => {
@@ -61,6 +83,16 @@ describe('ApplicationShell', () => {
       ['Produção', '/production/formulas'],
       ['Fornecedores', '/suppliers'],
     ]);
+    expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
+      'Painel',
+      'Estoque',
+      'Entradas',
+      'Alertas',
+      'Produção',
+      'Fornecedores',
+    ]);
+    expect(links.every((link) => link.querySelector('.nav-link-content .nav-glyph') !== null)).toBe(true);
+    expect(fixture.nativeElement.querySelectorAll('.nav-glyph[aria-hidden="true"]')).toHaveLength(6);
     expect(fixture.nativeElement.textContent).not.toContain('Saídas');
     expect(links.some((link) => link.getAttribute('href') === '/outputs')).toBe(false);
   });
@@ -72,18 +104,33 @@ describe('ApplicationShell', () => {
     expect(brandSlot.getAttribute('aria-label')).toBe('Lavanda Flow — Painel');
     expect(brandSlot.getAttribute('href')).toBe('/dashboard');
     expect(brandLogo).toBeTruthy();
-    expect(brandLogo.getAttribute('src')).toBe('/lavanda-flow-logo.svg');
-    expect(brandLogo.getAttribute('alt')).toBe('Lavanda Flow');
+    expect(brandSlot.querySelector('.compact-brand')?.getAttribute('src')).toBe('/favicon-lf.svg');
+    expect(brandSlot.querySelector('.full-brand')?.getAttribute('src')).toBe('/lavanda-flow-logo.svg');
   });
 
-  it('should expose an accessible navigation trigger on narrow screens', async () => {
-    breakpointState.next({ matches: true, breakpoints: {} });
+  it('keeps labels and links structurally available for keyboard rail expansion', () => {
+    const links = Array.from(fixture.nativeElement.querySelectorAll('.primary-navigation a')) as HTMLAnchorElement[];
+
+    expect(links).toHaveLength(6);
+    expect(links.every((link) => link.querySelector('.nav-label')?.textContent?.trim())).toBe(true);
+    expect(links.every((link) => link.getAttribute('tabindex') !== '-1')).toBe(true);
+    expect(fixture.nativeElement.querySelector('mat-sidenav').classList.contains('persistent-navigation')).toBe(true);
+  });
+
+  it('uses an overlay drawer and closes it after navigation for touch or narrow contexts', async () => {
+    persistentNavigationState.next({ matches: false, breakpoints: {} });
     fixture.detectChanges();
+    await fixture.whenStable();
+    const sidenav = fixture.debugElement.query(By.directive(MatSidenav)).componentInstance as MatSidenav;
     const menuButton = fixture.nativeElement.querySelector(
       'button[aria-label="Abrir navegação"]',
     ) as HTMLButtonElement;
 
+    expect(sidenav.mode).toBe('over');
+    expect(sidenav.opened).toBe(false);
+    expect(fixture.nativeElement.querySelector('mat-sidenav').classList.contains('overlay-navigation')).toBe(true);
     expect(menuButton).toBeTruthy();
+    expect(menuButton.getAttribute('aria-label')).toBe('Abrir navegação');
     expect(menuButton.getAttribute('aria-expanded')).toBe('false');
 
     menuButton.click();
@@ -91,6 +138,17 @@ describe('ApplicationShell', () => {
     await fixture.whenStable();
 
     expect(menuButton.getAttribute('aria-expanded')).toBe('true');
+    expect(menuButton.getAttribute('aria-label')).toBe('Fechar navegação');
+    expect(menuButton.textContent?.trim()).toBe('');
+
+    (fixture.nativeElement.querySelector('.primary-navigation a') as HTMLAnchorElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(sidenav.opened).toBe(false);
+    expect((fixture.nativeElement.querySelector('.primary-navigation a') as HTMLAnchorElement).getAttribute('href')).toBe(
+      '/dashboard',
+    );
   });
 
   it('offers a Portuguese logout action', () => {
@@ -117,5 +175,6 @@ describe('ApplicationShell', () => {
     expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
       'Ocorreu um erro inesperado.',
     );
+    expect(fixture.nativeElement.textContent).toContain('Operadora');
   });
 });
