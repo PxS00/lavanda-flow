@@ -67,11 +67,50 @@ describe('InventoryItemListPage', () => {
     expect(links.some((link) => link.getAttribute('href') === '/catalog/new')).toBe(true);
   });
 
-  it('should render the empty state', () => {
+  it('should show assigned reference values and no compact placeholders for null values', () => {
+    response.next({
+      ...populatedPage,
+      content: [
+        { ...item, essenceReference: '027', productionTypeCode: 'BHC' },
+        { ...item, id: 'without-references', name: 'Base neutra' },
+      ],
+    });
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll('mat-card') as NodeListOf<HTMLElement>;
+    expect(cards[0].textContent).toContain('Ref. essência:');
+    expect(cards[0].textContent).toContain('027');
+    expect(cards[0].textContent).toContain('Cód. produção:');
+    expect(cards[0].textContent).toContain('BHC');
+    expect(cards[1].textContent).not.toContain('Ref. essência');
+    expect(cards[1].textContent).not.toMatch(/000|---|N\/A/);
+  });
+
+  it('should guide an initially empty catalog toward the existing registration action', () => {
     response.next({ ...populatedPage, content: [], totalElements: 0, totalPages: 0 });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum item de estoque encontrado');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Cadastre um item para começar a montar o catálogo',
+    );
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('should keep a filtered empty result distinct from initial empty and error states', () => {
+    response.next(populatedPage);
+    fixture.componentInstance.filtersModel.set({ name: 'inexistente', category: '', active: 'all' });
+    fixture.detectChanges();
+    submitFilters();
+
+    response.next({ ...populatedPage, content: [], totalElements: 0, totalPages: 0 });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Tente alterar ou redefinir os filtros');
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'Cadastre um item para começar a montar o catálogo',
+    );
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
   });
 
   it('should correct an empty out-of-range page once and render the last valid page', () => {

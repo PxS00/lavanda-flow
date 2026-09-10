@@ -5,6 +5,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 
 import { API_BASE_URL } from '../../core/config/api-base-url.token';
+import { AuthSessionService } from '../../core/auth/auth-session.service';
+import { authenticatedOperatorSession } from '../../core/auth/testing/authenticated-operator-session';
 import { routes } from '../../app.routes';
 import { SupplierApiService } from './data-access/supplier-api.service';
 
@@ -15,6 +17,7 @@ describe('supplier routes', () => {
         provideRouter(routes),
         provideHttpClient(),
         { provide: API_BASE_URL, useValue: '/api/v1' },
+        { provide: AuthSessionService, useValue: authenticatedOperatorSession() },
         {
           provide: SupplierApiService,
           useValue: {

@@ -1,10 +1,28 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
+import { InventoryItemDto } from '../../data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
 import { InventoryItemSelector } from './inventory-item-selector';
 
 describe('InventoryItemSelector', () => {
+  const referencedItem: InventoryItemDto = {
+    id: 'item-1',
+    name: 'Essência de lavanda',
+    description: null,
+    category: 'ESSENCE',
+    unitOfMeasure: 'MILLILITER',
+    active: true,
+    essenceReference: '027',
+    productionTypeCode: 'BHC',
+  };
+  const itemWithoutReferences: InventoryItemDto = {
+    ...referencedItem,
+    id: 'item-2',
+    name: 'Base neutra',
+    essenceReference: null,
+    productionTypeCode: null,
+  };
   let fixture: ComponentFixture<InventoryItemSelector>;
   let search: ReturnType<typeof vi.fn>;
 
@@ -12,11 +30,11 @@ describe('InventoryItemSelector', () => {
     vi.useFakeTimers();
     search = vi.fn(() =>
       of({
-        content: [],
+        content: [referencedItem, itemWithoutReferences],
         page: 0,
         size: 10,
-        totalElements: 0,
-        totalPages: 0,
+        totalElements: 2,
+        totalPages: 1,
       }),
     );
 
@@ -35,5 +53,56 @@ describe('InventoryItemSelector', () => {
 
   it('should bound the initial search to active inventory items', () => {
     expect(search).toHaveBeenCalledWith({ name: '', active: true, page: 0, size: 10 });
+  });
+
+  it('associates the search helper without changing selector guidance', () => {
+    const searchField = fixture.nativeElement.querySelector('.search-field') as HTMLElement;
+    const input = searchField.querySelector('input') as HTMLInputElement;
+    const helper = searchField.querySelector('#inventory-item-search-hint') as HTMLParagraphElement;
+
+    expect(helper.textContent?.trim()).toBe('Os resultados são limitados a 10 itens ativos');
+    expect(input.getAttribute('aria-describedby')).toContain('inventory-item-search-hint');
+    expect(fixture.nativeElement.querySelector('.selector-heading h2')?.textContent?.trim()).toBe('Item de estoque');
+    expect(fixture.nativeElement.querySelector('.selector-heading p')?.textContent?.trim()).toBe(
+      'Busca apenas itens ativos do catálogo.',
+    );
+    expect(fixture.nativeElement.querySelector('mat-hint')).toBeNull();
+  });
+
+  it('should show reference metadata in results without fabricating null values', () => {
+    const resultButtons = fixture.nativeElement.querySelectorAll(
+      '.results button',
+    ) as NodeListOf<HTMLButtonElement>;
+
+    expect(resultButtons[0].textContent).toContain('Ref. essência:');
+    expect(resultButtons[0].textContent).toContain('027');
+    expect(resultButtons[0].textContent).toContain('Cód. produção:');
+    expect(resultButtons[0].textContent).toContain('BHC');
+    expect(resultButtons[1].textContent).not.toContain('Ref. essência');
+    expect(resultButtons[1].textContent).not.toMatch(/000|---|N\/A/);
+  });
+
+  it('should emit the original DTO unchanged and preserve select and clear behavior', () => {
+    const emitted: (InventoryItemDto | null)[] = [];
+    fixture.componentInstance.selectionChange.subscribe((item) => emitted.push(item));
+
+    (fixture.nativeElement.querySelector('.results button') as HTMLButtonElement).click();
+    fixture.componentRef.setInput('selected', referencedItem);
+    fixture.detectChanges();
+
+    expect(emitted[0]).toBe(referencedItem);
+    expect(fixture.nativeElement.querySelector('.selected')?.textContent).toContain(
+      'Ref. essência:',
+    );
+
+    const clearButton = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((button) => button.textContent?.trim() === 'Limpar') as HTMLButtonElement;
+    clearButton.click();
+    vi.advanceTimersByTime(200);
+    fixture.detectChanges();
+
+    expect(emitted).toEqual([referencedItem, null]);
+    expect(search).toHaveBeenLastCalledWith({ name: '', active: true, page: 0, size: 10 });
   });
 });

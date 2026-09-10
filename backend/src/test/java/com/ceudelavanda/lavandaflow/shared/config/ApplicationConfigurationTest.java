@@ -36,5 +36,29 @@ class ApplicationConfigurationTest {
             assertThat(propertySource.getProperty("spring.docker.compose.enabled"))
                 .isEqualTo(true)
         );
+        assertThat(propertySources).anySatisfy(propertySource -> {
+            assertThat(propertySource.getProperty("springdoc.api-docs.enabled"))
+                .isEqualTo(true);
+            assertThat(propertySource.getProperty("springdoc.swagger-ui.enabled"))
+                .isEqualTo(true);
+            assertThat(propertySource.getProperty("management.endpoints.web.exposure.include"))
+                .isEqualTo("health,info,prometheus");
+        });
+    }
+
+    @Test
+    void shouldKeepOperationalProfileIndependentFromDevelopmentCompose() throws IOException {
+        var propertySources = loader.load(
+            "application-operational",
+            new ClassPathResource("application-operational.yml")
+        );
+
+        assertThat(propertySources).anySatisfy(propertySource -> {
+            assertThat(propertySource.getProperty("spring.profiles.active")).isNull();
+            assertThat(propertySource.getProperty("spring.docker.compose.enabled"))
+                .isEqualTo(false);
+            assertThat(propertySource.getProperty("spring.jpa.hibernate.ddl-auto"))
+                .isEqualTo("validate");
+        });
     }
 }

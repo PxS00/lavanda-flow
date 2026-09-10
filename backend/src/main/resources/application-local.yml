@@ -20,6 +20,15 @@ springdoc:
     enabled: true
     path: /swagger-ui.html
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
 logging:
   level:
     com.ceudelavanda.lavandaflow: DEBUG

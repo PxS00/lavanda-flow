@@ -1,0 +1,26 @@
+:host {
+  display: contents;
+}
+
+.reference-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lf-space-2) var(--lf-space-4);
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.label {
+  font-weight: 600;
+}
+
+.reference {
+  display: inline-flex;
+  gap: var(--lf-space-1);
+}
+
+code {
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+  user-select: text;
+}

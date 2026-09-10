@@ -2,7 +2,10 @@
   <header class="page-header">
     <div>
       <h1 id="formula-list-heading">Fórmulas de produção</h1>
-      <p>Defina os itens e as quantidades de referência para cada produção.</p>
+      <p>
+        Defina itens e quantidades de referência. Salvar uma fórmula não movimenta estoque; use
+        Registrar produção para registrar uma execução real.
+      </p>
     </div>
     <div class="page-actions">
       <a mat-stroked-button routerLink="/production/executions/new">Registrar produção</a>
@@ -23,7 +26,7 @@
       @if (currentState.formulas.length === 0) {
         <app-empty-state
           title="Nenhuma fórmula cadastrada"
-          message="Cadastre uma fórmula para definir os requisitos de produção."
+          message="Cadastre uma fórmula para definir as referências antes de registrar uma produção."
         />
       } @else {
         <ul class="formula-list" aria-label="Fórmulas de produção">
@@ -38,7 +41,13 @@
                   <dl>
                     <div>
                       <dt>Item de saída</dt>
-                      <dd>{{ item.outputItem.name }} · {{ unitLabel(item.outputItem.unitOfMeasure) }}</dd>
+                      <dd class="item-identity">
+                        <span>{{ item.outputItem.name }} · {{ unitLabel(item.outputItem.unitOfMeasure) }}</span>
+                        <app-inventory-item-reference-metadata
+                          [essenceReference]="item.outputItem.essenceReference"
+                          [productionTypeCode]="item.outputItem.productionTypeCode"
+                        />
+                      </dd>
                     </div>
                     <div>
                       <dt>Quantidade de saída</dt>

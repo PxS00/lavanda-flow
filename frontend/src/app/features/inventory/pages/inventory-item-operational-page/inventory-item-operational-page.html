@@ -6,6 +6,9 @@
       <p>Consulte o estoque, os lotes, o estoque mínimo e o histórico de movimentações.</p>
     </div>
   </header>
+  @if (maintenanceNotice(); as notice) {
+    <p class="notice" aria-live="polite">{{ notice }}</p>
+  }
 
   <section class="panel" aria-labelledby="overview-heading">
     <h2 id="overview-heading">Visão geral</h2>
@@ -24,7 +27,30 @@
             <header class="item-identity">
               <div>
                 <h3>{{ overview.data.name }}</h3>
-                <p>{{ enumLabel(overview.data.category) }} · {{ enumLabel(overview.data.unitOfMeasure) }}</p>
+                <p>
+                  {{ enumLabel(overview.data.category) }} ·
+                  {{ enumLabel(overview.data.unitOfMeasure) }}
+                </p>
+                @let references = referenceState();
+                @switch (references.kind) {
+                  @case ('loading') {
+                    <p class="reference-status">Carregando referências do item...</p>
+                  }
+                  @case ('error') {
+                    <div class="reference-error">
+                      <app-error-state [error]="references.error" />
+                      <button mat-button type="button" (click)="retryReferences()">
+                        Tentar carregar referências novamente
+                      </button>
+                    </div>
+                  }
+                  @case ('loaded') {
+                    <app-inventory-item-reference-metadata
+                      [essenceReference]="references.data.essenceReference"
+                      [productionTypeCode]="references.data.productionTypeCode"
+                    />
+                  }
+                }
               </div>
               <div class="item-actions">
                 <strong>{{ overview.data.active ? 'Ativo' : 'Inativo' }}</strong>
@@ -69,7 +95,13 @@
               </div>
               <div>
                 <dt>Validade mais próxima</dt>
-                <dd>{{ overview.data.nearestExpiration ? formatLocalDate(overview.data.nearestExpiration) : 'Nenhuma' }}</dd>
+                <dd>
+                  {{
+                    overview.data.nearestExpiration
+                      ? formatLocalDate(overview.data.nearestExpiration)
+                      : 'Nenhuma'
+                  }}
+                </dd>
               </div>
               <div>
                 <dt>Lotes vencidos</dt>
@@ -82,8 +114,10 @@
             </dl>
 
             <p class="semantics-note">
-              Em {{ formatLocalDate(overview.data.asOfDate) }} · janela de validade de {{ overview.data.expirationWindowDays }} dias.
-              A quantidade física inclui saldos positivos vencidos; o estoque disponível segue as regras de disponibilidade do sistema.
+              Em {{ formatLocalDate(overview.data.asOfDate) }} · janela de validade de
+              {{ overview.data.expirationWindowDays }} dias. A quantidade física inclui saldos
+              positivos vencidos; o estoque disponível segue as regras de disponibilidade do
+              sistema.
             </p>
           </mat-card-content>
         </mat-card>
@@ -115,21 +149,37 @@
       }
       @case ('loaded') {
         @if (batches.data.batches.length === 0) {
-          <app-empty-state title="Nenhum lote encontrado" message="Este item não possui lotes registrados." />
+          <app-empty-state
+            title="Nenhum lote encontrado"
+            message="Registre uma entrada de estoque para criar o primeiro lote; o saldo não é editado diretamente."
+          />
         } @else {
           <div class="table-scroll">
             <table>
-              <caption>Estoque por lote em {{ formatLocalDate(batches.data.asOfDate) }}</caption>
+              <caption>
+                Estoque por lote em
+                {{
+                  formatLocalDate(batches.data.asOfDate)
+                }}
+              </caption>
               <thead>
                 <tr>
-                  <th scope="col">Status</th><th scope="col">Código do lote</th><th scope="col">ID do fornecedor</th>
-                  <th scope="col">Entrada</th><th scope="col">Validade</th><th scope="col">Quantidade inicial</th><th scope="col">Quantidade atual</th><th scope="col">Ações</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Código do lote</th>
+                  <th scope="col">ID do fornecedor</th>
+                  <th scope="col">Entrada</th>
+                  <th scope="col">Validade</th>
+                  <th scope="col">Quantidade inicial</th>
+                  <th scope="col">Quantidade atual</th>
+                  <th scope="col">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 @for (batch of batches.data.batches; track batch.batchId) {
                   <tr>
-                    <td><strong>{{ batchStatusLabel(batch.status) }}</strong></td>
+                    <td>
+                      <strong>{{ batchStatusLabel(batch.status) }}</strong>
+                    </td>
                     <td>{{ batch.lotCode || '—' }}</td>
                     <td>{{ batch.supplierId || '—' }}</td>
                     <td>{{ formatLocalDate(batch.receivedAt) }}</td>
@@ -137,6 +187,14 @@
                     <td>{{ formatDecimal(batch.initialQuantity) }}</td>
                     <td>{{ formatDecimal(batch.currentQuantity) }}</td>
                     <td>
+                      <button
+                        mat-button
+                        type="button"
+                        [attr.aria-label]="'Manutenção do lote ' + (batch.lotCode || batch.batchId)"
+                        (click)="openMaintenance(batch)"
+                      >
+                        Manutenção
+                      </button>
                       <a mat-button [routerLink]="['/production/genealogy/batches', batch.batchId]">
                         Rastrear genealogia
                       </a>
@@ -153,6 +211,10 @@
 
   <section class="panel minimum-panel" aria-labelledby="minimum-heading">
     <h2 id="minimum-heading">Estoque mínimo</h2>
+    <p class="semantics-note">
+      Esta quantidade é usada pelo sistema para monitorar o estoque; os alertas seguem os dados
+      confirmados pelo sistema.
+    </p>
     @let minimum = minimumState();
     @switch (minimum.kind) {
       @case ('loading') {
@@ -160,7 +222,9 @@
       }
       @case ('error') {
         <app-error-state [error]="minimum.error" />
-        <button mat-stroked-button type="button" (click)="retryMinimumStock()">Tentar novamente</button>
+        <button mat-stroked-button type="button" (click)="retryMinimumStock()">
+          Tentar novamente
+        </button>
       }
       @case ('loaded') {
         <p class="current-minimum">
@@ -202,8 +266,18 @@
           }
 
           <div class="minimum-actions">
-            <button mat-flat-button type="submit" [disabled]="isSavingMinimum() || isRemovingMinimum()">
-              {{ isSavingMinimum() ? 'Salvando...' : minimum.data === null ? 'Definir mínimo' : 'Atualizar mínimo' }}
+            <button
+              mat-flat-button
+              type="submit"
+              [disabled]="isSavingMinimum() || isRemovingMinimum()"
+            >
+              {{
+                isSavingMinimum()
+                  ? 'Salvando...'
+                  : minimum.data === null
+                    ? 'Definir mínimo'
+                    : 'Atualizar mínimo'
+              }}
             </button>
 
             @if (minimum.data !== null && !confirmingMinimumRemoval()) {
@@ -220,7 +294,11 @@
         </form>
 
         @if (minimum.data !== null && confirmingMinimumRemoval()) {
-          <div class="removal-confirmation" role="group" aria-label="Confirmar remoção do estoque mínimo">
+          <div
+            class="removal-confirmation"
+            role="group"
+            aria-label="Confirmar remoção do estoque mínimo"
+          >
             <p>Remover este estoque mínimo?</p>
             <button
               mat-flat-button
@@ -230,7 +308,12 @@
             >
               {{ isRemovingMinimum() ? 'Removendo...' : 'Confirmar remoção' }}
             </button>
-            <button mat-button type="button" [disabled]="isRemovingMinimum()" (click)="cancelMinimumRemoval()">
+            <button
+              mat-button
+              type="button"
+              [disabled]="isRemovingMinimum()"
+              (click)="cancelMinimumRemoval()"
+            >
               Cancelar
             </button>
           </div>
@@ -241,6 +324,10 @@
 
   <section class="panel" aria-labelledby="movements-heading">
     <h2 id="movements-heading">Histórico de movimentações</h2>
+    <p class="semantics-note">
+      Operações de estoque criam movimentações auditáveis. Para corrigir um saldo, registre uma
+      nova correção; as movimentações anteriores não são reescritas.
+    </p>
     @let movements = movementState();
     @switch (movements.kind) {
       @case ('loading') {
@@ -248,19 +335,30 @@
       }
       @case ('error') {
         <app-error-state [error]="movements.error" />
-        <button mat-stroked-button type="button" (click)="retryMovements()">Tentar novamente</button>
+        <button mat-stroked-button type="button" (click)="retryMovements()">
+          Tentar novamente
+        </button>
       }
       @case ('loaded') {
         @if (movements.data.content.length === 0) {
-          <app-empty-state title="Nenhuma movimentação encontrada" message="Nenhuma movimentação de estoque foi registrada para este item." />
+          <app-empty-state
+            title="Nenhuma movimentação encontrada"
+            message="O histórico será exibido após uma operação auditável de estoque."
+          />
         } @else {
           <div class="table-scroll">
             <table>
-              <caption>Histórico de movimentações, da mais recente para a mais antiga</caption>
+              <caption>
+                Histórico de movimentações, da mais recente para a mais antiga
+              </caption>
               <thead>
                 <tr>
-                  <th scope="col">Data e hora</th><th scope="col">Tipo</th><th scope="col">Quantidade</th>
-                  <th scope="col">Código do lote</th><th scope="col">ID do lote</th><th scope="col">Motivo</th>
+                  <th scope="col">Data e hora</th>
+                  <th scope="col">Tipo</th>
+                  <th scope="col">Quantidade</th>
+                  <th scope="col">Código do lote</th>
+                  <th scope="col">ID do lote</th>
+                  <th scope="col">Motivo</th>
                 </tr>
               </thead>
               <tbody>
@@ -268,7 +366,9 @@
                   <tr>
                     <td>{{ movement.occurredAt | date: 'dd/MM/yyyy, HH:mm' }}</td>
                     <td>{{ movementTypeLabel(movement.type) }}</td>
-                    <td>{{ formatDecimal(movement.quantity) }} {{ enumLabel(movement.unitOfMeasure) }}</td>
+                    <td>
+                      {{ formatDecimal(movement.quantity) }} {{ enumLabel(movement.unitOfMeasure) }}
+                    </td>
                     <td>{{ movement.lotCode || '—' }}</td>
                     <td>{{ movement.batchId }}</td>
                     <td>{{ movement.reason || '—' }}</td>

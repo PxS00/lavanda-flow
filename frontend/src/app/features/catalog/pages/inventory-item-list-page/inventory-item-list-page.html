@@ -74,6 +74,10 @@
                   <mat-card-subtitle>{{ categoryLabel(item.category) }}</mat-card-subtitle>
                 </mat-card-header>
                 <mat-card-content>
+                  <app-inventory-item-reference-metadata
+                    [essenceReference]="item.essenceReference"
+                    [productionTypeCode]="item.productionTypeCode"
+                  />
                   <dl>
                     <div>
                       <dt>Unidade</dt>

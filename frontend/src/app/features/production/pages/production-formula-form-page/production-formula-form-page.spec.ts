@@ -11,8 +11,8 @@ import { ProductionFormulaFormPage } from './production-formula-form-page';
 
 describe('ProductionFormulaFormPage', () => {
   const items: readonly InventoryItemDto[] = [
-    item('output', 'Produto'),
-    item('ingredient-a', 'Essência A'),
+    { ...item('output', 'Produto'), productionTypeCode: 'BHC' },
+    { ...item('ingredient-a', 'Essência A'), essenceReference: '027' },
     item('ingredient-b', 'Essência B', false),
   ];
   const formula: ProductionFormulaDto = {
@@ -57,6 +57,13 @@ describe('ProductionFormulaFormPage', () => {
     fixture = TestBed.createComponent(ProductionFormulaFormPage);
     fixture.detectChanges();
   }
+
+  it('should explain that formula references do not move stock', async () => {
+    await configure(null);
+
+    expect(fixture.nativeElement.textContent).toContain('quantidades de referência');
+    expect(fixture.nativeElement.textContent).toContain('não cria nem consome estoque');
+  });
 
   it('should create a formula with multiple ingredient quantities only after backend confirmation', async () => {
     await configure(null);
@@ -110,6 +117,10 @@ describe('ProductionFormulaFormPage', () => {
       ],
     });
     expect(fixture.nativeElement.textContent).toContain('Essência B');
+    expect(fixture.nativeElement.textContent).toContain('Cód. produção:');
+    expect(fixture.nativeElement.textContent).toContain('BHC');
+    expect(fixture.nativeElement.textContent).toContain('Ref. essência:');
+    expect(fixture.nativeElement.textContent).toContain('027');
 
     submit();
     expect(update).toHaveBeenCalledWith(formula.id, {

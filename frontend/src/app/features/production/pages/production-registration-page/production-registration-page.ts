@@ -41,6 +41,7 @@ import { LoadingState } from '../../../../shared/ui/loading-state/loading-state'
 import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
 import { inventoryItemUnitLabel } from '../../../catalog/inventory-item-display';
+import { InventoryItemReferenceMetadata } from '../../../catalog/ui/inventory-item-reference-metadata/inventory-item-reference-metadata';
 import {
   BatchInventoryEntryDto,
   BatchOperationalStatus,
@@ -133,6 +134,7 @@ type RefreshState =
   imports: [
     EmptyState,
     ErrorState,
+    InventoryItemReferenceMetadata,
     LoadingState,
     MatButtonModule,
     MatCardModule,
@@ -411,18 +413,19 @@ export class ProductionRegistrationPage {
   }
 
   protected itemName(inventoryItemId: string): string {
+    return this.completedItem(inventoryItemId)?.name ?? inventoryItemId;
+  }
+
+  protected completedItem(inventoryItemId: string): InventoryItemDto | null {
     const context = this.completedContext();
     if (context === null) {
-      return inventoryItemId;
-    }
-    if (context.outputItem.id === inventoryItemId) {
-      return context.outputItem.name;
+      return null;
     }
 
-    return (
-      context.ingredients.find((ingredient) => ingredient.item.id === inventoryItemId)?.item.name ??
-      inventoryItemId
-    );
+    return context.outputItem.id === inventoryItemId
+      ? context.outputItem
+      : (context.ingredients.find((ingredient) => ingredient.item.id === inventoryItemId)?.item ??
+          null);
   }
 
   protected sourceBatchLabel(batchId: string): string {

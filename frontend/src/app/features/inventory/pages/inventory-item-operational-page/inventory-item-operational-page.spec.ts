@@ -1,12 +1,15 @@
-import {HttpErrorResponse} from '@angular/common/http';
-import {Component, input, output} from '@angular/core';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {MatPaginatorIntl} from '@angular/material/paginator';
-import {By} from '@angular/platform-browser';
-import {ActivatedRoute, convertToParamMap, ParamMap, provideRouter} from '@angular/router';
-import {Observable, Subject} from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, input, output } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatPaginatorIntl } from '@angular/material/paginator';
+import { MatDialog } from '@angular/material/dialog';
+import { By } from '@angular/platform-browser';
+import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter } from '@angular/router';
+import { Observable, Subject } from 'rxjs';
 
-import {InventoryItemOperationsApiService} from '../../data-access/inventory-item-operations-api.service';
+import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
+import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
+import { InventoryItemOperationsApiService } from '../../data-access/inventory-item-operations-api.service';
 import {
   BatchInventoryDto,
   ConfigureMinimumStockLevelRequest,
@@ -16,10 +19,12 @@ import {
   MinimumStockLevelDto,
   MovementHistoryPageDto,
 } from '../../data-access/inventory-operations.dto';
-import {MovementHistoryApiService} from '../../data-access/movement-history-api.service';
-import {FefoWithdrawalPanel} from '../../ui/fefo-withdrawal-panel/fefo-withdrawal-panel';
-import {createPtBrPaginatorIntl} from '../../../../core/i18n/pt-br-paginator-intl';
-import {InventoryItemOperationalPage} from './inventory-item-operational-page';
+import { MovementHistoryApiService } from '../../data-access/movement-history-api.service';
+import { StockMaintenanceMovementDto } from '../../data-access/stock-maintenance.dto';
+import { FefoWithdrawalPanel } from '../../ui/fefo-withdrawal-panel/fefo-withdrawal-panel';
+import { StockMaintenanceDialog } from '../../ui/stock-maintenance-dialog/stock-maintenance-dialog';
+import { createPtBrPaginatorIntl } from '../../../../core/i18n/pt-br-paginator-intl';
+import { InventoryItemOperationalPage } from './inventory-item-operational-page';
 
 @Component({ selector: 'app-fefo-withdrawal-panel', template: 'withdrawal panel' })
 class FefoWithdrawalPanelStub {
@@ -77,12 +82,15 @@ describe('InventoryItemOperationalPage', () => {
   let fixture: ComponentFixture<InventoryItemOperationalPage>;
   let routeParams: Subject<ParamMap>;
   let overviewResponse: Subject<InventoryItemOverviewDto>;
+  let catalogResponse: Subject<InventoryItemDto>;
   let batchResponse: Subject<BatchInventoryDto>;
   let minimumResponse: Subject<MinimumStockLevelDto>;
   let movementResponse: Subject<MovementHistoryPageDto>;
   let configureResponse: Subject<MinimumStockLevelDto>;
   let deleteResponse: Subject<void>;
+  let maintenanceResult: Subject<StockMaintenanceMovementDto | undefined>;
   let getOverview: ReturnType<typeof vi.fn<(id: string) => Observable<InventoryItemOverviewDto>>>;
+  let getCatalogItem: ReturnType<typeof vi.fn<(id: string) => Observable<InventoryItemDto>>>;
   let getBatches: ReturnType<typeof vi.fn<(id: string) => Observable<BatchInventoryDto>>>;
   let getMinimumStockLevel: ReturnType<
     typeof vi.fn<(id: string) => Observable<MinimumStockLevelDto>>
@@ -96,22 +104,27 @@ describe('InventoryItemOperationalPage', () => {
   let searchMovements: ReturnType<
     typeof vi.fn<(query: InventoryItemMovementHistoryQuery) => Observable<MovementHistoryPageDto>>
   >;
+  let openMaintenanceDialog: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     routeParams = new Subject<ParamMap>();
     overviewResponse = new Subject<InventoryItemOverviewDto>();
+    catalogResponse = new Subject<InventoryItemDto>();
     batchResponse = new Subject<BatchInventoryDto>();
     minimumResponse = new Subject<MinimumStockLevelDto>();
     movementResponse = new Subject<MovementHistoryPageDto>();
     configureResponse = new Subject<MinimumStockLevelDto>();
     deleteResponse = new Subject<void>();
+    maintenanceResult = new Subject<StockMaintenanceMovementDto | undefined>();
 
     getOverview = vi.fn(() => overviewResponse);
+    getCatalogItem = vi.fn(() => catalogResponse);
     getBatches = vi.fn(() => batchResponse);
     getMinimumStockLevel = vi.fn(() => minimumResponse);
     configureMinimumStockLevel = vi.fn(() => configureResponse);
     deleteMinimumStockLevel = vi.fn(() => deleteResponse);
     searchMovements = vi.fn(() => movementResponse);
+    openMaintenanceDialog = vi.fn(() => ({ afterClosed: () => maintenanceResult }));
 
     TestBed.configureTestingModule({
       imports: [InventoryItemOperationalPage],
@@ -119,6 +132,7 @@ describe('InventoryItemOperationalPage', () => {
         { provide: MatPaginatorIntl, useFactory: createPtBrPaginatorIntl },
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { paramMap: routeParams } },
+        { provide: InventoryItemApiService, useValue: { getById: getCatalogItem } },
         {
           provide: InventoryItemOperationsApiService,
           useValue: {
@@ -130,6 +144,7 @@ describe('InventoryItemOperationalPage', () => {
           },
         },
         { provide: MovementHistoryApiService, useValue: { search: searchMovements } },
+        { provide: MatDialog, useValue: { open: openMaintenanceDialog } },
       ],
     });
 
@@ -147,6 +162,7 @@ describe('InventoryItemOperationalPage', () => {
   });
 
   it('should request every independent panel for the direct route item', () => {
+    expect(getCatalogItem).toHaveBeenCalledWith(inventoryItemId);
     expect(getOverview).toHaveBeenCalledWith(inventoryItemId);
     expect(getBatches).toHaveBeenCalledWith(inventoryItemId);
     expect(getMinimumStockLevel).toHaveBeenCalledWith(inventoryItemId);
@@ -154,6 +170,92 @@ describe('InventoryItemOperationalPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Carregando visão geral do estoque...');
     expect(fixture.nativeElement.textContent).toContain('Carregando lotes...');
     expect(fixture.nativeElement.textContent).toContain('Carregando histórico de movimentações...');
+  });
+
+  it('should render catalog references once at item identity level', () => {
+    overviewResponse.next(overview);
+    catalogResponse.next({
+      id: inventoryItemId,
+      name: overview.name,
+      description: null,
+      category: 'ESSENCE',
+      unitOfMeasure: 'MILLILITER',
+      active: overview.active,
+      essenceReference: '027',
+      productionTypeCode: 'BHC',
+    });
+    fixture.detectChanges();
+
+    const identity = fixture.nativeElement.querySelector('.item-identity') as HTMLElement;
+    expect(identity.textContent).toContain('Ref. essência:');
+    expect(identity.textContent).toContain('027');
+    expect(identity.textContent).toContain('Cód. produção:');
+    expect(identity.textContent).toContain('BHC');
+    expect(
+      fixture.nativeElement.querySelectorAll('app-inventory-item-reference-metadata'),
+    ).toHaveLength(1);
+  });
+
+  it('should keep stock operations available when the supplementary catalog read fails', () => {
+    overviewResponse.next(overview);
+    catalogResponse.error(apiError(500, 'INTERNAL_ERROR', 'Internal details'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Lavender Essence');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Ocorreu um erro no servidor. Tente novamente.',
+    );
+
+    catalogResponse = new Subject<InventoryItemDto>();
+    getCatalogItem.mockReturnValue(catalogResponse);
+    clickButton('Tentar carregar referências novamente');
+
+    expect(getCatalogItem).toHaveBeenLastCalledWith(inventoryItemId);
+    expect(getOverview).toHaveBeenCalledTimes(1);
+  });
+
+  it('should ignore stale catalog metadata after the route item changes', () => {
+    const itemBId = '5184d508-35eb-42de-a2a0-44c4f6c9b9ae';
+    const itemBOverviewResponse = new Subject<InventoryItemOverviewDto>();
+    const itemBCatalogResponse = new Subject<InventoryItemDto>();
+    getOverview.mockImplementation((id) =>
+      id === itemBId ? itemBOverviewResponse : overviewResponse,
+    );
+    getCatalogItem.mockImplementation((id) =>
+      id === itemBId ? itemBCatalogResponse : catalogResponse,
+    );
+
+    routeParams.next(convertToParamMap({ inventoryItemId: itemBId }));
+    itemBOverviewResponse.next({ ...overview, inventoryItemId: itemBId, name: 'Lavender Base' });
+    catalogResponse.next({
+      id: inventoryItemId,
+      name: overview.name,
+      description: null,
+      category: 'ESSENCE',
+      unitOfMeasure: 'MILLILITER',
+      active: true,
+      essenceReference: '027',
+      productionTypeCode: null,
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Lavender Base');
+    expect(fixture.nativeElement.textContent).not.toContain('027');
+
+    itemBCatalogResponse.next({
+      id: itemBId,
+      name: 'Lavender Base',
+      description: null,
+      category: 'BASE',
+      unitOfMeasure: 'MILLILITER',
+      active: true,
+      essenceReference: null,
+      productionTypeCode: 'BHC',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('BHC');
+    expect(fixture.nativeElement.textContent).not.toContain('027');
   });
 
   it('should render backend overview semantics without conflating physical and available stock', () => {
@@ -209,11 +311,15 @@ describe('InventoryItemOperationalPage', () => {
     fixture.detectChanges();
 
     expect(
-      (fixture.debugElement.query(By.directive(FefoWithdrawalPanelStub))
-        .componentInstance as FefoWithdrawalPanelStub).inventoryItemId(),
+      (
+        fixture.debugElement.query(By.directive(FefoWithdrawalPanelStub))
+          .componentInstance as FefoWithdrawalPanelStub
+      ).inventoryItemId(),
     ).toBe(inventoryItemId);
 
-    getOverview.mockImplementation((id) => (id === itemBId ? itemBOverviewResponse : overviewResponse));
+    getOverview.mockImplementation((id) =>
+      id === itemBId ? itemBOverviewResponse : overviewResponse,
+    );
     routeParams.next(convertToParamMap({ inventoryItemId: itemBId }));
     fixture.detectChanges();
 
@@ -251,7 +357,9 @@ describe('InventoryItemOperationalPage', () => {
     });
     fixture.detectChanges();
 
-    const rows = Array.from(fixture.nativeElement.querySelectorAll('tbody tr')) as HTMLTableRowElement[];
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll('tbody tr'),
+    ) as HTMLTableRowElement[];
     expect(rows.map((row) => row.textContent)).toEqual([
       expect.stringContaining('LOT-A'),
       expect.stringContaining('LOT-B'),
@@ -263,10 +371,45 @@ describe('InventoryItemOperationalPage', () => {
     expect(rows[0].textContent).toContain('supplier-1');
     expect(rows[0].textContent).toContain('100');
     expect(rows[0].textContent).toContain('40');
-    expect(
-      rows[0].querySelector('a')?.getAttribute('href'),
-    ).toBe('/production/genealogy/batches/batch-a');
+    expect(rows[0].querySelector('a')?.getAttribute('href')).toBe(
+      '/production/genealogy/batches/batch-a',
+    );
     expect(rows[0].querySelector('a')?.textContent).toContain('Rastrear genealogia');
+  });
+
+  it('should open maintenance for the exact selected batch and refresh only after backend confirmation', () => {
+    const selectedBatch = batch('batch-a', 'LOT-A', 'AVAILABLE');
+    batchResponse.next({ inventoryItemId, asOfDate: '2026-09-01', batches: [selectedBatch] });
+    fixture.detectChanges();
+
+    const maintenanceButton = Array.from(fixture.nativeElement.querySelectorAll('button')).find(
+      (candidate) => (candidate as HTMLButtonElement).textContent?.trim() === 'Manutenção',
+    ) as HTMLButtonElement;
+    maintenanceButton.click();
+    fixture.detectChanges();
+
+    expect(openMaintenanceDialog).toHaveBeenCalledWith(StockMaintenanceDialog, {
+      data: selectedBatch,
+    });
+    expect(getOverview).toHaveBeenCalledTimes(1);
+    expect(getBatches).toHaveBeenCalledTimes(1);
+    expect(searchMovements).toHaveBeenCalledTimes(1);
+
+    maintenanceResult.next({
+      movementId: 'movement-2',
+      batchId: selectedBatch.batchId,
+      type: 'LOSS',
+      quantity: '1',
+      resultingBalance: '39',
+      reason: 'Quebra',
+      occurredAt: '2026-09-08T15:00:00Z',
+    });
+    fixture.detectChanges();
+
+    expect(getOverview).toHaveBeenCalledTimes(2);
+    expect(getBatches).toHaveBeenCalledTimes(2);
+    expect(searchMovements).toHaveBeenLastCalledWith({ inventoryItemId, page: 0, size: 20 });
+    expect(fixture.nativeElement.textContent).toContain('Manutenção de estoque registrada.');
   });
 
   it('should treat only the dedicated minimum-not-found code as an unconfigured state', () => {
@@ -375,7 +518,17 @@ describe('InventoryItemOperationalPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum lote encontrado');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Registre uma entrada de estoque para criar o primeiro lote',
+    );
+    expect(fixture.nativeElement.textContent).toContain('o saldo não é editado diretamente');
     expect(fixture.nativeElement.textContent).toContain('Nenhuma movimentação encontrada');
+    expect(fixture.nativeElement.textContent).toContain(
+      'O histórico será exibido após uma operação auditável de estoque',
+    );
+    expect(fixture.nativeElement.textContent).toContain(
+      'as movimentações anteriores não são reescritas',
+    );
   });
 
   it('should keep usable overview data visible when a secondary panel fails', () => {

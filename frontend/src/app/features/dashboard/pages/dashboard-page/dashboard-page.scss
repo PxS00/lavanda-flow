@@ -6,11 +6,11 @@
 .page-header,
 .metric-card {
   display: grid;
-  gap: 16px;
+  gap: var(--lf-space-4);
 }
 
 .dashboard-page {
-  gap: 32px;
+  gap: var(--lf-space-6);
 }
 
 .page-header {
@@ -33,7 +33,7 @@
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 16px;
+  gap: var(--lf-space-4);
 }
 
 .metric-link {
@@ -42,14 +42,16 @@
 }
 
 .metric-link:focus-visible {
-  border-radius: var(--mat-sys-corner-medium);
-  outline: 3px solid var(--mat-sys-primary);
+  border-radius: var(--lf-radius-medium);
+  outline: 3px solid var(--lf-color-focus);
   outline-offset: 3px;
 }
 
 .metric-card {
   height: 100%;
-  padding: 20px;
+  padding: var(--lf-space-5);
+  border-top: 4px solid var(--lf-color-accent);
+  box-shadow: var(--lf-shadow-surface);
 }
 
 .metric-link .metric-card {
@@ -57,7 +59,7 @@
 }
 
 .metric-link:hover .metric-card {
-  background: var(--mat-sys-surface-container-low);
+  background: var(--lf-color-surface-muted);
 }
 
 .metric-label {
@@ -65,6 +67,7 @@
 }
 
 .metric-value {
+  color: var(--lf-color-primary-emphasis);
   font: var(--mat-sys-display-small);
 }
 

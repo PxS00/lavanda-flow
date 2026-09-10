@@ -12,6 +12,7 @@ import { LoadingState } from '../../../../shared/ui/loading-state/loading-state'
 import { InventoryItemDto } from '../../data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
 import { inventoryItemUnitLabel } from '../../inventory-item-display';
+import { InventoryItemReferenceMetadata } from '../inventory-item-reference-metadata/inventory-item-reference-metadata';
 
 const SEARCH_PAGE_SIZE = 10;
 
@@ -22,7 +23,7 @@ type SearchState =
 
 @Component({
   selector: 'app-inventory-item-selector',
-  imports: [ErrorState, LoadingState, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [ErrorState, InventoryItemReferenceMetadata, LoadingState, MatButtonModule, MatFormFieldModule, MatInputModule],
   templateUrl: './inventory-item-selector.html',
   styleUrl: './inventory-item-selector.scss',
 })

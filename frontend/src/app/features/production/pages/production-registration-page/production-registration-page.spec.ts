@@ -19,8 +19,8 @@ import { ProductionFormulaDto } from '../../data-access/production-formula.dto';
 import { ProductionFormulaApiService } from '../../data-access/production-formula-api.service';
 import { ProductionRegistrationPage } from './production-registration-page';
 
-const outputItem = item('output-item', 'Body Splash');
-const ingredientItem = item('ingredient-item', 'Essência Lavanda');
+const outputItem = { ...item('output-item', 'Body Splash'), productionTypeCode: 'BHC' };
+const ingredientItem = { ...item('ingredient-item', 'Essência Lavanda'), essenceReference: '027' };
 const formula: ProductionFormulaDto = {
   id: 'formula-1',
   outputInventoryItemId: outputItem.id,
@@ -111,6 +111,10 @@ describe('ProductionRegistrationPage', () => {
     await configure([]);
 
     expect(fixture.nativeElement.textContent).toContain('Nenhuma fórmula disponível');
+    const formulaLink = fixture.nativeElement.querySelector(
+      'a[href="/production/formulas/new"]',
+    ) as HTMLAnchorElement | null;
+    expect(formulaLink?.textContent).toContain('Cadastrar fórmula');
     expect(register).not.toHaveBeenCalled();
   });
 
@@ -122,7 +126,13 @@ describe('ProductionRegistrationPage', () => {
 
     expect(register).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Revisar produção');
+    expect(fixture.nativeElement.textContent).toContain('O sistema ainda validará fórmula');
     expect(fixture.nativeElement.textContent).toContain('definido pelo servidor ao concluir');
+    expect(fixture.nativeElement.textContent).toContain('Cód. produção:');
+    expect(fixture.nativeElement.textContent).toContain('BHC');
+    expect(fixture.nativeElement.textContent).toContain('Ref. essência:');
+    expect(fixture.nativeElement.textContent).toContain('027');
+    expect(fixture.nativeElement.textContent).not.toContain('backend');
     expect(fixture.nativeElement.textContent).not.toContain(execution.lotCode);
 
     clickButton('Confirmar produção');
@@ -257,6 +267,10 @@ describe('ProductionRegistrationPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Produção registrada');
     expect(fixture.nativeElement.textContent).toContain(execution.lotCode);
     expect(fixture.nativeElement.textContent).toContain(execution.outputBatchId);
+    expect(fixture.nativeElement.textContent).toContain('Cód. produção:');
+    expect(fixture.nativeElement.textContent).toContain('BHC');
+    expect(fixture.nativeElement.textContent).toContain('Ref. essência:');
+    expect(fixture.nativeElement.textContent).toContain('027');
     expect(getOverview).toHaveBeenCalledWith(outputItem.id);
     expect(getOverview).toHaveBeenCalledWith(ingredientItem.id);
   });

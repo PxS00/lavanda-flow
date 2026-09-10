@@ -43,3 +43,8 @@ logs/
 
 # Local database/runtime data
 postgres-data/
+
+# PostgreSQL backup artifacts
+backups/
+*.dump
+*.dump.sha256

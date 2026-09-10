@@ -26,6 +26,7 @@ import {
   inventoryItemCategoryLabel,
   inventoryItemUnitLabel,
 } from '../../inventory-item-display';
+import { InventoryItemReferenceMetadata } from '../../ui/inventory-item-reference-metadata/inventory-item-reference-metadata';
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -57,6 +58,7 @@ const DEFAULT_QUERY: InventoryItemSearchQuery = { page: 0, size: DEFAULT_PAGE_SI
     MatPaginatorModule,
     MatSelectModule,
     RouterLink,
+    InventoryItemReferenceMetadata,
   ],
   templateUrl: './inventory-item-list-page.html',
   styleUrl: './inventory-item-list-page.scss',

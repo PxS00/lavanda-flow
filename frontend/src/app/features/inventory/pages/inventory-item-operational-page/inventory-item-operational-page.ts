@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
@@ -29,6 +30,9 @@ import { UiError } from '../../../../core/http/ui-error';
 import { EmptyState } from '../../../../shared/ui/empty-state/empty-state';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../../../shared/ui/loading-state/loading-state';
+import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
+import { InventoryItemApiService } from '../../../catalog/data-access/inventory-item-api.service';
+import { InventoryItemReferenceMetadata } from '../../../catalog/ui/inventory-item-reference-metadata/inventory-item-reference-metadata';
 import { InventoryItemOperationsApiService } from '../../data-access/inventory-item-operations-api.service';
 import {
   BatchInventoryDto,
@@ -41,6 +45,7 @@ import {
 } from '../../data-access/inventory-operations.dto';
 import { MovementHistoryApiService } from '../../data-access/movement-history-api.service';
 import { FefoWithdrawalPanel } from '../../ui/fefo-withdrawal-panel/fefo-withdrawal-panel';
+import { StockMaintenanceDialog } from '../../ui/stock-maintenance-dialog/stock-maintenance-dialog';
 
 const DEFAULT_MOVEMENT_PAGE_SIZE = 20;
 const MINIMUM_QUANTITY_PATTERN = /^\d+(?:\.\d{1,6})?$/;
@@ -77,16 +82,20 @@ type PanelState<T> =
     MatPaginatorModule,
     RouterLink,
     FefoWithdrawalPanel,
+    InventoryItemReferenceMetadata,
   ],
   templateUrl: './inventory-item-operational-page.html',
   styleUrl: './inventory-item-operational-page.scss',
 })
 export class InventoryItemOperationalPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly inventoryItemApi = inject(InventoryItemApiService);
   private readonly operationsApi = inject(InventoryItemOperationsApiService);
   private readonly movementHistoryApi = inject(MovementHistoryApiService);
+  private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly overviewRequests = new Subject<string>();
+  private readonly referenceRequests = new Subject<string>();
   private readonly batchRequests = new Subject<string>();
   private readonly minimumRequests = new Subject<string>();
   private readonly movementRequests = new Subject<InventoryItemMovementHistoryQuery>();
@@ -123,6 +132,7 @@ export class InventoryItemOperationalPage {
   protected readonly overviewState = signal<PanelState<InventoryItemOverviewDto>>({
     kind: 'loading',
   });
+  protected readonly referenceState = signal<PanelState<InventoryItemDto>>({ kind: 'loading' });
   protected readonly batchState = signal<PanelState<BatchInventoryDto>>({ kind: 'loading' });
   protected readonly minimumState = signal<PanelState<MinimumStockLevelDto | null>>({
     kind: 'loading',
@@ -132,6 +142,7 @@ export class InventoryItemOperationalPage {
   });
   protected readonly minimumActionError = signal<UiError | null>(null);
   protected readonly minimumNotice = signal<string | null>(null);
+  protected readonly maintenanceNotice = signal<string | null>(null);
   protected readonly isSavingMinimum = signal(false);
   protected readonly isRemovingMinimum = signal(false);
   protected readonly confirmingMinimumRemoval = signal(false);
@@ -151,6 +162,7 @@ export class InventoryItemOperationalPage {
   protected readonly stockStatusLabel = stockStatusLabel;
 
   constructor() {
+    this.bindReferenceRequests();
     this.bindOverviewRequests();
     this.bindBatchRequests();
     this.bindMinimumRequests();
@@ -168,6 +180,10 @@ export class InventoryItemOperationalPage {
 
   protected retryOverview(): void {
     this.emitForCurrentItem(this.overviewRequests);
+  }
+
+  protected retryReferences(): void {
+    this.emitForCurrentItem(this.referenceRequests);
   }
 
   protected retryBatches(): void {
@@ -198,6 +214,26 @@ export class InventoryItemOperationalPage {
     this.retryOverview();
     this.retryBatches();
     this.retryMovements();
+  }
+
+  protected openMaintenance(batch: BatchInventoryDto['batches'][number]): void {
+    this.dialog
+      .open(StockMaintenanceDialog, { data: batch })
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((movement) => {
+        if (movement === undefined || this.inventoryItemId() !== batch.inventoryItemId) {
+          return;
+        }
+
+        this.maintenanceNotice.set('Manutenção de estoque registrada.');
+        this.retryOverview();
+        this.retryBatches();
+        const query = this.currentMovementQuery();
+        if (query !== null) {
+          this.loadMovements({ ...query, page: 0 });
+        }
+      });
   }
 
   protected saveMinimumStock(event: SubmitEvent): void {
@@ -300,9 +336,11 @@ export class InventoryItemOperationalPage {
     this.minimumStockForm().reset({ minimumQuantity: '' });
     this.minimumActionError.set(null);
     this.minimumNotice.set(null);
+    this.maintenanceNotice.set(null);
     this.confirmingMinimumRemoval.set(false);
 
     this.overviewRequests.next(inventoryItemId);
+    this.referenceRequests.next(inventoryItemId);
     this.batchRequests.next(inventoryItemId);
     this.minimumRequests.next(inventoryItemId);
     this.loadMovements({ inventoryItemId, page: 0, size: DEFAULT_MOVEMENT_PAGE_SIZE });
@@ -326,9 +364,7 @@ export class InventoryItemOperationalPage {
         tap(() => this.overviewState.set({ kind: 'loading' })),
         switchMap((inventoryItemId) =>
           this.operationsApi.getOverview(inventoryItemId).pipe(
-            map(
-              (data): PanelState<InventoryItemOverviewDto> => ({ kind: 'loaded', data }),
-            ),
+            map((data): PanelState<InventoryItemOverviewDto> => ({ kind: 'loaded', data })),
             catchError((error: unknown) =>
               of<PanelState<InventoryItemOverviewDto>>({
                 kind: 'error',
@@ -351,6 +387,23 @@ export class InventoryItemOperationalPage {
           });
         }
       });
+  }
+
+  private bindReferenceRequests(): void {
+    this.referenceRequests
+      .pipe(
+        tap(() => this.referenceState.set({ kind: 'loading' })),
+        switchMap((inventoryItemId) =>
+          this.inventoryItemApi.getById(inventoryItemId).pipe(
+            map((data): PanelState<InventoryItemDto> => ({ kind: 'loaded', data })),
+            catchError((error: unknown) =>
+              of<PanelState<InventoryItemDto>>({ kind: 'error', error: mapHttpError(error) }),
+            ),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((state) => this.referenceState.set(state));
   }
 
   private bindBatchRequests(): void {
@@ -445,10 +498,23 @@ export class InventoryItemOperationalPage {
 
 function formatEnumLabel(value: string): string {
   const labels: Readonly<Record<string, string>> = {
-    ESSENCE: 'Essência', CHEMICAL_INPUT: 'Insumo químico', BASE: 'Base', ALCOHOL: 'Álcool',
-    COLORANT: 'Corante', FIXATIVE: 'Fixador', BOTTLE: 'Frasco', VALVE: 'Válvula', CAP: 'Tampa',
-    LABEL: 'Rótulo', PACKAGING: 'Embalagem', OTHER: 'Outros', MILLILITER: 'Mililitro',
-    LITER: 'Litro', GRAM: 'Grama', KILOGRAM: 'Quilograma', UNIT: 'Unidade',
+    ESSENCE: 'Essência',
+    CHEMICAL_INPUT: 'Insumo químico',
+    BASE: 'Base',
+    ALCOHOL: 'Álcool',
+    COLORANT: 'Corante',
+    FIXATIVE: 'Fixador',
+    BOTTLE: 'Frasco',
+    VALVE: 'Válvula',
+    CAP: 'Tampa',
+    LABEL: 'Rótulo',
+    PACKAGING: 'Embalagem',
+    OTHER: 'Outros',
+    MILLILITER: 'Mililitro',
+    LITER: 'Litro',
+    GRAM: 'Grama',
+    KILOGRAM: 'Quilograma',
+    UNIT: 'Unidade',
   };
   return labels[value] ?? value;
 }
@@ -459,8 +525,12 @@ function batchStatusLabel(status: BatchOperationalStatus): string {
 
 function movementTypeLabel(type: InventoryMovementType): string {
   return {
-    ENTRY: 'Entrada', CONSUMPTION: 'Consumo', ADJUSTMENT_IN: 'Ajuste de entrada',
-    ADJUSTMENT_OUT: 'Ajuste de saída', LOSS: 'Perda', EXPIRED_DISPOSAL: 'Descarte por vencimento',
+    ENTRY: 'Entrada',
+    CONSUMPTION: 'Consumo',
+    ADJUSTMENT_IN: 'Ajuste de entrada',
+    ADJUSTMENT_OUT: 'Ajuste de saída',
+    LOSS: 'Perda',
+    EXPIRED_DISPOSAL: 'Descarte por vencimento',
   }[type];
 }
 

@@ -16,7 +16,30 @@ The generated specification is the primary source for HTTP contract discovery. A
 
 ## Security
 
-API documentation must never contain credentials, secrets, database connection details, tokens, or sensitive runtime configuration. Endpoint authentication and authorization requirements should be documented at the contract boundary as the security model is introduced.
+Operational `/api/v1/**` routes use stateful Spring Security sessions. The session cookie is managed by the browser and server; it is not a bearer-token contract and Angular must not read or persist it. Public registration, password reset, JWT, OAuth, and refresh-token endpoints are not part of v0.6.0.
+
+Authentication contracts:
+
+```text
+POST /api/v1/auth/login    public, CSRF-protected
+GET  /api/v1/auth/session  public session/CSRF bootstrap
+POST /api/v1/auth/logout   authenticated, CSRF-protected
+```
+
+Login accepts `username` and `password` JSON fields and returns `200` with the authenticated state and canonical username. Invalid credentials return the generic `AUTHENTICATION_FAILED` error without revealing whether the username exists. Session bootstrap returns `200` with `authenticated` and a nullable `username`; it also materializes fresh CSRF state without returning the token or session identifier in JSON. Logout invalidates the session and returns `204`.
+
+Angular uses Spring Security's same-origin XSRF boundary:
+
+```text
+cookie: XSRF-TOKEN
+header: X-XSRF-TOKEN
+```
+
+The XSRF cookie is browser-readable; the separate session cookie is `HttpOnly`. A fresh client calls `GET /api/v1/auth/session` before login or another unsafe request and again when fresh CSRF state is needed after authentication or logout.
+
+The server-side session has a 12-hour idle timeout. Its cookie uses path `/`, `HttpOnly`, and `SameSite=Lax`; `Secure=false` is the trusted-LAN HTTP default and external configuration must set `Secure=true` for an HTTPS profile.
+
+The default operational profile disables Swagger UI and OpenAPI endpoints and exposes only minimal Actuator health. The `local` development profile enables `/v3/api-docs`, `/v3/api-docs.yaml`, `/swagger-ui.html`, and the existing local diagnostics. API documentation must never contain credentials, secrets, database connection details, tokens, or sensitive runtime configuration.
 
 ## Versioning
 

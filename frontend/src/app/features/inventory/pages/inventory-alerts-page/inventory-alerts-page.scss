@@ -6,6 +6,9 @@
 .page-header h1, .page-header p, .panel-heading h2, .panel-heading p { margin: 0; }
 .page-header p, .panel-heading p, caption, .identifier { color: var(--mat-sys-on-surface-variant); }
 .window-form { grid-template-columns: minmax(0, 320px) auto; align-items: start; }
+.expiration-window-field { display: grid; min-width: 0; gap: var(--lf-space-1); }
+.expiration-window-field mat-form-field { width: 100%; }
+.operational-field-helper { margin: 0; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); line-height: 1.4; }
 .table-scroll { max-width: 100%; overflow-x: auto; }
 table { width: 100%; min-width: 940px; border-collapse: collapse; }
 caption { padding-bottom: 10px; text-align: left; font: var(--mat-sys-body-small); }

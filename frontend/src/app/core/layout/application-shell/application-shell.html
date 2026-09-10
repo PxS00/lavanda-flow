@@ -1,80 +1,170 @@
-<mat-toolbar>
-  @if (isHandset()) {
-    <button
-      mat-button
-      type="button"
-      aria-label="Abrir navegação"
-      (click)="sidenav.toggle()"
-    >
-      Menu
-    </button>
-  }
-
-  <strong>Lavanda Flow</strong>
-</mat-toolbar>
-
 <mat-sidenav-container class="shell-container">
   <mat-sidenav
     #sidenav
-    [mode]="isHandset() ? 'over' : 'side'"
-    [opened]="!isHandset()"
+    [class.overlay-navigation]="usesOverlayNavigation()"
+    [class.persistent-navigation]="!usesOverlayNavigation()"
+    [mode]="usesOverlayNavigation() ? 'over' : 'side'"
+    [opened]="!usesOverlayNavigation()"
     aria-label="Navegação principal"
   >
-    <mat-nav-list>
-      <a
-        mat-list-item
-        routerLink="/dashboard"
-        routerLinkActive="active-link"
-        (click)="isHandset() && sidenav.close()"
-      >
-        Painel
-      </a>
+    <a class="brand-slot" routerLink="/dashboard" aria-label="Lavanda Flow — Painel">
+      <img class="brand-logo compact-brand" src="/favicon-lf.svg" alt="" />
+      <img class="brand-logo full-brand" src="/lavanda-flow-logo.svg" alt="" />
+    </a>
 
-      <a
-        mat-list-item
-        routerLink="/catalog"
-        routerLinkActive="active-link"
-        (click)="isHandset() && sidenav.close()"
-      >
-        Estoque
-      </a>
-      <a
-        mat-list-item
-        routerLink="/suppliers"
-        routerLinkActive="active-link"
-        (click)="isHandset() && sidenav.close()"
-      >
-        Fornecedores
-      </a>
-      <a
-        mat-list-item
-        routerLink="/receipts"
-        routerLinkActive="active-link"
-        (click)="isHandset() && sidenav.close()"
-      >
-        Entradas
-      </a>
-      <a
-        mat-list-item
-        routerLink="/production/formulas"
-        routerLinkActive="active-link"
-        (click)="isHandset() && sidenav.close()"
-      >
-        Produção
-      </a>
-      <span mat-list-item>Saídas</span>
-      <a
-        mat-list-item
-        routerLink="/inventory/alerts"
-        routerLinkActive="active-link"
-        (click)="isHandset() && sidenav.close()"
-      >
-        Alertas
-      </a>
-    </mat-nav-list>
+    <nav class="primary-navigation" aria-label="Destinos operacionais">
+      <section class="nav-group" aria-labelledby="overview-nav-heading">
+        <h2 id="overview-nav-heading">Visão geral</h2>
+        <mat-nav-list>
+          <a
+            class="nav-link"
+            mat-list-item
+            routerLink="/dashboard"
+            routerLinkActive="active-link"
+            [routerLinkActiveOptions]="{ exact: true }"
+            aria-label="Painel"
+            (click)="usesOverlayNavigation() && sidenav.close()"
+          >
+            <span class="nav-link-content">
+              <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z" />
+              </svg>
+              <span class="nav-label">Painel</span>
+            </span>
+          </a>
+        </mat-nav-list>
+      </section>
+
+      <section class="nav-group" aria-labelledby="inventory-nav-heading">
+        <h2 id="inventory-nav-heading">Estoque</h2>
+        <mat-nav-list>
+          <a
+            class="nav-link"
+            mat-list-item
+            routerLink="/catalog"
+            routerLinkActive="active-link"
+            aria-label="Estoque"
+            (click)="usesOverlayNavigation() && sidenav.close()"
+          >
+            <span class="nav-link-content">
+              <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M20 8h-3V4c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v16h14v-4h3l1-4-1-4Zm-5 10H5V6h10v12Zm3.56-4H17v-4h1.56l.5 2-.5 2ZM7 8h6v2H7V8Zm0 4h6v2H7v-2Zm0 4h4v-2H7v2Z" />
+              </svg>
+              <span class="nav-label">Estoque</span>
+            </span>
+          </a>
+          <a
+            class="nav-link"
+            mat-list-item
+            routerLink="/receipts"
+            routerLinkActive="active-link"
+            aria-label="Entradas"
+            (click)="usesOverlayNavigation() && sidenav.close()"
+          >
+            <span class="nav-link-content">
+              <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Zm0 12h-4v3H9v-3H5V5h14v10Zm-8-1 4-4h-3V6h-2v4H7l4 4Z" />
+              </svg>
+              <span class="nav-label">Entradas</span>
+            </span>
+          </a>
+          <a
+            class="nav-link"
+            mat-list-item
+            routerLink="/inventory/alerts"
+            routerLinkActive="active-link"
+            aria-label="Alertas"
+            (click)="usesOverlayNavigation() && sidenav.close()"
+          >
+            <span class="nav-link-content">
+              <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z" />
+              </svg>
+              <span class="nav-label">Alertas</span>
+            </span>
+          </a>
+        </mat-nav-list>
+      </section>
+
+      <section class="nav-group" aria-labelledby="production-nav-heading">
+        <h2 id="production-nav-heading">Produção</h2>
+        <mat-nav-list>
+          <a
+            class="nav-link"
+            mat-list-item
+            routerLink="/production/formulas"
+            routerLinkActive="active-link"
+            aria-label="Produção"
+            (click)="usesOverlayNavigation() && sidenav.close()"
+          >
+            <span class="nav-link-content">
+              <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M9.25 2v2h1v5.59L5.25 18c-.33.57.08 1.3.74 1.3h12.02c.66 0 1.07-.72.74-1.3l-5-8.41V4h1V2h-5.5Zm1.83 9.5 1.02-1.71 1.02 1.71h-2.04ZM7.72 17l2.17-3.65h4.22L16.28 17H7.72Z" />
+              </svg>
+              <span class="nav-label">Produção</span>
+            </span>
+          </a>
+        </mat-nav-list>
+      </section>
+
+      <section class="nav-group" aria-labelledby="registrations-nav-heading">
+        <h2 id="registrations-nav-heading">Cadastros</h2>
+        <mat-nav-list>
+          <a
+            class="nav-link"
+            mat-list-item
+            routerLink="/suppliers"
+            routerLinkActive="active-link"
+            aria-label="Fornecedores"
+            (click)="usesOverlayNavigation() && sidenav.close()"
+          >
+            <span class="nav-link-content">
+              <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-4-4ZM6 18.5c-.83 0-1.5-.67-1.5-1.5S5.17 15.5 6 15.5s1.5.67 1.5 1.5S6.83 18.5 6 18.5ZM15 6h1v4h4.5l1.5 1.5V12h-7V6Zm2 12.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5Z" />
+              </svg>
+              <span class="nav-label">Fornecedores</span>
+            </span>
+          </a>
+        </mat-nav-list>
+      </section>
+    </nav>
   </mat-sidenav>
 
   <mat-sidenav-content>
+    <mat-toolbar class="shell-toolbar">
+      @if (usesOverlayNavigation()) {
+        <button
+          mat-icon-button
+          type="button"
+          [attr.aria-label]="sidenav.opened ? 'Fechar navegação' : 'Abrir navegação'"
+          [attr.aria-expanded]="sidenav.opened"
+          (click)="sidenav.toggle()"
+        >
+          @if (sidenav.opened) {
+            <svg class="menu-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+              <path d="m18.3 5.71-1.41-1.42L12 9.17 7.11 4.29 5.7 5.71l4.89 4.88-4.89 4.89 1.41 1.42L12 12l4.89 4.9 1.41-1.42-4.89-4.89 4.89-4.88Z" />
+            </svg>
+          } @else {
+            <svg class="menu-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+              <path d="M3 18h18v-2H3v2Zm0-5h18v-2H3v2Zm0-7v2h18V6H3Z" />
+            </svg>
+          }
+        </button>
+        <strong class="mobile-brand">Lavanda Flow</strong>
+      }
+
+      @if (username() !== null) {
+        <span class="operator-name">{{ username() }}</span>
+      }
+      <button class="logout-button" mat-button type="button" [disabled]="loggingOut()" (click)="logout()">
+        {{ loggingOut() ? 'Saindo...' : 'Sair' }}
+      </button>
+    </mat-toolbar>
+
+    @if (logoutError() !== null) {
+      <div class="shell-error" role="alert">{{ logoutError() }}</div>
+    }
+
     <main class="shell-content">
       <router-outlet />
     </main>

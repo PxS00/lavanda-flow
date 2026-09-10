@@ -4,6 +4,12 @@
     <p>{{ itemName() }} · Estoque disponível: {{ formatDecimal(availableQuantity()) }} {{ unitLabel(unitOfMeasure()) }}</p>
   </header>
 
+  <p class="guidance">
+    Informe a quantidade desejada. O sistema seleciona automaticamente os lotes elegíveis por
+    validade (FEFO); a alocação não é alterada manualmente neste fluxo e pode consumir mais de um
+    lote.
+  </p>
+
   @if (state() === 'success') {
     @let withdrawal = completedWithdrawal();
     @if (withdrawal !== null) {
@@ -86,7 +92,10 @@
       <mat-card appearance="outlined" class="confirmation-card" role="group" aria-labelledby="withdrawal-confirmation-heading">
         <mat-card-content>
           <h3 id="withdrawal-confirmation-heading">Confirmar saída de estoque</h3>
-          <p class="warning">Esta ação consome estoque. Os lotes elegíveis serão selecionados por FEFO e mais de um lote pode ser usado.</p>
+          <p class="warning">
+            Esta ação consome estoque. Os lotes elegíveis serão selecionados por FEFO e mais de um
+            lote pode ser usado.
+          </p>
           <dl class="summary-list">
             <div><dt>Item</dt><dd>{{ itemName() }}</dd></div>
             <div><dt>Quantidade solicitada</dt><dd>{{ formatDecimal(withdrawal.quantity) }} {{ unitLabel(unitOfMeasure()) }}</dd></div>

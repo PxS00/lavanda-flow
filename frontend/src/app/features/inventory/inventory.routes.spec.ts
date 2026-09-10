@@ -4,6 +4,9 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 
 import { routes } from '../../app.routes';
+import { AuthSessionService } from '../../core/auth/auth-session.service';
+import { authenticatedOperatorSession } from '../../core/auth/testing/authenticated-operator-session';
+import { InventoryItemApiService } from '../catalog/data-access/inventory-item-api.service';
 import { InventoryItemOperationsApiService } from './data-access/inventory-item-operations-api.service';
 import { FefoWithdrawalApiService } from './data-access/fefo-withdrawal-api.service';
 import { InventoryAlertApiService } from './data-access/inventory-alert-api.service';
@@ -16,6 +19,23 @@ describe('inventory routes', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter(routes),
+        { provide: AuthSessionService, useValue: authenticatedOperatorSession() },
+        {
+          provide: InventoryItemApiService,
+          useValue: {
+            getById: () =>
+              of({
+                id: inventoryItemId,
+                name: 'Lavender Essence',
+                description: null,
+                category: 'ESSENCE',
+                unitOfMeasure: 'MILLILITER',
+                active: true,
+                essenceReference: '027',
+                productionTypeCode: null,
+              }),
+          },
+        },
         {
           provide: InventoryItemOperationsApiService,
           useValue: {

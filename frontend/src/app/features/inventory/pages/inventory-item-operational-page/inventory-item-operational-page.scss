@@ -2,6 +2,17 @@
   display: block;
 }
 
+.reference-status {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.reference-error {
+  display: grid;
+  justify-items: start;
+  gap: var(--lf-space-2);
+}
+
 .operational-page {
   display: grid;
   gap: 32px;

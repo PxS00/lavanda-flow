@@ -10,6 +10,7 @@ on:
       - "README.md"
       - "CONTRIBUTING.md"
       - "SECURITY.md"
+      - "scripts/operations/**"
   pull_request:
     branches: [develop, main]
 
@@ -17,7 +18,7 @@ permissions:
   contents: read
 
 jobs:
-  repository-quality:
+  repository-checks:
     runs-on: ubuntu-latest
 
     steps:
@@ -75,3 +76,149 @@ jobs:
               exit 1
             }
           done
+
+      - name: Test restore verification contract
+        shell: bash
+        run: bash scripts/operations/test-verify-postgres-restore.sh
+
+  operational-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect operational runtime changes
+        id: changes
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet "$BASE_SHA...$HEAD_SHA" -- \
+            Dockerfile \
+            .dockerignore \
+            compose.operational.yaml \
+            operational.env.example \
+            backend \
+            frontend \
+            .tool-versions \
+            .github/workflows/repository-quality.yml; then
+            echo "required=false" >> "$GITHUB_OUTPUT"
+            echo "No operational runtime changes detected."
+          else
+            echo "required=true" >> "$GITHUB_OUTPUT"
+            echo "Operational runtime changes detected."
+          fi
+
+      - name: No operational runtime validation required
+        if: github.event_name != 'pull_request' || steps.changes.outputs.required != 'true'
+        run: echo "Operational runtime validation is not required for this event."
+
+      - name: Validate operational runtime
+        if: github.event_name == 'pull_request' && steps.changes.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            "Dockerfile"
+            ".dockerignore"
+            "compose.operational.yaml"
+            "operational.env.example"
+            "backend/src/main/resources/application-operational.yml"
+          )
+
+          for file in "${required[@]}"; do
+            test -f "$file" || {
+              echo "Required operational runtime file not found: $file"
+              exit 1
+            }
+          done
+
+          if env -u POSTGRES_DB -u POSTGRES_USER -u POSTGRES_PASSWORD \
+            docker compose -f compose.operational.yaml config --quiet; then
+            echo "Operational Compose accepted missing required database configuration."
+            exit 1
+          fi
+
+          umask 077
+          runtime_env="$(mktemp "$RUNNER_TEMP/operational-runtime.XXXXXX.env")"
+          runtime_config="$(mktemp "$RUNNER_TEMP/operational-runtime.XXXXXX.json")"
+          trap 'rm -f "$runtime_env" "$runtime_config"' EXIT
+
+          runtime_password="$(openssl rand -hex 32)"
+          {
+            printf '%s\n' "POSTGRES_DB=lavanda_flow_ci"
+            printf '%s\n' "POSTGRES_USER=lavanda_ci"
+            printf '%s\n' "POSTGRES_PASSWORD=$runtime_password"
+            printf '%s\n' "LAVANDA_HTTP_PORT=18080"
+            printf '%s\n' "LAVANDA_SECURITY_BOOTSTRAP_ENABLED=false"
+          } > "$runtime_env"
+
+          docker compose -f compose.operational.yaml --env-file "$runtime_env" config --quiet
+          docker compose -f compose.operational.yaml --env-file "$runtime_env" config --format json > "$runtime_config"
+
+          python3 - "$runtime_config" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1]) as file:
+              configuration = json.load(file)
+
+          services = configuration.get("services", {})
+          expected_services = {"postgres", "lavanda-flow-app"}
+          if set(services) != expected_services:
+              raise SystemExit("Operational Compose must define exactly postgres and lavanda-flow-app.")
+
+          if services["postgres"].get("ports"):
+              raise SystemExit("Operational PostgreSQL must not publish a host port.")
+
+          if not services["lavanda-flow-app"].get("ports"):
+              raise SystemExit("Operational application must publish its HTTP port.")
+
+          if "postgres-data" not in configuration.get("volumes", {}):
+              raise SystemExit("Operational PostgreSQL volume is missing.")
+          PY
+
+          docker compose -f compose.operational.yaml --env-file "$runtime_env" build --no-cache lavanda-flow-app
+
+          revision="$(git rev-parse HEAD)"
+          image_tag="lavanda-flow-operational-lavanda-flow-app:latest"
+          image_id="$(docker image inspect "$image_tag" --format '{{.Id}}')" || {
+            echo "Operational application image was not created."
+            exit 1
+          }
+
+          {
+            echo "### Operational runtime validation"
+            echo
+            echo "Validated revision: \`$revision\`"
+            echo "Operational application image exists: \`$image_tag\` (\`$image_id\`)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  repository-quality:
+    needs: [repository-checks, operational-runtime]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Confirm repository quality gates
+        shell: bash
+        env:
+          REPOSITORY_CHECKS_RESULT: ${{ needs.repository-checks.result }}
+          OPERATIONAL_RUNTIME_RESULT: ${{ needs.operational-runtime.result }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$REPOSITORY_CHECKS_RESULT" != "success" || "$OPERATIONAL_RUNTIME_RESULT" != "success" ]]; then
+            echo "repository-checks: $REPOSITORY_CHECKS_RESULT"
+            echo "operational-runtime: $OPERATIONAL_RUNTIME_RESULT"
+            exit 1
+          fi

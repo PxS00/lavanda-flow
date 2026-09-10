@@ -36,4 +36,20 @@ describe('SupplierSelector', () => {
   it('should bound the initial search to active suppliers', () => {
     expect(search).toHaveBeenCalledWith({ name: '', active: true, page: 0, size: 10 });
   });
+
+  it('associates the optional supplier helper without changing selector guidance', () => {
+    const searchField = fixture.nativeElement.querySelector('.search-field') as HTMLElement;
+    const input = searchField.querySelector('input') as HTMLInputElement;
+    const helper = searchField.querySelector('#supplier-search-hint') as HTMLParagraphElement;
+
+    expect(helper.textContent?.trim()).toBe('Deixe sem seleção quando a entrada não tiver fornecedor');
+    expect(input.getAttribute('aria-describedby')).toContain('supplier-search-hint');
+    expect(fixture.nativeElement.querySelector('.selector-heading h2')?.textContent?.trim()).toBe(
+      'Fornecedor (opcional)',
+    );
+    expect(fixture.nativeElement.querySelector('.selector-heading p')?.textContent?.trim()).toBe(
+      'Busca apenas fornecedores ativos.',
+    );
+    expect(fixture.nativeElement.querySelector('mat-hint')).toBeNull();
+  });
 });

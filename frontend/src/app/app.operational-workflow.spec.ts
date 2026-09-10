@@ -6,6 +6,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/config/api-base-url.token';
+import { AuthSessionService } from './core/auth/auth-session.service';
+import { authenticatedOperatorSession } from './core/auth/testing/authenticated-operator-session';
 
 describe('operational UI workflow', () => {
   const apiUrl = 'https://api.example.test/api/v1';
@@ -21,6 +23,7 @@ describe('operational UI workflow', () => {
       providers: [
         provideRouter(routes), provideHttpClient(), provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: apiUrl },
+        { provide: AuthSessionService, useValue: authenticatedOperatorSession() },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -139,6 +142,12 @@ function flushWorkspace(
   availableQuantity: number,
   includeMinimum = true,
 ): void {
+  if (includeMinimum) {
+    http.expectOne('https://api.example.test/api/v1/inventory-items/item-1').flush({
+      id: 'item-1', name: 'Essência de lavanda', description: null, category: 'ESSENCE',
+      unitOfMeasure: 'MILLILITER', active: true, essenceReference: '027', productionTypeCode: 'BDS',
+    });
+  }
   const overview = http.expectOne('https://api.example.test/api/v1/inventory/items/item-1/overview');
   overview.flush({ inventoryItemId: 'item-1', name: 'Essência de lavanda', category: 'ESSENCE',
     unitOfMeasure: 'MILLILITER', active: true, asOfDate: '2026-09-01', expirationWindowDays: 30,

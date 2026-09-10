@@ -18,10 +18,17 @@ class ManagementConfigurationTest {
     @Test
     void exposesOnlyApprovedManagementEndpoints() {
         assertEquals(
-                "health,info,prometheus",
+                "health",
                 environment.getProperty("management.endpoints.web.exposure.include"));
         assertEquals(
-                "when-authorized",
+                "never",
                 environment.getProperty("management.endpoint.health.show-details"));
+        assertEquals("false", environment.getProperty("springdoc.api-docs.enabled"));
+        assertEquals("false", environment.getProperty("springdoc.swagger-ui.enabled"));
+        assertEquals("12h", environment.getProperty("server.servlet.session.timeout"));
+        assertEquals("true", environment.getProperty("server.servlet.session.cookie.http-only"));
+        assertEquals("lax", environment.getProperty("server.servlet.session.cookie.same-site"));
+        assertEquals("/", environment.getProperty("server.servlet.session.cookie.path"));
+        assertEquals("false", environment.getProperty("server.servlet.session.cookie.secure"));
     }
 }

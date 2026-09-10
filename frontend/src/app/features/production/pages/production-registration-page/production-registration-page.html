@@ -28,7 +28,7 @@
         <mat-card appearance="outlined" class="success-card" aria-live="polite">
           <mat-card-header>
             <mat-card-title>Produção registrada</mat-card-title>
-            <mat-card-subtitle>O backend confirmou a execução e o lote definitivo.</mat-card-subtitle>
+            <mat-card-subtitle>O sistema confirmou a execução e o lote definitivo.</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <dl class="summary-grid">
@@ -42,7 +42,15 @@
               </div>
               <div>
                 <dt>Item produzido</dt>
-                <dd>{{ itemName(result.outputInventoryItemId) }}</dd>
+                <dd class="identified-item">
+                  <span>{{ itemName(result.outputInventoryItemId) }}</span>
+                  @if (completedItem(result.outputInventoryItemId); as item) {
+                    <app-inventory-item-reference-metadata
+                      [essenceReference]="item.essenceReference"
+                      [productionTypeCode]="item.productionTypeCode"
+                    />
+                  }
+                </dd>
               </div>
               <div>
                 <dt>Quantidade produzida</dt>
@@ -73,9 +81,17 @@
               <ul>
                 @for (consumption of result.consumptions; track consumption.movementId) {
                   <li>
-                    {{ itemName(consumption.sourceInventoryItemId) }} ·
-                    lote {{ sourceBatchLabel(consumption.sourceBatchId) }} ·
-                    {{ formatDecimal(consumption.quantity) }}
+                    <span>
+                      {{ itemName(consumption.sourceInventoryItemId) }} · lote
+                      {{ sourceBatchLabel(consumption.sourceBatchId) }} ·
+                      {{ formatDecimal(consumption.quantity) }}
+                    </span>
+                    @if (completedItem(consumption.sourceInventoryItemId); as item) {
+                      <app-inventory-item-reference-metadata
+                        [essenceReference]="item.essenceReference"
+                        [productionTypeCode]="item.productionTypeCode"
+                      />
+                    }
                   </li>
                 }
               </ul>
@@ -86,7 +102,7 @@
         @let refresh = refreshState();
         @switch (refresh.kind) {
           @case ('loading') {
-            <app-loading-state message="Atualizando o estoque confirmado pelo backend..." />
+            <app-loading-state message="Atualizando o estoque confirmado pelo sistema..." />
           }
           @case ('ready') {
             <mat-card appearance="outlined">
@@ -138,7 +154,7 @@
             <mat-card-header>
               <mat-card-title>Revisar produção</mat-card-title>
               <mat-card-subtitle>
-                Esta revisão confirma apenas os dados informados. O backend ainda validará fórmula,
+                Esta revisão confirma apenas os dados informados. O sistema ainda validará fórmula,
                 estoque, validade, elegibilidade e lote.
               </mat-card-subtitle>
             </mat-card-header>
@@ -146,7 +162,13 @@
               <dl class="summary-grid">
                 <div>
                   <dt>Item produzido</dt>
-                  <dd>{{ currentReview.context.outputItem.name }}</dd>
+                  <dd class="identified-item">
+                    <span>{{ currentReview.context.outputItem.name }}</span>
+                    <app-inventory-item-reference-metadata
+                      [essenceReference]="currentReview.context.outputItem.essenceReference"
+                      [productionTypeCode]="currentReview.context.outputItem.productionTypeCode"
+                    />
+                  </dd>
                 </div>
                 <div>
                   <dt>Quantidade produzida</dt>
@@ -187,6 +209,10 @@
                   @for (allocation of currentReview.allocations; track allocation.batch.batchId) {
                     <li>
                       <strong>{{ allocation.inventoryItem.name }}</strong>
+                      <app-inventory-item-reference-metadata
+                        [essenceReference]="allocation.inventoryItem.essenceReference"
+                        [productionTypeCode]="allocation.inventoryItem.productionTypeCode"
+                      />
                       <span>Lote: {{ allocation.batch.lotCode || allocation.batch.batchId }}</span>
                       <span>
                         Quantidade informada: {{ formatDecimal(allocation.quantity) }}
@@ -300,7 +326,7 @@
                   </mat-radio-group>
                   @if (lotCodeMode() === 'GENERATED') {
                     <p class="field-hint">
-                      O código definitivo será gerado pelo backend somente quando a produção for
+                      O código definitivo será gerado pelo servidor somente quando a produção for
                       registrada com sucesso. Nenhuma sequência é reservada nesta tela.
                     </p>
                   }
@@ -357,9 +383,13 @@
                     </mat-card-subtitle>
                   </mat-card-header>
                   <mat-card-content>
+                    <app-inventory-item-reference-metadata
+                      [essenceReference]="selectedContext.context.outputItem.essenceReference"
+                      [productionTypeCode]="selectedContext.context.outputItem.productionTypeCode"
+                    />
                     <p class="field-hint">
                       As quantidades de referência são apenas contexto. O escalonamento para a
-                      quantidade produzida será validado exclusivamente pelo backend.
+                      quantidade produzida será validado exclusivamente pelo sistema.
                     </p>
                   </mat-card-content>
                 </mat-card>
@@ -382,6 +412,10 @@
                         </mat-card-subtitle>
                       </mat-card-header>
                       <mat-card-content formArrayName="allocations">
+                        <app-inventory-item-reference-metadata
+                          [essenceReference]="ingredient.item.essenceReference"
+                          [productionTypeCode]="ingredient.item.productionTypeCode"
+                        />
                         @if (ingredient.batches.length === 0) {
                           <p class="context-message">
                             Nenhum lote foi retornado pelo estoque para este ingrediente.
@@ -440,7 +474,7 @@
                               as batch
                             ) {
                               <p class="batch-facts">
-                                Status informado pelo backend: {{ batchStatusLabel(batch.status) }} ·
+                                Status informado pelo sistema: {{ batchStatusLabel(batch.status) }} ·
                                 saldo atual: {{ formatDecimal(batch.currentQuantity) }}
                                 {{ unitLabel(ingredient.item.unitOfMeasure) }}
                                 @if (batch.expiresAt) {

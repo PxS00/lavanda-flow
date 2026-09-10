@@ -17,7 +17,7 @@ form {
 
 .page-header div {
   display: grid;
-  gap: 4px;
+  gap: var(--lf-space-3);
 }
 
 h1,
@@ -120,6 +120,12 @@ mat-radio-group {
 .summary-grid dd {
   margin: 4px 0 0;
   overflow-wrap: anywhere;
+}
+
+.identified-item,
+.confirmed-consumptions li {
+  display: grid;
+  gap: var(--lf-space-2);
 }
 
 .review-list,

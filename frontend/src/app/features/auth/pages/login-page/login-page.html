@@ -1,0 +1,53 @@
+<main class="login-page" aria-labelledby="login-title">
+  <mat-card>
+    <div class="login-brand">
+      <span class="login-brand-mark" aria-hidden="true">LF</span>
+      <span>Lavanda Flow</span>
+    </div>
+    <mat-card-header>
+      <mat-card-title id="login-title">Entrar no Lavanda Flow</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (sessionState().kind === 'loading' || sessionState().kind === 'unknown') {
+      <p role="status">Preparando acesso seguro...</p>
+      } @else if (sessionState().kind === 'error') {
+      <div role="alert" class="login-error">
+        Não foi possível conectar ao servidor. Tente novamente.
+      </div>
+      <button mat-button type="button" (click)="retrySessionBootstrap()">Tentar novamente</button>
+      } @else if (sessionState().kind === 'authenticated') {
+      <p role="status">Acesso confirmado. Redirecionando...</p>
+      } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <mat-form-field>
+          <mat-label>Usuário</mat-label>
+          <input matInput formControlName="username" autocomplete="username" />
+          @if (form.controls.username.hasError('required') && form.controls.username.touched) {
+          <mat-error>Informe o usuário.</mat-error>
+          } @else if (form.controls.username.hasError('maxlength') && form.controls.username.touched) {
+          <mat-error>Informe no máximo 100 caracteres.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Senha</mat-label>
+          <input matInput type="password" formControlName="password" autocomplete="current-password" />
+          @if (form.controls.password.hasError('required') && form.controls.password.touched) {
+          <mat-error>Informe a senha.</mat-error>
+          }
+        </mat-form-field>
+
+        @if (errorMessage() !== null) {
+        <div role="alert" class="login-error">{{ errorMessage() }}</div>
+        }
+
+        <button mat-flat-button type="submit"
+          [disabled]="form.invalid || submitting() || sessionState().kind !== 'unauthenticated'">
+          {{ submitting() ? 'Entrando...' : 'Entrar' }}
+        </button>
+      </form>
+      }
+    </mat-card-content>
+  </mat-card>
+</main>

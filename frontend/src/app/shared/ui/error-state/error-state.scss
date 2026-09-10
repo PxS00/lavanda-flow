@@ -2,8 +2,12 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--lf-space-2);
   min-height: 160px;
+  padding: var(--lf-space-5);
+  border-left: 4px solid var(--mat-sys-error);
+  border-radius: var(--lf-radius-small);
+  background: var(--mat-sys-error-container);
 }
 
 .error-state h2,

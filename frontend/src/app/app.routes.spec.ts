@@ -25,7 +25,11 @@ describe('application routes', () => {
   afterEach(() => http.verify());
 
   it('should redirect the root route to dashboard', async () => {
-    await RouterTestingHarness.create('/');
+    const harness = await RouterTestingHarness.create();
+    const navigation = harness.navigateByUrl('/');
+    await navigationStarted();
+    http.expectOne('/api/v1/auth/session').flush({ authenticated: true, username: 'Operator' });
+    await navigation;
     http.expectOne('/api/v1/inventory/dashboard').flush(dashboardSummary());
 
     const router = TestBed.inject(Router);
@@ -34,12 +38,37 @@ describe('application routes', () => {
   });
 
   it('should render the dashboard route', async () => {
-    const harness = await RouterTestingHarness.create('/dashboard');
+    const harness = await RouterTestingHarness.create();
+    const navigation = harness.navigateByUrl('/dashboard');
+    await navigationStarted();
+    http.expectOne('/api/v1/auth/session').flush({ authenticated: true, username: 'Operator' });
+    await navigation;
     http.expectOne('/api/v1/inventory/dashboard').flush(dashboardSummary());
     harness.fixture.detectChanges();
 
     expect(harness.routeNativeElement?.textContent).toContain('Painel operacional');
     expect(harness.routeNativeElement?.textContent).toContain('Itens ativos');
+  });
+
+  it('should redirect an unauthenticated protected-route reload to login', async () => {
+    const harness = await RouterTestingHarness.create();
+    const navigation = harness.navigateByUrl('/dashboard');
+    await navigationStarted();
+    http.expectOne('/api/v1/auth/session').flush({ authenticated: false, username: null });
+    await navigation;
+
+    expect(TestBed.inject(Router).url).toBe('/login');
+  });
+
+  it('should redirect a valid backend session away from login', async () => {
+    const harness = await RouterTestingHarness.create();
+    const navigation = harness.navigateByUrl('/login');
+    await navigationStarted();
+    http.expectOne('/api/v1/auth/session').flush({ authenticated: true, username: 'Operator' });
+    await navigation;
+    http.expectOne('/api/v1/inventory/dashboard').flush(dashboardSummary());
+
+    expect(TestBed.inject(Router).url).toBe('/dashboard');
   });
 });
 
@@ -53,4 +82,8 @@ function dashboardSummary() {
     expiringSoonBatchCount: 4,
     expiredBatchCount: 1,
   };
+}
+
+function navigationStarted(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve));
 }

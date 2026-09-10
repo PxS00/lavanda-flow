@@ -64,6 +64,7 @@ describe('ProductionGenealogyPage', () => {
 
     const text = fixture.nativeElement.textContent as string;
     expect(getBatchGenealogy).toHaveBeenCalledWith(batchId, 'BOTH');
+    expect(text).toContain('ancestralidade registrada de um lote concreto');
     expect(text).toContain('Perfume de lavanda');
     expect(text).toContain('LOT-root-batch');
     expect(text).toContain('Produção interna');

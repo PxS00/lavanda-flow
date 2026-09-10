@@ -93,6 +93,88 @@ describe('StockReceiptPage', () => {
     fixture.detectChanges();
   });
 
+  it('should explain receipt item, batch, expiration, and audit context without changing rules', () => {
+    const text = fixture.nativeElement.textContent as string;
+
+    expect(text).toContain('item que receberá o novo lote');
+    expect(text).toContain('Identifica o lote recebido quando informado');
+    expect(text).toContain('as regras de data do sistema permanecem válidas');
+    expect(text).toContain('Contexto auditável da entrada; não altera as regras de estoque');
+  });
+
+  it('groups receipt fields, external helpers, and backend errors into stable grid cells', () => {
+    const fields = Array.from(fixture.nativeElement.querySelectorAll('.fields-grid > .receipt-field')) as HTMLElement[];
+
+    expect(fields).toHaveLength(5);
+    expect(fields.every((field) => field.querySelectorAll('mat-form-field').length === 1)).toBe(true);
+    expect(fields.at(-1)?.classList.contains('receipt-field--full')).toBe(true);
+    expect(fields[2]?.querySelector('.receipt-field-helper')).toBeNull();
+    expect(Array.from(fixture.nativeElement.querySelectorAll('.fields-grid .receipt-field-helper'), (helper: Element) => ({
+      id: helper.id,
+      text: helper.textContent?.trim(),
+    }))).toEqual([
+      {
+        id: 'receipt-quantity-hint',
+        text: 'Valor positivo, com até 13 dígitos inteiros e 6 casas decimais',
+      },
+      {
+        id: 'receipt-lot-hint',
+        text: 'Identifica o lote recebido quando informado · opcional · máximo de 255 caracteres',
+      },
+      {
+        id: 'receipt-expiration-hint',
+        text: 'Opcional; as regras de data do sistema permanecem válidas',
+      },
+      {
+        id: 'receipt-reason-hint',
+        text: 'Contexto auditável da entrada; não altera as regras de estoque · opcional · máximo de 255 caracteres',
+      },
+    ]);
+    expect(fields[0]?.querySelector('input')?.getAttribute('aria-describedby')).toContain('receipt-quantity-hint');
+    expect(fields[3]?.querySelector('input')?.getAttribute('aria-describedby')).toContain('receipt-expiration-hint');
+  });
+
+  it('hides an external helper while its client validation error is displayed', () => {
+    selectItem();
+    fixture.componentInstance.receiptModel.set({
+      lotCode: '',
+      quantity: '0',
+      receivedAt: '2026-09-01',
+      expiresAt: '',
+      reason: '',
+    });
+    fixture.detectChanges();
+
+    submit();
+
+    const quantityField = fixture.nativeElement.querySelector('.fields-grid > .receipt-field') as HTMLElement;
+    const describedBy = quantityField.querySelector('input')?.getAttribute('aria-describedby');
+
+    expect(quantityField.querySelector('.receipt-field-helper')).toBeNull();
+    expect(quantityField.textContent).toContain('quantidade positiva');
+    expect(describedBy).not.toContain('receipt-quantity-hint');
+    expect(describedBy).toBeTruthy();
+  });
+
+  it('keeps a backend field error with its receipt field and description', () => {
+    selectItem();
+    setValidForm();
+    submit();
+
+    response.error(apiError(400, 'VALIDATION_ERROR', 'Receipt data is invalid.', { quantity: 'Invalid quantity' }));
+    fixture.detectChanges();
+
+    const error = fixture.nativeElement.querySelector('#receipt-quantity-backend-error') as HTMLParagraphElement;
+    const field = error.closest('.receipt-field') as HTMLElement;
+    const describedBy = field.querySelector('input')?.getAttribute('aria-describedby');
+
+    expect(error).toBeTruthy();
+    expect(field.querySelector('mat-label')?.textContent?.trim()).toBe('Quantidade');
+    expect(error.parentElement).toBe(field);
+    expect(describedBy).toContain('receipt-quantity-hint');
+    expect(describedBy).toContain('receipt-quantity-backend-error');
+  });
+
   it('should submit one valid receipt and lock the completed transaction against repeat submission', () => {
     selectItem();
     selectSupplier();
@@ -269,7 +351,12 @@ describe('StockReceiptPage', () => {
     ) as HTMLButtonElement | undefined;
   }
 
-  function apiError(status: number, code: string, message: string): HttpErrorResponse {
+  function apiError(
+    status: number,
+    code: string,
+    message: string,
+    details: Record<string, string> = {},
+  ): HttpErrorResponse {
     return new HttpErrorResponse({
       status,
       error: {
@@ -280,7 +367,7 @@ describe('StockReceiptPage', () => {
         code,
         message,
         path: '/api/v1/inventory/receipts',
-        details: {},
+        details,
       },
     });
   }

@@ -4,13 +4,21 @@ import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStock
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockAdjustmentCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockEntry;
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockEntryCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterExpiredStockDisposal;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterExpiredStockDisposalCommand;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockLoss;
+import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockLossCommand;
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockWithdrawal;
 import com.ceudelavanda.lavandaflow.inventory.application.movement.RegisterStockWithdrawalCommand;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockAdjustmentRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockEntryRequest;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterExpiredStockDisposalRequest;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockLossRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.request.RegisterStockWithdrawalRequest;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockAdjustmentResponse;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockEntryResponse;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterExpiredStockDisposalResponse;
+import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockLossResponse;
 import com.ceudelavanda.lavandaflow.inventory.infrastructure.web.response.RegisterStockWithdrawalResponse;
 import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,6 +46,8 @@ public class StockMovementController {
     private final RegisterStockEntry registerStockEntry;
     private final RegisterStockAdjustment registerStockAdjustment;
     private final RegisterStockWithdrawal registerStockWithdrawal;
+    private final RegisterStockLoss registerStockLoss;
+    private final RegisterExpiredStockDisposal registerExpiredStockDisposal;
 
     @Operation(summary = "Register stock entry", description = "Adds a positive quantity to an existing batch and records the corresponding stock movement.")
     @ApiResponses({
@@ -84,5 +94,39 @@ public class StockMovementController {
     ) {
         var result = registerStockAdjustment.execute(new RegisterStockAdjustmentCommand(batchId, request.quantity(), request.reason()));
         return ResponseEntity.status(HttpStatus.CREATED).body(RegisterStockAdjustmentResponse.from(result));
+    }
+
+    @Operation(summary = "Register stock loss", description = "Removes physically lost stock from the selected batch and records an immutable loss movement.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Stock loss registered successfully", content = @Content(schema = @Schema(implementation = RegisterStockLossResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid quantity or reason", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Batch not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "422", description = "Insufficient stock", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PostMapping("/batches/{batchId}/losses")
+    public ResponseEntity<RegisterStockLossResponse> registerStockLoss(
+        @PathVariable UUID batchId,
+        @Valid @RequestBody RegisterStockLossRequest request
+    ) {
+        var result = registerStockLoss.execute(new RegisterStockLossCommand(batchId, request.quantity(), request.reason()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(RegisterStockLossResponse.from(result));
+    }
+
+    @Operation(summary = "Register expired-stock disposal", description = "Removes stock from an expired selected batch and records an immutable disposal movement.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Expired-stock disposal registered successfully", content = @Content(schema = @Schema(implementation = RegisterExpiredStockDisposalResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid quantity or reason", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Batch not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "422", description = "Insufficient stock or batch is not expired", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PostMapping("/batches/{batchId}/expired-disposals")
+    public ResponseEntity<RegisterExpiredStockDisposalResponse> registerExpiredStockDisposal(
+        @PathVariable UUID batchId,
+        @Valid @RequestBody RegisterExpiredStockDisposalRequest request
+    ) {
+        var result = registerExpiredStockDisposal.execute(
+            new RegisterExpiredStockDisposalCommand(batchId, request.quantity(), request.reason())
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(RegisterExpiredStockDisposalResponse.from(result));
     }
 }

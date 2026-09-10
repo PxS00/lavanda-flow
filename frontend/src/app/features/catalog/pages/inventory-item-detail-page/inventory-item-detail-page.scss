@@ -2,6 +2,11 @@
   display: block;
 }
 
+code {
+  font: inherit;
+  user-select: text;
+}
+
 .detail-page,
 header {
   display: grid;
