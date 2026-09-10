@@ -28,19 +28,45 @@ sha256sum -c lavanda-flow-YYYYMMDDTHHMMSSZ.dump.sha256
 
 ## Verify a backup safely
 
-Run disposable verification before go-live, periodically as part of maintenance, and after important changes:
+Run this default disposable verification periodically and after important changes. It is the normal maintainer
+path for an operational backup:
 
 ```bash
 scripts/operations/verify-postgres-restore.sh backups/lavanda-flow-YYYYMMDDTHHMMSSZ.dump
 ```
 
-The harness verifies the checksum when present, inspects the custom-format dump, restores only into a uniquely named `lavanda-flow-restore-*` PostgreSQL 17 Compose project and volume, checks Flyway history and inventory/production/genealogy relationships, then starts the current operational application against the restored database and waits for `/actuator/health`. It uses no PostgreSQL host port. Its trap runs `down -v` only after a project-name guard confirms this is the disposable restore project; it never targets `lavanda-flow-operational` or its volume.
+The harness verifies the checksum when present, inspects the custom-format dump, restores only into a uniquely
+named `lavanda-flow-restore-*` PostgreSQL 17 Compose project and volume, validates the Flyway history, checks
+every restored inventory/production/genealogy relationship for broken references, then starts the current
+operational application against the restored database and waits for `/actuator/health`. It uses no PostgreSQL
+host port. Its trap runs `down -v` only after a project-name guard confirms this is the disposable restore
+project; it never targets `lavanda-flow-operational` or its volume.
+
+This generic operational path accepts a valid empty or sparse business database: catalog-only data, inventory
+without production, and unused production tables are normal before or during early operation. Zero rows are not
+corruption; any broken relationship among rows that do exist fails verification. The harness never inserts
+synthetic business rows into the restored backup.
 
 If port `18080` is occupied, use a different disposable port:
 
 ```bash
 LAVANDA_RESTORE_HTTP_PORT=18081 scripts/operations/verify-postgres-restore.sh backups/lavanda-flow-YYYYMMDDTHHMMSSZ.dump
 ```
+
+### Strict representative acceptance verification
+
+Use strict representative verification only for #184-style acceptance datasets, after restoring a disposable
+backup known to contain representative catalog, inventory, movement, formula, production, consumption, output,
+source, and genealogy relationships:
+
+```bash
+scripts/operations/verify-postgres-restore.sh --strict-representative backups/lavanda-flow-YYYYMMDDTHHMMSSZ.dump
+```
+
+Strict mode performs the same checksum, dump, Flyway, row-integrity, isolated PostgreSQL 17, application-health,
+and cleanup checks as the generic path. In addition, it requires positive counts for each representative table
+and relationship. It intentionally fails for a valid operational backup that has not yet used one of those
+workflows; use the default command for ordinary maintenance verification.
 
 ## Destructive operational recovery
 
