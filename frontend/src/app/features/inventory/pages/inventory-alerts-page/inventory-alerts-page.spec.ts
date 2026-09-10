@@ -101,6 +101,21 @@ describe('InventoryAlertsPage', () => {
     expect(fixture.nativeElement.textContent).toContain('batch-expired');
   });
 
+  it('associates the expiration-window helper without changing expiration status metadata', () => {
+    expirationResponse.next({ ...expiration, alerts: [] });
+    fixture.detectChanges();
+
+    const field = fixture.nativeElement.querySelector('.expiration-window-field') as HTMLElement;
+    const input = field.querySelector('input') as HTMLInputElement;
+    const helper = field.querySelector('#expiration-window-hint') as HTMLParagraphElement;
+
+    expect(helper.textContent?.trim()).toBe('Use 0 para mostrar somente lotes vencidos.');
+    expect(input.getAttribute('aria-describedby')).toContain('expiration-window-hint');
+    expect(fixture.nativeElement.querySelector('#expiration-heading')?.textContent?.trim()).toBe('Validade');
+    expect(fixture.nativeElement.textContent).toContain('0 alerta(s) em 01/09/2026.');
+    expect(fixture.nativeElement.querySelector('mat-hint')).toBeNull();
+  });
+
   it('should request an explicit zero-day window from the operator', () => {
     expirationResponse.next(expiration);
     fixture.detectChanges();
@@ -131,6 +146,8 @@ describe('InventoryAlertsPage', () => {
 
     expect(getExpirationAlerts).toHaveBeenCalledOnce();
     expect(fixture.nativeElement.textContent).toContain('Informe a janela de validade.');
+    expect(fixture.nativeElement.querySelector('#expiration-window-hint')).toBeNull();
+    expect((fixture.nativeElement.querySelector('.expiration-window-field input') as HTMLInputElement).getAttribute('aria-describedby')).toBeTruthy();
   });
 
   it('should present empty alert sets as a valid state and link each alert to its item workspace', () => {

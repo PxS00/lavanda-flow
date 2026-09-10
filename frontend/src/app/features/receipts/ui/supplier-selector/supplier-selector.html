@@ -9,18 +9,23 @@
     }
   </div>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Buscar fornecedor</mat-label>
-    <input
-      matInput
-      type="search"
-      autocomplete="off"
-      [disabled]="disabled()"
-      [value]="query()"
-      (input)="search($event)"
-    />
-    <mat-hint>Deixe sem seleção quando a entrada não tiver fornecedor</mat-hint>
-  </mat-form-field>
+  <div class="search-field">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Buscar fornecedor</mat-label>
+      <input
+        matInput
+        type="search"
+        autocomplete="off"
+        [disabled]="disabled()"
+        [value]="query()"
+        aria-describedby="supplier-search-hint"
+        (input)="search($event)"
+      />
+    </mat-form-field>
+    <p id="supplier-search-hint" class="operational-field-helper">
+      Deixe sem seleção quando a entrada não tiver fornecedor
+    </p>
+  </div>
 
   @if (selected(); as supplier) {
     <p class="selected" aria-live="polite">
