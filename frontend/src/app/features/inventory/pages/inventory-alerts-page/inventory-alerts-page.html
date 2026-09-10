@@ -73,14 +73,31 @@
     </div>
 
     <form class="window-form" (submit)="applyExpirationWindow($event)" novalidate>
-      <mat-form-field appearance="outline">
-        <mat-label>Janela de validade em dias</mat-label>
-        <input matInput type="text" inputmode="numeric" autocomplete="off" [formField]="expirationWindowForm.windowDays" />
-        <mat-hint>Use 0 para mostrar somente lotes vencidos.</mat-hint>
-        @if (expirationWindowForm.windowDays().touched() && expirationWindowForm.windowDays().invalid()) {
-          <mat-error>{{ expirationWindowForm.windowDays().errors()[0].message }}</mat-error>
+      <div class="expiration-window-field">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Janela de validade em dias</mat-label>
+          <input
+            matInput
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            [formField]="expirationWindowForm.windowDays"
+            [attr.aria-describedby]="
+              expirationWindowForm.windowDays().touched() && expirationWindowForm.windowDays().invalid()
+                ? null
+                : 'expiration-window-hint'
+            "
+          />
+          @if (expirationWindowForm.windowDays().touched() && expirationWindowForm.windowDays().invalid()) {
+            <mat-error>{{ expirationWindowForm.windowDays().errors()[0].message }}</mat-error>
+          }
+        </mat-form-field>
+        @if (!(expirationWindowForm.windowDays().touched() && expirationWindowForm.windowDays().invalid())) {
+          <p id="expiration-window-hint" class="operational-field-helper">
+            Use 0 para mostrar somente lotes vencidos.
+          </p>
         }
-      </mat-form-field>
+      </div>
       <button mat-flat-button type="submit">Aplicar janela</button>
     </form>
 

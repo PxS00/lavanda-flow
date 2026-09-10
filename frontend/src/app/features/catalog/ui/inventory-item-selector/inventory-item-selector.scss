@@ -21,6 +21,18 @@ mat-form-field {
   width: 100%;
 }
 
+.search-field {
+  display: grid;
+  gap: var(--lf-space-1);
+}
+
+.operational-field-helper {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  line-height: 1.4;
+}
+
 .results {
   display: grid;
   gap: 0.5rem;

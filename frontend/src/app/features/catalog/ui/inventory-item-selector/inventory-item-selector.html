@@ -9,18 +9,23 @@
     }
   </div>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Buscar item de estoque</mat-label>
-    <input
-      matInput
-      type="search"
-      autocomplete="off"
-      [disabled]="disabled()"
-      [value]="query()"
-      (input)="search($event)"
-    />
-    <mat-hint>Os resultados são limitados a 10 itens ativos</mat-hint>
-  </mat-form-field>
+  <div class="search-field">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Buscar item de estoque</mat-label>
+      <input
+        matInput
+        type="search"
+        autocomplete="off"
+        [disabled]="disabled()"
+        [value]="query()"
+        aria-describedby="inventory-item-search-hint"
+        (input)="search($event)"
+      />
+    </mat-form-field>
+    <p id="inventory-item-search-hint" class="operational-field-helper">
+      Os resultados são limitados a 10 itens ativos
+    </p>
+  </div>
 
   @if (selected(); as item) {
     <div class="selected" aria-live="polite">

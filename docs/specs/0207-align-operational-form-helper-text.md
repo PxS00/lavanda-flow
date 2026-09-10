@@ -40,38 +40,49 @@ The branch starts from `develop` after #202 at:
 
 ## Repository observations
 
-The stock-receipt form is the concrete defect surface.
+The stock-receipt form is the original concrete defect surface. Manual validation of the
+corrected receipt fields demonstrated the same Material subscript inset in exactly three
+additional operational controls: the inventory-item selector search field, the supplier
+selector search field, and the inventory-alerts expiration-window field.
 
 Current receipt structure:
 
 - `.fields-grid` uses two equal columns on notebook widths and collapses to one column at `max-width: 1024px`;
 - quantity, lot code, received date, expiration date, and reason use Angular Material `mat-form-field` controls;
-- quantity, lot code, expiration date, and reason already use `mat-hint`;
+- quantity, lot code, expiration date, and reason have informational helper copy;
 - `receivedAt` intentionally has no helper copy and must not receive invented copy in this issue;
-- conditional backend field-error paragraphs are currently siblings of each `mat-form-field` inside `.fields-grid`, so an error paragraph can become an independent grid item and disturb field pairing/order;
+- conditional backend field-error paragraphs are owned by their corresponding `.receipt-field`, so an error cannot become an independent grid item or disturb field pairing/order;
 - `reason` spans both columns;
-- Material form-field hints should remain the semantic helper mechanism rather than being replaced with arbitrary external paragraphs.
+- the receipt fields now render informational helper copy as application-owned text outside
+  the Material subscript layout, preserving their outer-outline alignment and accessible
+  descriptions.
 
-A repository audit also found helper text in catalog, suppliers, inventory, receipt selectors, production formula setup, and production registration. Those surfaces use different layouts: single-column forms, selector-owned form fields, three-column ingredient/allocation rows, or custom contextual copy. No single cross-application alignment defect has been demonstrated that justifies a global `mat-hint` override or a new shared form abstraction in #207.
+A repository audit also found helper text in catalog, suppliers, inventory, receipt selectors, production formula setup, and production registration. The manual validation above demonstrates the same defect only for the three named selector/alert controls. The other surfaces use different layouts: single-column forms, selector-owned form fields, three-column ingredient/allocation rows, or custom contextual copy. No global `mat-hint` override or shared form abstraction is justified in #207.
 
-Therefore the approved implementation is receipt-local. Other forms are inspection evidence only unless implementation reveals the exact same structural defect and a small shared rule is clearly safer; any scope expansion beyond the receipt feature must be reported before being implemented.
+Therefore the approved implementation remains component-local: receipt fields plus the three
+manually demonstrated controls. Other forms remain inspection evidence only.
 
 ## Implementation strategy
 
-### Keep Angular Material hint semantics
+### Align informational helpers to the outer control edge
 
-Keep existing helper copy inside `mat-hint`.
+For the receipt fields and the three demonstrated controls, render informational helper copy
+as an application-owned paragraph immediately after the outlined `mat-form-field`. Use a
+stable helper ID and associate it with the relevant input through `aria-describedby`.
+Use the public `subscriptSizing="dynamic"` input after removing `mat-hint` so Material does
+not reserve an empty subscript row. Keep `mat-error` inside the form field and hide the
+external helper only while an existing client validation error is displayed.
 
 Do not:
 
-- convert hints to unrelated `<p>` elements;
-- duplicate hint text outside `mat-form-field`;
+- duplicate helper text inside and outside `mat-form-field`;
 - add helper copy for `receivedAt` merely to fill visual space;
-- change `subscriptSizing` unless a concrete rendering defect proves it necessary;
 - target `.mat-mdc-*`, MDC internals, private Material classes, or `::ng-deep`;
 - counteract Material's own subscript inset with arbitrary negative margins.
 
-The target horizontal axis is the field content/start axis provided by Angular Material, consistently across receipt fields. The goal is not to force helper text against the outer outline border.
+The target horizontal axis is the visible outer edge of the outlined control, not the Material
+subscript/content axis. Use receipt-local or component-local `.operational-field-helper` styles
+with the existing body-small and surface-variant tokens; do not add global CSS.
 
 ### Group each receipt field as one grid cell
 
@@ -147,7 +158,8 @@ The receipt helper text should have a consistent presentation across quantity, l
 - no forced single-line truncation;
 - no excessive reserved whitespace.
 
-Prefer Angular Material's existing helper spacing first. If a page-local normalization is needed, style the public `mat-hint` element or an application-owned class attached to it. Do not style private subscript wrappers.
+Use application-owned helper spacing and styles for the demonstrated controls. Do not style
+private Material subscript wrappers.
 
 Use existing tokens such as `var(--mat-sys-body-small)`, `var(--mat-sys-on-surface-variant)`, and `--lf-space-*` where appropriate. Do not add raw brand hex values.
 
@@ -177,11 +189,17 @@ Backend errors must remain inside the same `receipt-field` wrapper as their asso
 
 Do not merge backend errors into Material `mat-error` unless that would preserve every existing semantic and behavior contract and is demonstrably simpler. The default approved implementation is to keep the existing external backend error paragraphs and only group them structurally.
 
-### Selector section
+### Demonstrated selector and alert controls
 
-The inventory-item and supplier selectors in the first receipt card own their own helper text and layout. Do not edit those components unless manual validation shows the same concrete alignment defect after the receipt field-grid fix.
+Apply the same local external-helper pattern only to these controls:
 
-The current issue was raised from the second receipt card containing quantity/lot/date/reason fields; keep the implementation focused there.
+- `InventoryItemSelector`: `Os resultados são limitados a 10 itens ativos`;
+- `SupplierSelector`: `Deixe sem seleção quando a entrada não tiver fornecedor`;
+- `InventoryAlertsPage`: `Use 0 para mostrar somente lotes vencidos.`
+
+Do not change selector-level descriptive copy, empty states, alert headings/status text, or any
+other `mat-hint` occurrence. Each component owns its local presentation style because view
+encapsulation makes a global helper rule unnecessary.
 
 ## Expected implementation footprint
 
@@ -191,6 +209,9 @@ Expected files:
 frontend/src/app/features/receipts/pages/stock-receipt-page/stock-receipt-page.html
 frontend/src/app/features/receipts/pages/stock-receipt-page/stock-receipt-page.scss
 frontend/src/app/features/receipts/pages/stock-receipt-page/stock-receipt-page.spec.ts   # only if structural assertions are useful
+frontend/src/app/features/catalog/ui/inventory-item-selector/inventory-item-selector.{html,scss,spec.ts}
+frontend/src/app/features/receipts/ui/supplier-selector/supplier-selector.{html,scss,spec.ts}
+frontend/src/app/features/inventory/pages/inventory-alerts-page/inventory-alerts-page.{html,scss,spec.ts}
 ```
 
 Do not edit `stock-receipt-page.ts` unless a real blocker is discovered; this issue should require no production TypeScript behavior change.
@@ -229,7 +250,7 @@ Because this issue changes markup structure rather than domain behavior, add onl
 - each wrapper owns exactly one associated `mat-form-field`;
 - the reason wrapper has the full-width class;
 - existing helper copy remains unchanged;
-- helper-bearing fields continue to use `mat-hint`;
+- external helper IDs and `aria-describedby` associations remain stable;
 - `receivedAt` does not receive invented helper copy;
 - when a backend field error is rendered, it remains inside the same wrapper as the corresponding form field and does not become a sibling grid cell.
 
@@ -244,7 +265,7 @@ Manual browser validation is required because the defect is visual.
 At a supported notebook width, verify:
 
 - quantity and lot-code controls align as one row;
-- their helper text begins on the same Material content/start axis;
+- their helper text begins at the same outer axis as the visible field outline;
 - helper typography, line height, and spacing look consistent;
 - received-date and expiration-date controls align as one row;
 - the absence of helper copy on received date does not make the next row visually unstable;
@@ -293,6 +314,8 @@ The existing initial bundle-budget warning may remain non-blocking if materially
 - no helper text is invented for `receivedAt`;
 - no private Angular Material selector or `::ng-deep` is used;
 - no global form-system abstraction is introduced without demonstrated need;
+- the three manually demonstrated selector/alert helpers align to the outer control edge and
+  remain programmatically associated with their inputs;
 - no backend/API/DTO/route/auth/dependency change is introduced;
 - notebook and tablet manual visual checks pass;
 - `pnpm lint`, `pnpm test`, and `pnpm build` pass.

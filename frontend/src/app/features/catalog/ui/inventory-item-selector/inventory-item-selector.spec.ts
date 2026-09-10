@@ -55,6 +55,20 @@ describe('InventoryItemSelector', () => {
     expect(search).toHaveBeenCalledWith({ name: '', active: true, page: 0, size: 10 });
   });
 
+  it('associates the search helper without changing selector guidance', () => {
+    const searchField = fixture.nativeElement.querySelector('.search-field') as HTMLElement;
+    const input = searchField.querySelector('input') as HTMLInputElement;
+    const helper = searchField.querySelector('#inventory-item-search-hint') as HTMLParagraphElement;
+
+    expect(helper.textContent?.trim()).toBe('Os resultados são limitados a 10 itens ativos');
+    expect(input.getAttribute('aria-describedby')).toContain('inventory-item-search-hint');
+    expect(fixture.nativeElement.querySelector('.selector-heading h2')?.textContent?.trim()).toBe('Item de estoque');
+    expect(fixture.nativeElement.querySelector('.selector-heading p')?.textContent?.trim()).toBe(
+      'Busca apenas itens ativos do catálogo.',
+    );
+    expect(fixture.nativeElement.querySelector('mat-hint')).toBeNull();
+  });
+
   it('should show reference metadata in results without fabricating null values', () => {
     const resultButtons = fixture.nativeElement.querySelectorAll(
       '.results button',
