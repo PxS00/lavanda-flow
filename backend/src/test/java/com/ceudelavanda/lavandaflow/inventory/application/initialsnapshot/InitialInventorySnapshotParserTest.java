@@ -29,7 +29,7 @@ class InitialInventorySnapshotParserTest {
         var plan = parse("""
             %s
               Serena  , f / c ,10.5,09/2 7,-0.500001ml,014,PFM, PFM-014-001-09-2026 
-            Catalog only,M,0,,,,021,PFM,
+            Catalog only,M,0,,,021,PFM,
             """.formatted(HEADER).replace("\n", "\r\n"));
 
         assertThat(plan.report().totalRowCount()).isEqualTo(2);
@@ -119,8 +119,8 @@ class InitialInventorySnapshotParserTest {
         var plan = parse("""
             %s
             Positive,F,1,09/27,,014,PFM,
-            Zero blank,M,0,,,,015,PFM,
-            Zero with source lot,C,0,,,,016,PFM,LEGACY-LOT
+            Zero blank,M,0,,,015,PFM,
+            Zero with source lot,C,0,,,016,PFM,LEGACY-LOT
             """.formatted(HEADER));
 
         assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
@@ -305,7 +305,7 @@ class InitialInventorySnapshotParserTest {
             %s
             Valid,F,1,09/27,,014,PFM,L1
             Bad columns,F,2
-            Valid zero,C,0,,,,015,BDS,
+            Valid zero,C,0,,,015,BDS,
             """.formatted(HEADER));
 
         assertThat(plan.report().totalRowCount()).isEqualTo(3);

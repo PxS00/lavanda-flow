@@ -119,9 +119,8 @@ class ImportInitialInventorySnapshotIntegrationTest {
             assertThat(movement.type()).isEqualTo(MovementType.ENTRY);
             assertThat(movement.reason()).isEqualTo("Importação inicial do estoque");
         });
-        assertThat(history).extracting(movement -> movement.quantity())
-            .usingElementComparator(BigDecimal::compareTo)
-            .containsExactlyInAnyOrder(new BigDecimal("10.500001"), new BigDecimal("5.000000"));
+        assertThat(history).extracting(movement -> movement.quantity().toPlainString())
+            .containsExactlyInAnyOrder("10.500001", "5.000000");
 
         var catalogOnly = inventoryItemLookup.findAllActive().stream()
             .filter(item -> item.name().equals("Golden Femme"))
@@ -224,7 +223,7 @@ class ImportInitialInventorySnapshotIntegrationTest {
             %s
             Serena,F,10.500001,02/24,,014,PFM,PFM-014-001-01-2024
             Serena,F,5,03/24,,014,PFM,PFM-014-002-01-2024
-            Golden Femme,F,0,,,,021,PFM,
+            Golden Femme,F,0,,,021,PFM,
             """.formatted(HEADER));
     }
 
