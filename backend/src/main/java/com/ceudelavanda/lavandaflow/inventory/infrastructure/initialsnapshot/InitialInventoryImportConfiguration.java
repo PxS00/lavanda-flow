@@ -51,9 +51,10 @@ class InitialInventoryImportConfiguration {
                 report.openingStockCount(), report.rejectedCount()
             );
             report.rows().forEach(row -> LOGGER.info(
-                "row={} name={} reference={} quantity={} expiration={} outcome={} validationCode={} reason={}",
-                row.sourceRowNumber(), row.catalogName(), row.legacyReference(), row.quantity(), row.expiration(),
-                row.outcome(), row.validationCode(), row.validationReason()
+                "row={} name={} gender={} essenceReference={} productionTypeCode={} lotCode={} quantity={} expiration={} "
+                    + "outcome={} validationCode={} reason={}",
+                row.sourceRowNumber(), row.catalogName(), row.gender(), row.essenceReference(), row.productionTypeCode(),
+                row.lotCode(), row.quantity(), row.expiration(), row.outcome(), row.validationCode(), row.validationReason()
             ));
         }
     }
