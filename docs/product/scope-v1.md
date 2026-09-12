@@ -101,9 +101,13 @@ BAS-000-001-12-2026
 └── ...
 ```
 
-### Internal production lot codes
+### Production lot codes
 
-Céu de Lavanda's internal production lot format is:
+Lot codes are human operational identifiers. They are neither database identity nor the source of genealogy. Exact genealogy always comes from persisted production executions and concrete source-batch consumptions.
+
+#### Bulk and normal internal production
+
+Normal internally produced bulk, intermediate, and other non-packaged outputs keep Céu de Lavanda's existing generated lot format:
 
 ```text
 TTT-EEE-LLL-MM-YYYY
@@ -117,13 +121,37 @@ For example, `BDS-014-003-12-2026` means:
 - `MM`: production month;
 - `YYYY`: production year.
 
-The lot code is a human operational identifier. It is neither database identity nor the source of genealogy.
+Automatic generation remains recommended but optional for this existing path. The production registration interface offers generated or manual lot-code entry. For automatic generation, the backend assigns the definitive code when production is successfully registered and prevents concurrent allocations from receiving the same code. The frontend must neither reserve nor authoritatively calculate the next sequence. Explicit manual entry remains allowed and is not required to encode genealogy.
 
-Automatic generation is recommended but optional. The production registration interface offers generated or
-manual lot-code entry. For automatic generation, the backend assigns the definitive code when production is
-successfully registered and prevents concurrent allocations from receiving the same code. The frontend must
-neither reserve nor authoritatively calculate the next sequence. Explicit manual entry remains allowed and
-is not required to encode genealogy.
+#### Packaged finished-product production
+
+Generated packaged finished-product outputs use the shorter package-facing format:
+
+```text
+SSS-MM-YYYY
+```
+
+For example:
+
+```text
+017-09-2026
+```
+
+Where:
+
+- `SSS` is exactly three digits from `001` through `999`;
+- `SSS` is allocated by the backend globally across generated packaged finished-product outputs within one calendar month/year;
+- the packaged sequence does not restart by fragrance, `productionTypeCode`, presentation, or source bulk batch;
+- `MM` and `YYYY` are the packaged production/filling month and year;
+- the sequence resets for the next calendar month/year.
+
+The generated packaged lot intentionally does not encode `productionTypeCode`, `essenceReference`, source bulk lot codes, presentation size, or packaging lot codes. Those remain structured domain data.
+
+A packaged production execution still creates exactly one output batch. Its explicit genealogy may reference one or multiple bulk finished-product batches and any inventory-controlled bottle, valve, cap, label, or other component batches actually consumed. The packaged lot remains one code regardless of how many valid source batches are recorded.
+
+Packaged generated allocation is backend-authoritative. Angular must not reserve or definitively calculate the next `SSS`. Issue #232 owns implementation of this convention inside the existing `production` architecture; no dedicated filling module is introduced.
+
+This convention does not define packaged-product expiration derivation. Filling must not be assumed to renew, copy, shorten, or otherwise derive expiration unless a separately approved shelf-life rule establishes that behavior.
 
 ### Search and operational dashboard
 

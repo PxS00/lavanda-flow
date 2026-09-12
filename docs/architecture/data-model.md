@@ -87,6 +87,8 @@ The required semantics are:
 
 Formula requirements and production consumptions are separate relationships: the former describes what should be used; the latter records what was actually allocated.
 
+Packaged finished-product filling uses these same relationships. A packaged production execution still creates exactly one output `inventory_batch`; one or multiple bulk finished-product batches and any inventory-controlled bottles, valves, caps, labels, or other components actually used remain individual `production_consumption` sources. No packaged lot string replaces these relations.
+
 ## Recursive bidirectional genealogy
 
 Genealogy is derived from explicit production-execution, output-batch, and source-batch-consumption relations:
@@ -112,16 +114,50 @@ Failure rolls back every effect; no negative balance or partial production state
 
 Quantities use `NUMERIC`/`DECIMAL`, never floating-point types. FEFO, expiration, available stock, and inventory eligibility are backend-authoritative. Date-dependent rules use the application `Clock`; `expiresAt <= today` is expired.
 
-## Internal lot-code data semantics
+## Lot-code data semantics
 
-Internally produced batches use `TTT-EEE-LLL-MM-YYYY`, for example `BDS-014-003-12-2026`.
+All internal lot codes are human operational identifiers, not database keys, product identity, or genealogy relations. Generated allocation is backend-authoritative; frontend previews never reserve a sequence or guarantee a definitive code.
+
+### Bulk and normal internal production
+
+Normal internally produced bulk, intermediate, and other non-packaged batches keep `TTT-EEE-LLL-MM-YYYY`, for example `BDS-014-003-12-2026`.
 
 - `TTT` is a stable three-letter product-type code;
 - `EEE` is a stable essence reference: `000` is reserved for no essence, while actual references use `001` through `999`, are never recycled, and do not change with the essence display name;
 - `LLL` is `001` through `999`, allocated for the relevant `TTT-EEE` prefix within a month/year, reset when month/year changes, and advanced for every execution;
 - `MM` and `YYYY` represent the production month and year.
 
-The internal lot code is a human operational identifier, not a database key or genealogy relation. Automatic generation is optional and backend-authoritative; manual entry remains allowed and does not need to encode source batches. A preview displayed by the frontend neither reserves a sequence nor guarantees the definitive code.
+Automatic generation is optional and backend-authoritative; manual entry remains allowed and does not need to encode source batches.
+
+The currently implemented `production_lot_sequence` persistence and V12 migration correspond to this normal internal generated format.
+
+### Packaged finished-product generated lots
+
+The approved generated packaged finished-product contract is:
+
+```text
+SSS-MM-YYYY
+```
+
+For example:
+
+```text
+017-09-2026
+```
+
+- `SSS` is exactly `001` through `999`;
+- allocation is global across generated packaged finished-product outputs inside one month/year;
+- allocation does not restart by fragrance, `productionTypeCode`, presentation, or source bulk batch;
+- `MM` and `YYYY` identify the packaged production/filling month and year;
+- the sequence resets for a new month/year.
+
+The packaged lot deliberately does not encode `productionTypeCode`, `essenceReference`, source bulk lot codes, presentation size, or packaging source lots. Those values remain structured metadata or explicit production-consumption relationships.
+
+One packaged execution still creates exactly one output batch. Its genealogy may contain one or multiple bulk source batches plus other inventory-controlled component batches without changing the output lot format.
+
+Issue #235 defines this contract only. The relational persistence, concurrency control, and allocation mechanics required for `SSS-MM-YYYY` are owned by #232. This documentation change does not claim that V12 `production_lot_sequence` already implements the packaged sequence and does not introduce a schema change by itself.
+
+Packaged-product expiration derivation remains outside this convention. No expiration value is inferred from the packaged lot string or automatically derived from a source bulk batch by this issue.
 
 ## Balance and retention principles
 
@@ -134,9 +170,11 @@ Automatic unit conversion is not part of V1. A batch uses its item's unit; all f
 ## Implemented physical design
 
 Flyway V10 adds immutable production reference metadata to `inventory_item`; V11 creates formulas and
-ingredients; V12 creates generated-lot sequence allocation; and V13 creates executions and immutable
+ingredients; V12 creates the existing normal internal generated-lot sequence allocation; and V13 creates executions and immutable
 consumptions. The schema uses stable identifiers and foreign keys rather than lot-code parsing. Formula
 versioning beyond the implemented minimum definition remains outside V1.
+
+The packaged `SSS-MM-YYYY` contract documented by #235 is not a claim of existing persistence support; #232 owns any compatible Flyway/schema evolution required to implement it.
 
 ### Finished-product metadata (V15)
 
