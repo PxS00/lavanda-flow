@@ -57,10 +57,13 @@ class ImportInitialInventorySnapshotIntegrationTest {
 
     @BeforeEach
     void clearInventory() {
-        jdbcTemplate.update("DELETE FROM stock_movement");
-        jdbcTemplate.update("DELETE FROM inventory_batch");
-        jdbcTemplate.update("DELETE FROM inventory_minimum_stock_level");
-        jdbcTemplate.update("DELETE FROM inventory_item");
+        jdbcTemplate.execute("""
+            TRUNCATE TABLE
+                production_consumption, production_execution, production_formula_ingredient,
+                production_formula, production_lot_sequence, stock_movement, inventory_batch,
+                inventory_minimum_stock_level, inventory_item, supplier
+            CASCADE
+            """);
     }
 
     @Test
@@ -72,6 +75,7 @@ class ImportInitialInventorySnapshotIntegrationTest {
         assertThat(report.catalogOnlyCount()).isEqualTo(1);
         assertThat(report.rejectedCount()).isZero();
         assertDatabaseCounts(0, 0, 0);
+        assertNoFabricatedRelatedData();
     }
 
     @Test
@@ -80,6 +84,7 @@ class ImportInitialInventorySnapshotIntegrationTest {
 
         assertThat(report.rejectedCount()).isZero();
         assertDatabaseCounts(2, 2, 2);
+        assertNoFabricatedRelatedData();
         assertThat(inventoryItemLookup.findAllActive()).extracting(item -> item.name())
             .containsExactlyInAnyOrder("Serena", "Golden Femme");
 
@@ -153,10 +158,12 @@ class ImportInitialInventorySnapshotIntegrationTest {
                 new BigDecimal("3.000000")
             );
         assertDatabaseCounts(0, 0, 0);
+        assertNoFabricatedRelatedData();
 
         importer.execute(InitialInventoryImportMode.APPLY, snapshot, EFFECTIVE_DATE);
 
         assertDatabaseCounts(3, 2, 2);
+        assertNoFabricatedRelatedData();
         var adjusted = inventoryItemLookup.findAllActive().stream()
             .filter(item -> item.name().equals("Adjusted"))
             .findFirst()
@@ -168,9 +175,6 @@ class ImportInitialInventorySnapshotIntegrationTest {
             assertThat(batch.currentQuantity()).isEqualByComparingTo("30.000000");
             assertThat(batch.lotCode()).isEqualTo("PFM-014-001-01-2024");
         });
-        assertThat(jdbcTemplate.queryForObject(
-            "SELECT count(*) FROM stock_movement WHERE movement_type = 'CONSUMPTION'", Integer.class
-        )).isZero();
     }
 
     @Test
@@ -187,6 +191,28 @@ class ImportInitialInventorySnapshotIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
             "SELECT count(*) FROM inventory_item WHERE name = 'Shared Name'", Integer.class
         )).isEqualTo(2);
+    }
+
+    @Test
+    void shouldRejectConflictingCompleteFileBeforeWrites() throws IOException {
+        var conflicting = write("""
+            %s
+            Serena,F,1,02/24,,014,PFM,L1
+            Serena renamed,F,2,03/24,,014,PFM,L2
+            """.formatted(HEADER));
+
+        assertThatThrownBy(() -> importer.execute(
+            InitialInventoryImportMode.APPLY, conflicting, EFFECTIVE_DATE
+        ))
+            .isInstanceOf(InitialInventoryImportException.class)
+            .satisfies(exception -> {
+                var report = ((InitialInventoryImportException) exception).report();
+                assertThat(report.rejectedCount()).isEqualTo(2);
+                assertThat(report.rows()).extracting(InitialInventoryImportRowResult::validationCode)
+                    .containsOnly(InitialInventoryImportValidationCode.CONFLICTING_PRODUCT_METADATA);
+            });
+        assertDatabaseCounts(0, 0, 0);
+        assertNoFabricatedRelatedData();
     }
 
     @Test
@@ -207,6 +233,7 @@ class ImportInitialInventorySnapshotIntegrationTest {
                     .isEqualTo(InitialInventoryImportValidationCode.LOT_CODE_REQUIRED);
             });
         assertDatabaseCounts(0, 0, 0);
+        assertNoFabricatedRelatedData();
 
         var existing = inventoryItemRegistration.registerEssence("Existing inactive guard fixture");
         jdbcTemplate.update("UPDATE inventory_item SET active = false WHERE id = ?", existing.id());
@@ -216,6 +243,7 @@ class ImportInitialInventorySnapshotIntegrationTest {
             .isInstanceOf(InitialInventoryImportException.class)
             .hasMessage("Operational catalog is already initialized");
         assertDatabaseCounts(1, 0, 0);
+        assertNoFabricatedRelatedData();
     }
 
     private Path validSnapshot() throws IOException {
@@ -240,6 +268,16 @@ class ImportInitialInventorySnapshotIntegrationTest {
             .isEqualTo(batches);
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM stock_movement", Integer.class))
             .isEqualTo(movements);
+    }
+
+    private void assertNoFabricatedRelatedData() {
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM supplier", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM production_formula", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM production_execution", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM production_consumption", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM stock_movement WHERE movement_type = 'CONSUMPTION'", Integer.class
+        )).isZero();
     }
 
     @TestConfiguration(proxyBeanMethods = false)

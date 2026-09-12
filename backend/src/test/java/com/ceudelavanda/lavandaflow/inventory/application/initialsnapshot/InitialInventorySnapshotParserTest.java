@@ -74,6 +74,38 @@ class InitialInventorySnapshotParserTest {
     }
 
     @Test
+    void shouldTrimNameAndRejectBlankName() throws IOException {
+        var plan = parse("""
+            %s
+              Trimmed name  ,F,1,09/27,,014,PFM,L1
+               ,M,1,09/27,,015,PFM,L2
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rows().getFirst().catalogName()).isEqualTo("Trimmed name");
+        assertThat(plan.report().rows().getFirst().validationCode()).isNull();
+        assertThat(plan.report().rows().get(1).validationCode())
+            .isEqualTo(InitialInventoryImportValidationCode.BLANK_NAME);
+    }
+
+    @Test
+    void shouldAcceptAllCanonicalGendersAndReferenceBoundaries() throws IOException {
+        var plan = parse("""
+            %s
+            Masculine,M,1,09/27,,001,PFM,L1
+            Feminine,F,1,09/27,,999,PFM,L2
+            Shared,C,1,09/27,,014,PFM,L3
+            Shared masculine,M/C,1,09/27,,015,PFM,L4
+            Shared feminine,F/C,1,09/27,,016,PFM,L5
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rejectedCount()).isZero();
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::gender)
+            .containsExactly("M", "F", "C", "M/C", "F/C");
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::essenceReference)
+            .containsExactly("001", "999", "014", "015", "016");
+    }
+
+    @Test
     void shouldRejectInvalidGenderValues() throws IOException {
         var plan = parse("""
             %s
@@ -95,6 +127,7 @@ class InitialInventorySnapshotParserTest {
             Reserved,F,1,09/27,,000,PFM,L1
             Short,F,1,09/27,,14,PFM,L2
             Alpha,F,1,09/27,,A14,PFM,L3
+            Blank,F,1,09/27,,,PFM,L4
             """.formatted(HEADER));
 
         assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
@@ -108,6 +141,7 @@ class InitialInventorySnapshotParserTest {
             Lower,F,1,09/27,,014,pfm,L1
             Short,F,1,09/27,,015,PF,L2
             Numeric,F,1,09/27,,016,P1M,L3
+            Blank,F,1,09/27,,017,,L4
             """.formatted(HEADER));
 
         assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
@@ -135,10 +169,18 @@ class InitialInventorySnapshotParserTest {
     }
 
     @Test
-    void shouldRejectLotCodeLongerThanBatchLimit() throws IOException {
-        var plan = parse(HEADER + "\nItem,F,1,09/27,,014,PFM," + "L".repeat(256) + "\n");
+    void shouldTrimLotCodeAcceptBoundaryAndRejectLongerValue() throws IOException {
+        var boundary = "L".repeat(255);
+        var tooLong = "L".repeat(256);
+        var plan = parse(HEADER
+            + "\nBoundary,F,1,09/27,,014,PFM," + boundary + "\n"
+            + "Trimmed,M,1,09/27,,015,PFM, LOT-TRIMMED \n"
+            + "Too long,C,1,09/27,,016,PFM," + tooLong + "\n");
 
-        assertThat(plan.report().rows().getFirst().validationCode())
+        assertThat(plan.report().rows().getFirst().validationCode()).isNull();
+        assertThat(plan.report().rows().getFirst().lotCode()).hasSize(255);
+        assertThat(plan.report().rows().get(1).lotCode()).isEqualTo("LOT-TRIMMED");
+        assertThat(plan.report().rows().get(2).validationCode())
             .isEqualTo(InitialInventoryImportValidationCode.INVALID_LOT_CODE);
     }
 
@@ -285,6 +327,8 @@ class InitialInventorySnapshotParserTest {
         assertThat(plan.products()).hasSize(2);
         assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::catalogName)
             .containsExactly("Shared Name", "Shared Name");
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::essenceReference)
+            .containsExactly("014", "015");
     }
 
     @Test
