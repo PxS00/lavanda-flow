@@ -137,3 +137,14 @@ Flyway V10 adds immutable production reference metadata to `inventory_item`; V11
 ingredients; V12 creates generated-lot sequence allocation; and V13 creates executions and immutable
 consumptions. The schema uses stable identifiers and foreign keys rather than lot-code parsing. Formula
 versioning beyond the implemented minimum definition remains outside V1.
+
+### Finished-product metadata (V15)
+
+`inventory_item.product_gender` is nullable and stores exactly `M`, `F`, `C`, `M/C`, or `F/C`.
+A check limits non-null gender and fragrance references to `ESSENCE` and `FINISHED_PRODUCT`.
+`uq_inventory_item_essence_reference` is unique only for non-null canonical `ESSENCE` references;
+finished products can share a fragrance reference without merging their stock identities.
+V15 preserves the V10 assignment/immutability and deletion triggers and adds a trigger preventing
+reclassification of canonical essences with assigned references. Existing rows are not rewritten.
+The public `InventoryItemRegistration.registerFinishedProduct(FinishedProductRegistration)` contract
+joins the caller transaction and delegates to catalog registration policy; inventory owns batch creation.

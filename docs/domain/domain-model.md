@@ -37,9 +37,25 @@ Confirmed movements are historical. Corrections create new adjustment movements 
 
 Represents the commercial source of externally supplied stock. It supports basic identification and contact information and allows externally supplied batches to be located by supplier. An internally produced batch has a production origin rather than a supplier origin.
 
+### Fragrance metadata and finished products
+
+`FINISHED_PRODUCT` covers formulated bulk stock and independently stocked packaged presentations.
+They remain separate `InventoryItem` identities with separate batches and movements, even when
+sharing an `essenceReference`. Bulk perfume commonly uses `MILLILITER`; packaged presentations use
+`UNIT`. Neither category nor reference implies unit conversion or stock consolidation.
+
+Optional `gender` is allowed only for `ESSENCE` and `FINISHED_PRODUCT`: `M`, `F`, `C`, `M/C`, `F/C`.
+The last two values mean shared with masculine/feminine tendency. Gender is descriptive and is not
+a lot-code component. Optional `productionTypeCode` remains the stable three-uppercase-letter family code.
+
+References remain `001`–`999`, nullable for legacy items and immutable after one-time assignment.
+Only canonical essence references are unique; finished products may share them. A canonical essence
+with an assigned reference cannot change category, preventing reference recycling through reclassification.
+Assigned-reference deletion protection remains in effect for both categories.
+
 ### Category and unit of measure
 
-Categories organize items and may include essence, chemical input, base, alcohol, colorant, fixative, bottle, valve, cap, label, packaging, and other. Classification does not create separate inventory models or determine every business rule.
+Categories organize items and include finished product, essence, chemical input, base, alcohol, colorant, fixative, bottle, valve, cap, label, packaging, and other. Classification does not create separate inventory models or determine every business rule.
 
 Quantities use exact decimal representation: `BigDecimal` in the backend and an appropriate `NUMERIC`/`DECIMAL` database type. Automatic conversion between units is not part of V1.
 

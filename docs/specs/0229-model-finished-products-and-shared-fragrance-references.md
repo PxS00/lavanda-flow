@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed implementation specification.
+Implementation specification; validation evidence is recorded in the linked pull request.
 
 ## Source of truth
 
@@ -120,6 +120,7 @@ Reference rules:
 
 - a canonical `ESSENCE` may have one non-null reference;
 - canonical `ESSENCE` references remain unique;
+- a canonical essence with an assigned reference cannot change category, preserving non-recycling;
 - multiple `FINISHED_PRODUCT` items may share a reference;
 - an assigned reference remains immutable;
 - submitting the same assigned value again is an accepted replay;
@@ -361,7 +362,7 @@ Do not add the real operational CSV, its lot data, checksum, or credentials to v
 - [ ] `gender` persists and preserves `M`, `F`, `C`, `M/C`, and `F/C`.
 - [ ] Gender is valid only for `ESSENCE` and `FINISHED_PRODUCT`.
 - [ ] Corrected perfume import can persist gender, reference, production type, and lot metadata through public module contracts.
-- [ ] `essenceReference` remains `001`–`999), with `000` reserved and non-assignable.
+- [ ] `essenceReference` remains `001`–`999`, with `000` reserved and non-assignable.
 - [ ] Canonical essence references remain unique.
 - [ ] Finished-product references may be reused.
 - [ ] Assigned references remain immutable in production code and PostgreSQL.
