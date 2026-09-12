@@ -8,6 +8,7 @@ package com.ceudelavanda.lavandaflow.catalog.domain;
 public enum Category {
 
     ESSENCE,
+    FINISHED_PRODUCT,
     CHEMICAL_INPUT,
     BASE,
     ALCOHOL,

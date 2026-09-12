@@ -13,12 +13,14 @@ import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/l
 import { UiError } from '../../../../core/http/ui-error';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import {
+  ProductGender,
   InventoryItemCategory,
   InventoryItemUnitOfMeasure,
   RegisterInventoryItemRequest,
 } from '../../data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
 import {
+  PRODUCT_GENDER_OPTIONS,
   INVENTORY_ITEM_CATEGORY_OPTIONS,
   INVENTORY_ITEM_UNIT_OPTIONS,
 } from '../../inventory-item-display';
@@ -30,6 +32,7 @@ interface RegistrationModel {
   readonly unitOfMeasure: InventoryItemUnitOfMeasure | null;
   readonly essenceReference: string;
   readonly productionTypeCode: string;
+  readonly gender: ProductGender | null;
 }
 
 type RegistrationField = keyof RegistrationModel;
@@ -41,6 +44,7 @@ const INLINE_ERROR_FIELDS: readonly RegistrationField[] = [
   'unitOfMeasure',
   'essenceReference',
   'productionTypeCode',
+  'gender',
 ];
 
 const EMPTY_REGISTRATION: RegistrationModel = {
@@ -50,6 +54,7 @@ const EMPTY_REGISTRATION: RegistrationModel = {
   unitOfMeasure: null,
   essenceReference: '',
   productionTypeCode: '',
+  gender: null,
 };
 
 @Component({
@@ -99,6 +104,7 @@ export class InventoryItemRegistrationPage {
         : { kind: 'production-type-code', message: 'Use 3 letras maiúsculas.' },
     );
   });
+  protected readonly genderOptions = PRODUCT_GENDER_OPTIONS;
   protected readonly categoryOptions = INVENTORY_ITEM_CATEGORY_OPTIONS;
   protected readonly unitOptions = INVENTORY_ITEM_UNIT_OPTIONS;
   protected readonly isSubmitting = signal(false);
@@ -142,6 +148,7 @@ export class InventoryItemRegistrationPage {
       unitOfMeasure: model.unitOfMeasure,
       essenceReference: normalizeOptionalText(model.essenceReference),
       productionTypeCode: normalizeOptionalText(model.productionTypeCode),
+      gender: model.gender,
     };
 
     this.isSubmitting.set(true);

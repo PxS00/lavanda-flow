@@ -23,7 +23,8 @@ class CatalogProductionItemReferenceLookupTest {
     @Test
     void shouldExposeOnlyProductionMetadataThroughPublicImmutableValues() {
         var item = InventoryItem.create(
-            "Lavender Essence", null, Category.ESSENCE, UnitOfMeasure.MILLILITER, "014", "ESS"
+            "Lavender Essence", null, Category.FINISHED_PRODUCT, UnitOfMeasure.MILLILITER, "014", "PRF",
+            com.ceudelavanda.lavandaflow.catalog.ProductGender.SHARED_FEMININE
         );
         when(inventoryItemRepository.findById(item.getId())).thenReturn(Optional.of(item));
 
@@ -35,7 +36,7 @@ class CatalogProductionItemReferenceLookupTest {
             assertThat(found.unitOfMeasure()).isEqualTo(UnitOfMeasure.MILLILITER);
             assertThat(found.active()).isTrue();
             assertThat(found.essenceReference()).isEqualTo("014");
-            assertThat(found.productionTypeCode()).isEqualTo("ESS");
+            assertThat(found.productionTypeCode()).isEqualTo("PRF");
         });
     }
 }

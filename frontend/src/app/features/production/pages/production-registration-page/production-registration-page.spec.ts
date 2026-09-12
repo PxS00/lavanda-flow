@@ -343,6 +343,7 @@ function item(id: string, name: string): InventoryItemDto {
     active: true,
     essenceReference: null,
     productionTypeCode: null,
+    gender: null,
   };
 }
 

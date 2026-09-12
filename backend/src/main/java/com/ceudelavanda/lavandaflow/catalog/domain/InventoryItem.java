@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.catalog.domain;
 
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
+import com.ceudelavanda.lavandaflow.catalog.ProductGender;
 
 import lombok.Getter;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class InventoryItem {
     private boolean active;
     private String essenceReference;
     private String productionTypeCode;
+    private final ProductGender gender;
 
     public InventoryItem(
         UUID id,
@@ -51,6 +53,13 @@ public class InventoryItem {
         String essenceReference,
         String productionTypeCode
     ) {
+        this(id, name, description, category, unitOfMeasure, active, essenceReference, productionTypeCode, null);
+    }
+
+    public InventoryItem(
+        UUID id, String name, String description, Category category, UnitOfMeasure unitOfMeasure,
+        boolean active, String essenceReference, String productionTypeCode, ProductGender gender
+    ) {
         this.id = requireNonNull(id, "id");
         this.name = requireName(name);
         this.description = normalizeDescription(description);
@@ -59,6 +68,8 @@ public class InventoryItem {
         this.active = active;
         this.essenceReference = requireEssenceReference(essenceReference, category);
         this.productionTypeCode = requireProductionTypeCode(productionTypeCode);
+        requireGenderEligibility(gender, category);
+        this.gender = gender;
     }
 
     public static InventoryItem create(
@@ -94,15 +105,25 @@ public class InventoryItem {
         this.name = requireName(name);
     }
 
+    public static InventoryItem create(
+        String name, String description, Category category, UnitOfMeasure unitOfMeasure,
+        String essenceReference, String productionTypeCode, ProductGender gender
+    ) {
+        return new InventoryItem(UUID.randomUUID(), name, description, category, unitOfMeasure,
+            true, essenceReference, productionTypeCode, gender);
+    }
+
     public void changeDescription(String description) {
         this.description = normalizeDescription(description);
     }
 
     public void changeCategory(Category category) {
         var newCategory = requireNonNull(category, "category");
-        if (essenceReference != null && newCategory != Category.ESSENCE) {
-            throw new IllegalArgumentException("essenceReference is only valid for ESSENCE items");
+        if (essenceReference != null && this.category == Category.ESSENCE && newCategory != this.category) {
+            throw new IllegalStateException("canonical essence with an assigned reference cannot change category");
         }
+        requireEssenceReference(essenceReference, newCategory);
+        requireGenderEligibility(gender, newCategory);
         this.category = newCategory;
     }
 
@@ -111,7 +132,7 @@ public class InventoryItem {
     }
 
     /**
-     * Assigns the stable reference for an essence that does not already have one.
+     * Assigns a stable fragrance reference to an eligible item that does not already have one.
      * An assigned reference can only be submitted again unchanged.
      */
     public void assignEssenceReference(String essenceReference) {
@@ -161,8 +182,8 @@ public class InventoryItem {
         if (essenceReference == null) {
             return null;
         }
-        if (category != Category.ESSENCE) {
-            throw new IllegalArgumentException("essenceReference is only valid for ESSENCE items");
+        if (category != Category.ESSENCE && category != Category.FINISHED_PRODUCT) {
+            throw new IllegalArgumentException("essenceReference is only valid for ESSENCE or FINISHED_PRODUCT items");
         }
         if (!ESSENCE_REFERENCE_PATTERN.matcher(essenceReference).matches()) {
             throw new IllegalArgumentException("essenceReference must be a three-digit value from 001 through 999");
@@ -178,6 +199,12 @@ public class InventoryItem {
             throw new IllegalArgumentException("productionTypeCode must be exactly three uppercase letters");
         }
         return productionTypeCode;
+    }
+
+    private static void requireGenderEligibility(ProductGender gender, Category category) {
+        if (gender != null && category != Category.ESSENCE && category != Category.FINISHED_PRODUCT) {
+            throw new InvalidProductGenderException();
+        }
     }
 
     private static <T> T requireNonNull(T value, String field) {

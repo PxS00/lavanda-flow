@@ -128,6 +128,23 @@
       <p id="production-type-code-backend-error" class="field-error" role="alert">{{ error }}</p>
     }
 
+    <mat-form-field appearance="outline">
+      <mat-label>Gênero</mat-label>
+      <mat-select
+        [formField]="registrationForm.gender"
+        [attr.aria-describedby]="backendFieldError('gender') ? 'gender-backend-error' : null"
+      >
+        <mat-option [value]="null">Não informado</mat-option>
+        @for (option of genderOptions; track option.value) {
+          <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+      <mat-hint>Opcional · para essências e produtos finalizados</mat-hint>
+    </mat-form-field>
+    @if (backendFieldError('gender'); as error) {
+      <p id="gender-backend-error" class="field-error" role="alert">{{ error }}</p>
+    }
+
     <div class="form-actions">
       <button mat-flat-button type="submit" [disabled]="isSubmitting()">
         {{ isSubmitting() ? 'Cadastrando...' : 'Cadastrar item' }}

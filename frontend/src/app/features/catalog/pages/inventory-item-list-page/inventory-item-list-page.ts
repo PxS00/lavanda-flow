@@ -23,6 +23,7 @@ import {
 import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
 import {
   INVENTORY_ITEM_CATEGORY_OPTIONS,
+  productGenderLabel,
   inventoryItemCategoryLabel,
   inventoryItemUnitLabel,
 } from '../../inventory-item-display';
@@ -76,6 +77,7 @@ export class InventoryItemListPage {
     const query = this.currentQuery();
     return query.name !== undefined || query.category !== undefined || query.active !== undefined;
   });
+  protected readonly genderLabel = productGenderLabel;
   protected readonly categoryLabel = inventoryItemCategoryLabel;
   protected readonly unitLabel = inventoryItemUnitLabel;
 
