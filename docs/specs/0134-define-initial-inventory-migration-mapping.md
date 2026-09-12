@@ -1,5 +1,7 @@
 # Issue #134 — Define initial inventory migration mapping
 
+> **Historical mapping superseded for the corrected operational cutover.** Issue #231 and `docs/specs/0231-correct-initial-bulk-perfume-snapshot-mapping.md` supersede this document's source-shape, `ESSENCE`, legacy-`Genero` disambiguation, and null-lot assumptions for the corrected v0.6.1 perfume snapshot. Keep this file as historical #134 evidence; exact-decimal and expiration mechanics remain relevant only where #231 explicitly preserves them.
+
 ## Objective
 
 Define the authoritative, deterministic mapping from the current Céu de Lavanda inventory CSV into the existing Lavanda Flow V1 catalog, batch, and stock-history model.
