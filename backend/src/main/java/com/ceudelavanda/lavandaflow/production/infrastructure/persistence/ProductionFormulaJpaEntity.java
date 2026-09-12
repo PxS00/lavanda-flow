@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.production.infrastructure.persistence;
 
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
+import com.ceudelavanda.lavandaflow.production.domain.ProductionFormulaKind;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -28,6 +29,10 @@ class ProductionFormulaJpaEntity {
     @Id
     private UUID id;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "formula_kind", nullable = false, length = 32)
+    private ProductionFormulaKind kind;
+
     @Column(name = "output_inventory_item_id", nullable = false)
     private UUID outputInventoryItemId;
 
@@ -48,12 +53,14 @@ class ProductionFormulaJpaEntity {
 
     ProductionFormulaJpaEntity(
         UUID id,
+        ProductionFormulaKind kind,
         UUID outputInventoryItemId,
         BigDecimal outputQuantity,
         UnitOfMeasure outputUnitOfMeasure,
         List<FormulaIngredientJpaValue> ingredients
     ) {
         this.id = id;
+        this.kind = kind;
         this.outputInventoryItemId = outputInventoryItemId;
         this.outputQuantity = outputQuantity;
         this.outputUnitOfMeasure = outputUnitOfMeasure;

@@ -11,6 +11,7 @@ final class ProductionFormulaMapper {
     static ProductionFormulaJpaEntity toEntity(ProductionFormula formula) {
         return new ProductionFormulaJpaEntity(
             formula.getId(),
+            formula.getKind(),
             formula.getOutputInventoryItemId(),
             formula.getOutputQuantity(),
             formula.getOutputUnitOfMeasure(),
@@ -27,6 +28,7 @@ final class ProductionFormulaMapper {
     static ProductionFormula toDomain(ProductionFormulaJpaEntity entity) {
         return new ProductionFormula(
             entity.getId(),
+            entity.getKind(),
             entity.getOutputInventoryItemId(),
             entity.getOutputQuantity(),
             entity.getOutputUnitOfMeasure(),
