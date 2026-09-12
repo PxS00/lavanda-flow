@@ -8,6 +8,18 @@ public record ProductionItemReference(
     UnitOfMeasure unitOfMeasure,
     boolean active,
     String essenceReference,
-    String productionTypeCode
+    String productionTypeCode,
+    String category
 ) {
+
+    /** Backward-compatible constructor for callers that do not need category metadata. */
+    public ProductionItemReference(
+        UUID inventoryItemId,
+        UnitOfMeasure unitOfMeasure,
+        boolean active,
+        String essenceReference,
+        String productionTypeCode
+    ) {
+        this(inventoryItemId, unitOfMeasure, active, essenceReference, productionTypeCode, null);
+    }
 }

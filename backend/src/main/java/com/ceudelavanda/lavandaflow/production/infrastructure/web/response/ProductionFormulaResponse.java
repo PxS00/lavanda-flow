@@ -2,6 +2,7 @@ package com.ceudelavanda.lavandaflow.production.infrastructure.web.response;
 
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaResult;
+import com.ceudelavanda.lavandaflow.production.domain.ProductionFormulaKind;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -14,7 +15,8 @@ public record ProductionFormulaResponse(
     UUID outputInventoryItemId,
     BigDecimal outputQuantity,
     UnitOfMeasure outputUnitOfMeasure,
-    List<IngredientResponse> ingredients
+    List<IngredientResponse> ingredients,
+    ProductionFormulaKind kind
 ) {
 
     public ProductionFormulaResponse {
@@ -33,7 +35,8 @@ public record ProductionFormulaResponse(
                     ingredient.quantity(),
                     ingredient.unitOfMeasure()
                 ))
-                .toList()
+                .toList(),
+            result.kind()
         );
     }
 

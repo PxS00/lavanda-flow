@@ -17,6 +17,7 @@ describe('ProductionFormulaApiService', () => {
     ingredients: [
       { inventoryItemId: 'ingredient-a', quantity: '2.5', unitOfMeasure: 'MILLILITER' },
     ],
+    kind: 'STANDARD',
   };
   const requestBody: UpsertProductionFormulaRequest = {
     outputInventoryItemId: 'output-item',
@@ -59,6 +60,24 @@ describe('ProductionFormulaApiService', () => {
     const request = httpTesting.expectOne(`${formulasUrl}/${formula.id}`);
     expect(request.request.method).toBe('GET');
     request.flush(formula);
+  });
+
+  it('should request backend-confirmed scaled requirements without reserving production', () => {
+    service.getRequirements(formula.id, '5').subscribe();
+
+    const request = httpTesting.expectOne(
+      `${formulasUrl}/${formula.id}/requirements?outputQuantity=5`,
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush({
+      formulaId: formula.id,
+      outputInventoryItemId: formula.outputInventoryItemId,
+      outputQuantity: '5',
+      outputUnitOfMeasure: 'MILLILITER',
+      requirements: [
+        { inventoryItemId: 'ingredient-a', quantity: '1.190476', unitOfMeasure: 'MILLILITER' },
+      ],
+    });
   });
 
   it('should create a formula with the exact backend request body', () => {
