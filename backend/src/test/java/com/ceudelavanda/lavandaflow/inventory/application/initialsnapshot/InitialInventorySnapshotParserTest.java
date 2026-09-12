@@ -16,6 +16,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class InitialInventorySnapshotParserTest {
 
     private static final LocalDate EFFECTIVE_DATE = LocalDate.of(2026, 9, 5);
+    private static final String HEADER =
+        "Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada,EssenceReference,ProductionTypeCode,LotCode";
 
     @TempDir
     Path directory;
@@ -23,103 +25,182 @@ class InitialInventorySnapshotParserTest {
     private final InitialInventorySnapshotParser parser = new InitialInventorySnapshotParser();
 
     @Test
-    void shouldNormalizeApprovedSourceShapeAndDisambiguateDuplicateReferences() throws IOException {
+    void shouldNormalizeRevisedSourceAndExposeStableMetadata() throws IOException {
         var plan = parse("""
-            Nome do Perfume,Genero,Ml Disponiveis,Expired
-              Scandall, M,10.5,09/2 7
-            Scandall, F,0,
-              Unique Essence  ,F / C,1.000001,10/27
-            """.replace("\n", "\r\n"));
+            %s
+              Serena  , f / c ,10.5,09/2 7,-0.500001ml,014,PFM, PFM-014-001-09-2026 
+            Catalog only,M,0,,,,021,PFM,
+            """.formatted(HEADER).replace("\n", "\r\n"));
 
-        assertThat(plan.report().totalRowCount()).isEqualTo(3);
-        assertThat(plan.report().openingStockCount()).isEqualTo(2);
+        assertThat(plan.report().totalRowCount()).isEqualTo(2);
+        assertThat(plan.report().openingStockCount()).isEqualTo(1);
         assertThat(plan.report().catalogOnlyCount()).isEqualTo(1);
         assertThat(plan.report().rejectedCount()).isZero();
         assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::sourceRowNumber)
-            .containsExactly(1, 2, 3);
-        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::catalogName)
-            .containsExactly("Scandall (M)", "Scandall (F)", "Unique Essence");
-        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::legacyReference)
-            .containsExactly("M", "F", "F/C");
-        assertThat(plan.report().rows().get(0).quantity()).isEqualByComparingTo("10.500000");
-        assertThat(plan.report().rows().get(0).expiration()).isEqualTo(LocalDate.of(2027, 9, 30));
-        assertThat(plan.report().rows().get(1).expiration()).isNull();
+            .containsExactly(1, 2);
+        assertThat(plan.report().rows().getFirst()).satisfies(row -> {
+            assertThat(row.catalogName()).isEqualTo("Serena");
+            assertThat(row.gender()).isEqualTo("F/C");
+            assertThat(row.essenceReference()).isEqualTo("014");
+            assertThat(row.productionTypeCode()).isEqualTo("PFM");
+            assertThat(row.lotCode()).isEqualTo("PFM-014-001-09-2026");
+            assertThat(row.quantity()).isEqualByComparingTo("9.999999");
+            assertThat(row.expiration()).isEqualTo(LocalDate.of(2027, 9, 30));
+        });
+        assertThat(plan.products()).hasSize(2);
     }
 
     @Test
-    void shouldAdjustFinalSnapshotQuantitiesUsingWithdrawalColumn() throws IOException {
-        var plan = parse("""
-            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada
-            Adjusted,F,80,09/27,-50ml
-            Spaced,M,80,10/27,- 50ml
-            Decimal,C,10.5,11/27,-0.500001ml
-            Blank,F/C,1,12/27,
-            Catalog only,M/C,50,,-50ml
+    void shouldRejectLegacyHeadersAndAnyDifferentColumnShape() throws IOException {
+        var legacyFour = write("""
+            Nome do Perfume,Genero,Ml Disponiveis,Expired
+            Item,F,1,09/27
             """);
+        var legacyFive = write("""
+            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada
+            Item,F,1,09/27,
+            """);
+        var reordered = write("""
+            Nome do Perfume,Genero,Ml Disponiveis,Retirada,Expired,EssenceReference,ProductionTypeCode,LotCode
+            Item,F,1,,09/27,014,PFM,L1
+            """);
+        var extra = write(HEADER + ",Unexpected\nItem,F,1,09/27,,014,PFM,L1,x\n");
 
-        assertThat(plan.report().openingStockCount()).isEqualTo(4);
+        for (var file : new Path[]{legacyFour, legacyFive, reordered, extra}) {
+            assertThatThrownBy(() -> parser.parse(file, InitialInventoryImportMode.DRY_RUN, EFFECTIVE_DATE))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("CSV header must be exactly: " + HEADER);
+        }
+    }
+
+    @Test
+    void shouldRejectInvalidGenderValues() throws IOException {
+        var plan = parse("""
+            %s
+            Blank,,1,09/27,,014,PFM,L1
+            Unsupported,X,1,09/27,,015,PFM,L2
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsExactly(
+                InitialInventoryImportValidationCode.INVALID_GENDER,
+                InitialInventoryImportValidationCode.INVALID_GENDER
+            );
+    }
+
+    @Test
+    void shouldRejectInvalidEssenceReferences() throws IOException {
+        var plan = parse("""
+            %s
+            Reserved,F,1,09/27,,000,PFM,L1
+            Short,F,1,09/27,,14,PFM,L2
+            Alpha,F,1,09/27,,A14,PFM,L3
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsOnly(InitialInventoryImportValidationCode.INVALID_ESSENCE_REFERENCE);
+    }
+
+    @Test
+    void shouldRejectProductionTypeCodesThatAreNotExactlyUppercaseAscii() throws IOException {
+        var plan = parse("""
+            %s
+            Lower,F,1,09/27,,014,pfm,L1
+            Short,F,1,09/27,,015,PF,L2
+            Numeric,F,1,09/27,,016,P1M,L3
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsOnly(InitialInventoryImportValidationCode.INVALID_PRODUCTION_TYPE_CODE);
+    }
+
+    @Test
+    void shouldRequireLotOnlyForPositiveAdjustedStock() throws IOException {
+        var plan = parse("""
+            %s
+            Positive,F,1,09/27,,014,PFM,
+            Zero blank,M,0,,,,015,PFM,
+            Zero with source lot,C,0,,,,016,PFM,LEGACY-LOT
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsExactly(InitialInventoryImportValidationCode.LOT_CODE_REQUIRED, null, null);
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::outcome)
+            .containsExactly(
+                InitialInventoryImportOutcome.REJECTED,
+                InitialInventoryImportOutcome.CATALOG_ONLY,
+                InitialInventoryImportOutcome.CATALOG_ONLY
+            );
+        assertThat(plan.report().rows().get(2).lotCode()).isEqualTo("LEGACY-LOT");
+    }
+
+    @Test
+    void shouldRejectLotCodeLongerThanBatchLimit() throws IOException {
+        var plan = parse(HEADER + "\nItem,F,1,09/27,,014,PFM," + "L".repeat(256) + "\n");
+
+        assertThat(plan.report().rows().getFirst().validationCode())
+            .isEqualTo(InitialInventoryImportValidationCode.INVALID_LOT_CODE);
+    }
+
+    @Test
+    void shouldPreserveWithdrawalAdjustmentSemantics() throws IOException {
+        var plan = parse("""
+            %s
+            Adjusted,F,80,09/27,-50ml,014,PFM,L1
+            Spaced,M,80,10/27,- 50ml,015,PFM,L2
+            Decimal,C,10.5,11/27,-0.500001ml,016,PFM,L3
+            Catalog only,F/C,50,,-50ml,017,PFM,
+            """.formatted(HEADER));
+
+        assertThat(plan.report().openingStockCount()).isEqualTo(3);
         assertThat(plan.report().catalogOnlyCount()).isEqualTo(1);
-        assertThat(plan.report().rejectedCount()).isZero();
         assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::quantity)
             .containsExactly(
                 new BigDecimal("30.000000"),
                 new BigDecimal("30.000000"),
                 new BigDecimal("9.999999"),
-                new BigDecimal("1.000000"),
                 new BigDecimal("0.000000")
             );
-        assertThat(plan.report().rows().get(4).outcome()).isEqualTo(InitialInventoryImportOutcome.CATALOG_ONLY);
     }
 
     @Test
-    void shouldRejectInvalidWithdrawalAdjustmentsAndNegativeAdjustedQuantity() throws IOException {
+    void shouldRejectInvalidWithdrawalAndNegativeAdjustedQuantity() throws IOException {
         var plan = parse("""
-            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada
-            Positive,F,80,09/27,50ml
-            Malformed,M,80,09/27,-50liters
-            Too precise,C,80,09/27,-0.0000001ml
-            Below zero,F/C,10,09/27,-11ml
-            Positive blank,M/C,10,,
-            """);
+            %s
+            Positive,F,80,09/27,50ml,014,PFM,L1
+            Malformed,M,80,09/27,-50liters,015,PFM,L2
+            Too precise,C,80,09/27,-0.0000001ml,016,PFM,L3
+            Below zero,F/C,10,09/27,-11ml,017,PFM,L4
+            """.formatted(HEADER));
 
-        assertThat(plan.report().rejectedCount()).isEqualTo(5);
         assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
             .containsExactly(
                 InitialInventoryImportValidationCode.INVALID_WITHDRAWAL_ADJUSTMENT,
                 InitialInventoryImportValidationCode.INVALID_WITHDRAWAL_ADJUSTMENT,
                 InitialInventoryImportValidationCode.INVALID_WITHDRAWAL_ADJUSTMENT,
-                InitialInventoryImportValidationCode.NEGATIVE_ADJUSTED_QUANTITY,
-                InitialInventoryImportValidationCode.EXPIRATION_REQUIRED
+                InitialInventoryImportValidationCode.NEGATIVE_ADJUSTED_QUANTITY
             );
     }
 
     @Test
-    void shouldAccumulateStableValidationResultsInSourceOrder() throws IOException {
+    void shouldPreserveExactQuantityAndExpirationValidation() throws IOException {
         var plan = parse("""
-            Nome do Perfume,Genero,Ml Disponiveis,Expired
-            Valid,F,1,09/27
-            Too precise,M,1.0000001,09/27
-            Zero blank,C,0,
-            Positive blank,M/C,2,
-            Already expired,F,2,08/26
-            Bad columns,F,2
-            Bad expiration,F,2,13/27
-            Exponent,F,1e2,09/27
-            Negative zero,F,-0,09/27
-            """);
+            %s
+            Valid,F,1.000001,09/27,,014,PFM,L1
+            Too precise,M,1.0000001,09/27,,015,PFM,L2
+            Positive blank,C,2,,,016,PFM,L3
+            Already expired,M/C,2,08/26,,017,PFM,L4
+            Bad expiration,F/C,2,13/27,,018,PFM,L5
+            Exponent,F,1e2,09/27,,019,PFM,L6
+            Negative zero,F,-0,09/27,,020,PFM,L7
+            """.formatted(HEADER));
 
-        assertThat(plan.report().totalRowCount()).isEqualTo(9);
-        assertThat(plan.report().openingStockCount()).isEqualTo(1);
-        assertThat(plan.report().catalogOnlyCount()).isEqualTo(1);
-        assertThat(plan.report().rejectedCount()).isEqualTo(7);
         assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
             .containsExactly(
                 null,
                 InitialInventoryImportValidationCode.INVALID_QUANTITY,
-                null,
                 InitialInventoryImportValidationCode.EXPIRATION_REQUIRED,
                 InitialInventoryImportValidationCode.EXPIRATION_BEFORE_EFFECTIVE_DATE,
-                InitialInventoryImportValidationCode.MALFORMED_ROW,
                 InitialInventoryImportValidationCode.INVALID_EXPIRATION,
                 InitialInventoryImportValidationCode.INVALID_QUANTITY,
                 InitialInventoryImportValidationCode.INVALID_QUANTITY
@@ -127,31 +208,111 @@ class InitialInventorySnapshotParserTest {
     }
 
     @Test
-    void shouldRejectUnresolvableDuplicatesAndUnexpectedHeader() throws IOException {
-        var duplicatePlan = parse("""
-            Nome do Perfume,Genero,Ml Disponiveis,Expired
-            Same,F,1,09/27
-            same,F,2,10/27
-            """);
+    void shouldGroupRepeatedProductIdentityIntoOneProductWithDistinctLots() throws IOException {
+        var plan = parse("""
+            %s
+            Serena,F,10,09/27,,014,PFM,L1
+            Serena,F,20,10/27,,014,PFM,L2
+            """.formatted(HEADER));
 
-        assertThat(duplicatePlan.report().rows())
-            .allMatch(row -> row.outcome() == InitialInventoryImportOutcome.REJECTED)
-            .allMatch(row -> row.validationCode() == InitialInventoryImportValidationCode.DUPLICATE_NAME);
+        assertThat(plan.report().rejectedCount()).isZero();
+        assertThat(plan.products()).singleElement().satisfies(product -> {
+            assertThat(product.catalogName()).isEqualTo("Serena");
+            assertThat(product.essenceReference()).isEqualTo("014");
+            assertThat(product.productionTypeCode()).isEqualTo("PFM");
+            assertThat(product.rows()).extracting(ValidInitialInventoryRow::lotCode).containsExactly("L1", "L2");
+        });
+    }
 
-        var wrongHeader = write("Name,Genero,Ml Disponiveis,Expired\nItem,F,1,09/27\n");
-        assertThatThrownBy(() -> parser.parse(
-            wrongHeader, InitialInventoryImportMode.DRY_RUN, EFFECTIVE_DATE
-        ))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("CSV header must be exactly");
+    @Test
+    void shouldRejectDuplicateLotWithinSameProductIdentity() throws IOException {
+        var plan = parse("""
+            %s
+            Serena,F,10,09/27,,014,PFM,L1
+            Serena,F,20,10/27,,014,PFM,L1
+            """.formatted(HEADER));
 
-        var extraColumn = write("""
-            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada,Unexpected
-            Item,F,1,09/27,,
-            """);
-        assertThatThrownBy(() -> parser.parse(
-            extraColumn, InitialInventoryImportMode.DRY_RUN, EFFECTIVE_DATE
-        )).isInstanceOf(IllegalArgumentException.class);
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsOnly(InitialInventoryImportValidationCode.DUPLICATE_LOT_CODE);
+        assertThat(plan.products()).isEmpty();
+    }
+
+    @Test
+    void shouldRejectConflictingNameForSameProductIdentity() throws IOException {
+        var plan = parse("""
+            %s
+            Serena,F,10,09/27,,014,PFM,L1
+            Serena Premium,F,20,10/27,,014,PFM,L2
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsOnly(InitialInventoryImportValidationCode.CONFLICTING_PRODUCT_METADATA);
+    }
+
+    @Test
+    void shouldRejectConflictingGenderForSameProductIdentity() throws IOException {
+        var plan = parse("""
+            %s
+            Serena,F,10,09/27,,014,PFM,L1
+            Serena,M,20,10/27,,014,PFM,L2
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsOnly(InitialInventoryImportValidationCode.CONFLICTING_PRODUCT_METADATA);
+    }
+
+    @Test
+    void shouldRejectConflictingGenderForSameFragranceAcrossProductionTypes() throws IOException {
+        var plan = parse("""
+            %s
+            Serena Perfume,F,10,09/27,,014,PFM,L1
+            Serena Body Splash,M,20,10/27,,014,BDS,L2
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsOnly(InitialInventoryImportValidationCode.CONFLICTING_FRAGRANCE_GENDER);
+    }
+
+    @Test
+    void shouldAllowEqualDisplayNamesAcrossDistinctStableIdentities() throws IOException {
+        var plan = parse("""
+            %s
+            Shared Name,F,10,09/27,,014,PFM,L1
+            Shared Name,F,20,10/27,,015,PFM,L1
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rejectedCount()).isZero();
+        assertThat(plan.products()).hasSize(2);
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::catalogName)
+            .containsExactly("Shared Name", "Shared Name");
+    }
+
+    @Test
+    void shouldAllowSameLotCodeAcrossDistinctProductIdentities() throws IOException {
+        var plan = parse("""
+            %s
+            First,F,10,09/27,,014,PFM,LOT-001
+            Second,M,20,10/27,,015,PFM,LOT-001
+            """.formatted(HEADER));
+
+        assertThat(plan.report().rejectedCount()).isZero();
+        assertThat(plan.products()).hasSize(2);
+    }
+
+    @Test
+    void shouldAccumulateMalformedRowsInStableSourceOrder() throws IOException {
+        var plan = parse("""
+            %s
+            Valid,F,1,09/27,,014,PFM,L1
+            Bad columns,F,2
+            Valid zero,C,0,,,,015,BDS,
+            """.formatted(HEADER));
+
+        assertThat(plan.report().totalRowCount()).isEqualTo(3);
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::sourceRowNumber)
+            .containsExactly(1, 2, 3);
+        assertThat(plan.report().rows()).extracting(InitialInventoryImportRowResult::validationCode)
+            .containsExactly(null, InitialInventoryImportValidationCode.MALFORMED_ROW, null);
     }
 
     private InitialInventoryImportPlan parse(String csv) throws IOException {
