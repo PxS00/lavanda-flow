@@ -36,6 +36,10 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
     'As quantidades dos lotes não correspondem aos requisitos da fórmula.',
   INVALID_MANUAL_PRODUCTION_LOT_CODE: 'Revise o código de lote manual informado.',
   PRODUCTION_SOURCE_BATCH_NOT_FOUND: 'Um lote selecionado para a produção não foi encontrado.',
+  PACKAGED_PRODUCTION_LOT_SEQUENCE_EXHAUSTED:
+    'A sequência mensal de lotes de produtos envasados atingiu o limite de 999.',
+  UNREPRESENTABLE_PRODUCTION_REQUIREMENT:
+    'A quantidade solicitada gera um requisito que não pode ser representado exatamente.',
 };
 
 const KIND_MESSAGES: Readonly<Record<UiError['kind'], string>> = {
