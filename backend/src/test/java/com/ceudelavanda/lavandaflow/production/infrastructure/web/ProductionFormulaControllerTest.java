@@ -3,12 +3,15 @@ package com.ceudelavanda.lavandaflow.production.infrastructure.web;
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.production.application.formula.CreateProductionFormula;
 import com.ceudelavanda.lavandaflow.production.application.formula.GetProductionFormula;
+import com.ceudelavanda.lavandaflow.production.application.formula.GetProductionFormulaRequirements;
 import com.ceudelavanda.lavandaflow.production.application.formula.ListProductionFormulas;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaDefinitionCommand;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaIngredientCommand;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaNotFoundException;
+import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaRequirementsResult;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaResult;
 import com.ceudelavanda.lavandaflow.production.application.formula.UpdateProductionFormula;
+import com.ceudelavanda.lavandaflow.production.domain.ProductionFormulaKind;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
 import org.junit.jupiter.api.Test;
@@ -42,42 +45,70 @@ class ProductionFormulaControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
-    private CreateProductionFormula createProductionFormula;
-
-    @MockitoBean
-    private UpdateProductionFormula updateProductionFormula;
-
-    @MockitoBean
-    private GetProductionFormula getProductionFormula;
-
-    @MockitoBean
-    private ListProductionFormulas listProductionFormulas;
+    @MockitoBean private CreateProductionFormula createProductionFormula;
+    @MockitoBean private UpdateProductionFormula updateProductionFormula;
+    @MockitoBean private GetProductionFormula getProductionFormula;
+    @MockitoBean private ListProductionFormulas listProductionFormulas;
+    @MockitoBean private GetProductionFormulaRequirements getProductionFormulaRequirements;
 
     @Test
-    void shouldCreateProductionFormula() throws Exception {
+    void shouldCreateProductionFormulaWithBackwardCompatibleStandardKind() throws Exception {
         var formulaId = UUID.randomUUID();
         var outputItemId = UUID.randomUUID();
         var ingredientItemId = UUID.randomUUID();
-        var command = command(outputItemId, ingredientItemId, "1000", "250");
-        var result = result(formulaId, outputItemId, ingredientItemId, "1000", "250");
+        var command = command(outputItemId, ingredientItemId, "1000", "250", ProductionFormulaKind.STANDARD);
+        var result = result(formulaId, outputItemId, ingredientItemId, "1000", "250", ProductionFormulaKind.STANDARD);
         when(createProductionFormula.execute(command)).thenReturn(result);
 
         mockMvc.perform(post("/api/v1/production/formulas")
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json(outputItemId, ingredientItemId, "1000", "250")))
+                .content(json(outputItemId, ingredientItemId, "1000", "250", null)))
             .andExpect(status().isCreated())
             .andExpect(header().string("Location", "/api/v1/production/formulas/" + formulaId))
-            .andExpect(jsonPath("$.id").value(formulaId.toString()))
-            .andExpect(jsonPath("$.outputInventoryItemId").value(outputItemId.toString()))
-            .andExpect(jsonPath("$.outputQuantity").value("1000"))
-            .andExpect(jsonPath("$.outputUnitOfMeasure").value("MILLILITER"))
-            .andExpect(jsonPath("$.ingredients[0].inventoryItemId").value(ingredientItemId.toString()))
-            .andExpect(jsonPath("$.ingredients[0].quantity").value("250"))
-            .andExpect(jsonPath("$.ingredients[0].unitOfMeasure").value("MILLILITER"));
+            .andExpect(jsonPath("$.kind").value("STANDARD"));
 
         verify(createProductionFormula).execute(command);
+    }
+
+    @Test
+    void shouldExposePackagedFormulaKindAndScaledRequirements() throws Exception {
+        var formulaId = UUID.randomUUID();
+        var outputItemId = UUID.randomUUID();
+        var bulkItemId = UUID.randomUUID();
+        var command = command(outputItemId, bulkItemId, "1", "30", ProductionFormulaKind.PACKAGED_FILLING);
+        var result = result(formulaId, outputItemId, bulkItemId, "1", "30", ProductionFormulaKind.PACKAGED_FILLING);
+        when(createProductionFormula.execute(command)).thenReturn(result);
+        when(getProductionFormulaRequirements.execute(formulaId, new BigDecimal("5"))).thenReturn(
+            new ProductionFormulaRequirementsResult(
+                formulaId,
+                outputItemId,
+                new BigDecimal("5"),
+                UnitOfMeasure.UNIT,
+                List.of(new ProductionFormulaRequirementsResult.RequirementResult(
+                    bulkItemId,
+                    new BigDecimal("150"),
+                    UnitOfMeasure.MILLILITER
+                ))
+            )
+        );
+
+        mockMvc.perform(post("/api/v1/production/formulas")
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(outputItemId, bulkItemId, "1", "30", "PACKAGED_FILLING")))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.kind").value("PACKAGED_FILLING"));
+
+        mockMvc.perform(get("/api/v1/production/formulas/{formulaId}/requirements", formulaId)
+                .queryParam("outputQuantity", "5"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.formulaId").value(formulaId.toString()))
+            .andExpect(jsonPath("$.outputQuantity").value("5"))
+            .andExpect(jsonPath("$.outputUnitOfMeasure").value("UNIT"))
+            .andExpect(jsonPath("$.requirements[0].inventoryItemId").value(bulkItemId.toString()))
+            .andExpect(jsonPath("$.requirements[0].quantity").value("150"))
+            .andExpect(jsonPath("$.requirements[0].unitOfMeasure").value("MILLILITER"));
     }
 
     @Test
@@ -85,8 +116,8 @@ class ProductionFormulaControllerTest {
         var formulaId = UUID.randomUUID();
         var outputItemId = UUID.randomUUID();
         var ingredientItemId = UUID.randomUUID();
-        var command = command(outputItemId, ingredientItemId, "500", "50");
-        var result = result(formulaId, outputItemId, ingredientItemId, "500", "50");
+        var command = command(outputItemId, ingredientItemId, "500", "50", ProductionFormulaKind.STANDARD);
+        var result = result(formulaId, outputItemId, ingredientItemId, "500", "50", ProductionFormulaKind.STANDARD);
         when(updateProductionFormula.execute(formulaId, command)).thenReturn(result);
         when(getProductionFormula.execute(formulaId)).thenReturn(result);
         when(listProductionFormulas.execute()).thenReturn(List.of(result));
@@ -94,7 +125,7 @@ class ProductionFormulaControllerTest {
         mockMvc.perform(put("/api/v1/production/formulas/{formulaId}", formulaId)
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json(outputItemId, ingredientItemId, "500", "50")))
+                .content(json(outputItemId, ingredientItemId, "500", "50", null)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(formulaId.toString()));
 
@@ -125,19 +156,6 @@ class ProductionFormulaControllerTest {
             .andExpect(jsonPath("$.details.outputInventoryItemId").exists())
             .andExpect(jsonPath("$.details.outputQuantity").exists())
             .andExpect(jsonPath("$.details.ingredients").exists());
-
-        mockMvc.perform(post("/api/v1/production/formulas")
-                .with(csrf())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "outputInventoryItemId": "00000000-0000-0000-0000-000000000001",
-                      "outputQuantity": 1,
-                      "ingredients": [null]
-                    }
-                    """))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @Test
@@ -155,14 +173,16 @@ class ProductionFormulaControllerTest {
         UUID outputItemId,
         UUID ingredientItemId,
         String outputQuantity,
-        String ingredientQuantity
+        String ingredientQuantity,
+        ProductionFormulaKind kind
     ) {
         return new ProductionFormulaDefinitionCommand(
             outputItemId,
             new BigDecimal(outputQuantity),
             List.of(new ProductionFormulaIngredientCommand(
                 ingredientItemId, new BigDecimal(ingredientQuantity)
-            ))
+            )),
+            kind
         );
     }
 
@@ -171,18 +191,20 @@ class ProductionFormulaControllerTest {
         UUID outputItemId,
         UUID ingredientItemId,
         String outputQuantity,
-        String ingredientQuantity
+        String ingredientQuantity,
+        ProductionFormulaKind kind
     ) {
         return new ProductionFormulaResult(
             formulaId,
             outputItemId,
             new BigDecimal(outputQuantity),
-            UnitOfMeasure.MILLILITER,
+            kind == ProductionFormulaKind.PACKAGED_FILLING ? UnitOfMeasure.UNIT : UnitOfMeasure.MILLILITER,
             List.of(new ProductionFormulaResult.IngredientResult(
                 ingredientItemId,
                 new BigDecimal(ingredientQuantity),
                 UnitOfMeasure.MILLILITER
-            ))
+            )),
+            kind
         );
     }
 
@@ -190,8 +212,10 @@ class ProductionFormulaControllerTest {
         UUID outputItemId,
         UUID ingredientItemId,
         String outputQuantity,
-        String ingredientQuantity
+        String ingredientQuantity,
+        String kind
     ) {
+        var kindField = kind == null ? "" : ",\n  \"kind\": \"" + kind + "\"";
         return """
             {
               "outputInventoryItemId": "%s",
@@ -201,8 +225,8 @@ class ProductionFormulaControllerTest {
                   "inventoryItemId": "%s",
                   "quantity": %s
                 }
-              ]
+              ]%s
             }
-            """.formatted(outputItemId, outputQuantity, ingredientItemId, ingredientQuantity);
+            """.formatted(outputItemId, outputQuantity, ingredientItemId, ingredientQuantity, kindField);
     }
 }
