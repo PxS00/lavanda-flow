@@ -13,11 +13,13 @@ import com.ceudelavanda.lavandaflow.inventory.ProductionStockResult;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaNotFoundException;
 import com.ceudelavanda.lavandaflow.production.application.lot.AllocateInternalProductionLotCode;
 import com.ceudelavanda.lavandaflow.production.application.lot.AllocateInternalProductionLotCodeCommand;
-import com.ceudelavanda.lavandaflow.production.domain.FormulaIngredient;
+import com.ceudelavanda.lavandaflow.production.application.lot.AllocatePackagedProductionLotCode;
+import com.ceudelavanda.lavandaflow.production.application.lot.AllocatePackagedProductionLotCodeCommand;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionConsumption;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionExecution;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionExecutionRepository;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionFormula;
+import com.ceudelavanda.lavandaflow.production.domain.ProductionFormulaKind;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionFormulaRepository;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionLotCodeMode;
 import com.ceudelavanda.lavandaflow.production.domain.exception.InvalidProductionExecutionException;
@@ -26,7 +28,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -54,6 +55,8 @@ public class RegisterProduction {
     private final ProductionItemReferenceLookup productionItemReferenceLookup;
     private final ProductionBatchReferenceLookup productionBatchReferenceLookup;
     private final AllocateInternalProductionLotCode allocateInternalProductionLotCode;
+    private final AllocatePackagedProductionLotCode allocatePackagedProductionLotCode;
+    private final ProductionRequirementCalculator productionRequirementCalculator;
     private final ProductionStockApplication productionStockApplication;
     private final Clock clock;
 
@@ -69,7 +72,7 @@ public class RegisterProduction {
             validated.outputQuantity(),
             validated.sourceAllocations()
         );
-        var lotCode = resolveLotCode(validated, formula.getOutputInventoryItemId());
+        var lotCode = resolveLotCode(validated, formula);
 
         var inventoryResult = productionStockApplication.apply(new ProductionStockCommand(
             validated.sourceAllocations().stream()
@@ -198,11 +201,8 @@ public class RegisterProduction {
         }
 
         var requiredTotals = new HashMap<UUID, BigDecimal>();
-        for (var ingredient : formula.getIngredients()) {
-            requiredTotals.put(
-                ingredient.inventoryItemId(),
-                scaleRequirement(ingredient, requestedOutputQuantity, formula.getOutputQuantity())
-            );
+        for (var requirement : productionRequirementCalculator.calculate(formula, requestedOutputQuantity)) {
+            requiredTotals.put(requirement.inventoryItemId(), requirement.quantity());
         }
 
         for (var actual : actualTotals.entrySet()) {
@@ -275,29 +275,18 @@ public class RegisterProduction {
         return List.copyOf(consumptions);
     }
 
-    private BigDecimal scaleRequirement(
-        FormulaIngredient ingredient,
-        BigDecimal requestedOutputQuantity,
-        BigDecimal referenceOutputQuantity
-    ) {
-        try {
-            var scaled = ingredient.quantity()
-                .multiply(requestedOutputQuantity)
-                .divide(referenceOutputQuantity, 6, RoundingMode.UNNECESSARY);
-            var integerDigits = Math.max(scaled.precision() - scaled.scale(), 0);
-            if (integerDigits > 13 || scaled.signum() <= 0) {
-                throw new UnrepresentableProductionRequirementException(ingredient.inventoryItemId());
-            }
-            return scaled;
-        } catch (ArithmeticException exception) {
-            throw new UnrepresentableProductionRequirementException(ingredient.inventoryItemId());
-        }
-    }
-
-    private String resolveLotCode(RegisterProductionCommand command, UUID outputInventoryItemId) {
+    private String resolveLotCode(RegisterProductionCommand command, ProductionFormula formula) {
         if (command.lotCodeMode() == ProductionLotCodeMode.GENERATED) {
+            if (formula.getKind() == ProductionFormulaKind.PACKAGED_FILLING) {
+                return allocatePackagedProductionLotCode.execute(
+                    new AllocatePackagedProductionLotCodeCommand(command.productionDate())
+                ).value();
+            }
             return allocateInternalProductionLotCode.execute(
-                new AllocateInternalProductionLotCodeCommand(outputInventoryItemId, command.productionDate())
+                new AllocateInternalProductionLotCodeCommand(
+                    formula.getOutputInventoryItemId(),
+                    command.productionDate()
+                )
             ).value();
         }
         return command.manualLotCode().trim();
