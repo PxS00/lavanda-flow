@@ -1,5 +1,6 @@
 export const INVENTORY_ITEM_CATEGORIES = [
   'ESSENCE',
+  'FINISHED_PRODUCT',
   'CHEMICAL_INPUT',
   'BASE',
   'ALCOHOL',
@@ -25,6 +26,9 @@ export const INVENTORY_ITEM_UNITS_OF_MEASURE = [
 
 export type InventoryItemUnitOfMeasure = (typeof INVENTORY_ITEM_UNITS_OF_MEASURE)[number];
 
+export const PRODUCT_GENDERS = ['M', 'F', 'C', 'M/C', 'F/C'] as const;
+export type ProductGender = (typeof PRODUCT_GENDERS)[number];
+
 /** Transport representation of an inventory item returned by the catalog API. */
 export interface InventoryItemDto {
   readonly id: string;
@@ -35,6 +39,7 @@ export interface InventoryItemDto {
   readonly active: boolean;
   readonly essenceReference: string | null;
   readonly productionTypeCode: string | null;
+  readonly gender: ProductGender | null;
 }
 
 /** Transport representation of one paginated catalog API response. */
@@ -63,4 +68,5 @@ export interface RegisterInventoryItemRequest {
   readonly unitOfMeasure: InventoryItemUnitOfMeasure;
   readonly essenceReference: string | null;
   readonly productionTypeCode: string | null;
+  readonly gender: ProductGender | null;
 }

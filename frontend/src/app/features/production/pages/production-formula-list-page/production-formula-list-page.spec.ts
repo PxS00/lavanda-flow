@@ -39,6 +39,7 @@ describe('ProductionFormulaListPage', () => {
         active: false,
         essenceReference: '027',
         productionTypeCode: 'BHC',
+        gender: null,
       }),
     );
 

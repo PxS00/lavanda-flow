@@ -32,6 +32,7 @@ describe('catalog routes', () => {
                 active: true,
                 essenceReference: null,
                 productionTypeCode: null,
+                gender: null,
               }),
           },
         },

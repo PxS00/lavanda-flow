@@ -15,6 +15,7 @@ describe('InventoryItemSelector', () => {
     active: true,
     essenceReference: '027',
     productionTypeCode: 'BHC',
+    gender: null,
   };
   const itemWithoutReferences: InventoryItemDto = {
     ...referencedItem,
@@ -22,6 +23,7 @@ describe('InventoryItemSelector', () => {
     name: 'Base neutra',
     essenceReference: null,
     productionTypeCode: null,
+    gender: null,
   };
   let fixture: ComponentFixture<InventoryItemSelector>;
   let search: ReturnType<typeof vi.fn>;

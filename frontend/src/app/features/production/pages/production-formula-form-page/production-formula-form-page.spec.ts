@@ -203,6 +203,7 @@ function item(id: string, name: string, active = true): InventoryItemDto {
   return {
     id, name, description: null, category: 'ESSENCE', unitOfMeasure: 'MILLILITER', active,
     essenceReference: null, productionTypeCode: null,
+    gender: null,
   };
 }
 
