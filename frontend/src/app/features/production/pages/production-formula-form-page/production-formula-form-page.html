@@ -33,6 +33,23 @@
             <mat-card-title>Saída da produção</mat-card-title>
           </mat-card-header>
           <mat-card-content>
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de produção</mat-label>
+              <mat-select formControlName="kind">
+                <mat-option value="STANDARD">Produção padrão</mat-option>
+                <mat-option value="PACKAGED_FILLING">Envase de produto final</mat-option>
+              </mat-select>
+            </mat-form-field>
+            @if (backendFieldError('kind'); as error) {
+              <p class="field-error" role="alert">{{ error }}</p>
+            }
+            @if (formulaForm.controls.kind.value === 'PACKAGED_FILLING') {
+              <p class="field-hint">
+                O envase deve gerar um item finalizado em unidades e consumir ao menos um produto
+                finalizado a granel, além dos componentes de embalagem realmente controlados no estoque.
+              </p>
+            }
+
             <app-inventory-item-selector
               [selected]="formulaForm.controls.outputInventoryItem.value"
               [disabled]="isSubmitting()"
@@ -56,9 +73,6 @@
                 inputmode="decimal"
                 formControlName="outputQuantity"
                 [readonly]="isSubmitting()"
-                [attr.aria-describedby]="
-                  backendFieldError('outputQuantity') ? 'output-quantity-backend-error' : null
-                "
               />
               <mat-hint>Quantidade positiva com até 6 casas decimais</mat-hint>
               @if (
