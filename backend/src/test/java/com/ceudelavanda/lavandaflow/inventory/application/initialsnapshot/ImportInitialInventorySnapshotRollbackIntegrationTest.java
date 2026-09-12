@@ -7,12 +7,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.nio.charset.StandardCharsets;
@@ -54,9 +54,9 @@ class ImportInitialInventorySnapshotRollbackIntegrationTest {
     void shouldRollbackAllCatalogAndInventoryWritesWhenLaterReceiptFails() throws Exception {
         var file = directory.resolve("rollback.csv");
         Files.writeString(file, """
-            Nome do Perfume,Genero,Ml Disponiveis,Expired
-            First,F,1,02/24
-            Second,M,2,03/24
+            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada,EssenceReference,ProductionTypeCode,LotCode
+            First,F,1,02/24,,014,PFM,PFM-014-001-01-2024
+            Second,M,2,03/24,,015,PFM,PFM-015-001-01-2024
             """, StandardCharsets.UTF_8);
 
         assertThatThrownBy(() -> importer.execute(

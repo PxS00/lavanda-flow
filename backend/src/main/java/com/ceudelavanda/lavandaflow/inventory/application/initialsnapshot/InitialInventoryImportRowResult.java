@@ -7,7 +7,10 @@ import java.time.LocalDate;
 public record InitialInventoryImportRowResult(
     int sourceRowNumber,
     String catalogName,
-    String legacyReference,
+    String gender,
+    String essenceReference,
+    String productionTypeCode,
+    String lotCode,
     BigDecimal quantity,
     LocalDate expiration,
     InitialInventoryImportOutcome outcome,

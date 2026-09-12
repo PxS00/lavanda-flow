@@ -286,10 +286,10 @@ class V1OperationalReadinessAcceptanceTest {
     private Path syntheticSnapshot() throws IOException {
         var file = directory.resolve("v1-acceptance.csv");
         Files.writeString(file, """
-            Nome do Perfume,Genero,Ml Disponiveis,Expired
-            Operational source,F,20.500000,10/26
-            Expired snapshot,M,2.000000,09/26
-            Catalog only,C,0,
+            Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada,EssenceReference,ProductionTypeCode,LotCode
+            Operational source,F,20.500000,10/26,,014,PFM,PFM-014-001-09-2026
+            Expired snapshot,M,2.000000,09/26,,015,PFM,PFM-015-001-09-2026
+            Catalog only,C,0,,,016,PFM,
             """, StandardCharsets.UTF_8);
         return file;
     }

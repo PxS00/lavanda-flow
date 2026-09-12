@@ -1,5 +1,7 @@
 # Issue #136 — Import initial inventory snapshot
 
+> **Historical importer contract superseded for the corrected operational cutover.** Issue #231 and `docs/specs/0231-correct-initial-bulk-perfume-snapshot-mapping.md` supersede this document's four-column source, `ESSENCE` registration, duplicate-name disambiguation, and null-lot mapping. Keep this file as historical #136 evidence. The one-time offline execution, `DRY_RUN`/`APPLY`, empty-target guard, exact-decimal, expiration, and atomic transaction mechanics remain relevant only where #231 explicitly preserves them.
+
 ## Objective
 
 Implement the one-time, offline initial inventory migration defined by GitHub issue #136, consuming the normalization contract from #134 and preserving catalog, batch, balance, audit-history, transaction, and module-boundary invariants.
