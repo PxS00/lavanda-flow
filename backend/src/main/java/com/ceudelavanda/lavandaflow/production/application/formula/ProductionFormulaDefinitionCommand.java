@@ -13,6 +13,10 @@ public record ProductionFormulaDefinitionCommand(
     ProductionFormulaKind kind
 ) {
 
+    public ProductionFormulaDefinitionCommand {
+        kind = kind == null ? ProductionFormulaKind.STANDARD : kind;
+    }
+
     public ProductionFormulaDefinitionCommand(
         UUID outputInventoryItemId,
         BigDecimal outputQuantity,
@@ -22,6 +26,6 @@ public record ProductionFormulaDefinitionCommand(
     }
 
     public ProductionFormulaKind effectiveKind() {
-        return kind == null ? ProductionFormulaKind.STANDARD : kind;
+        return kind;
     }
 }
