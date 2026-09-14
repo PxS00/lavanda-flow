@@ -15,7 +15,10 @@ import {
   RegisterProductionRequest,
 } from '../../data-access/production-execution.dto';
 import { ProductionExecutionApiService } from '../../data-access/production-execution-api.service';
-import { ProductionFormulaDto } from '../../data-access/production-formula.dto';
+import {
+  ProductionFormulaDto,
+  ProductionFormulaRequirementsDto,
+} from '../../data-access/production-formula.dto';
 import { ProductionFormulaApiService } from '../../data-access/production-formula-api.service';
 import { ProductionRegistrationPage } from './production-registration-page';
 
@@ -29,6 +32,7 @@ const formula: ProductionFormulaDto = {
   ingredients: [
     { inventoryItemId: ingredientItem.id, quantity: '5', unitOfMeasure: 'MILLILITER' },
   ],
+  kind: 'STANDARD',
 };
 const batches: BatchInventoryDto = {
   inventoryItemId: ingredientItem.id,
@@ -69,6 +73,9 @@ describe('ProductionRegistrationPage', () => {
   let getOverview: ReturnType<
     typeof vi.fn<(inventoryItemId: string) => Observable<InventoryItemOverviewDto>>
   >;
+  let getRequirements: ReturnType<
+    typeof vi.fn<(formulaId: string, outputQuantity: string) => Observable<ProductionFormulaRequirementsDto>>
+  >;
 
   async function configure(
     formulas: readonly ProductionFormulaDto[] = [formula],
@@ -78,12 +85,26 @@ describe('ProductionRegistrationPage', () => {
     registerResponse = new Subject<ProductionExecutionDto>();
     register = vi.fn(() => registerResponse);
     getOverview = vi.fn((inventoryItemId) => overviewFactory(inventoryItemId));
+    getRequirements = vi.fn((formulaId, outputQuantity) =>
+      of({
+        formulaId,
+        outputInventoryItemId: outputItem.id,
+        outputQuantity,
+        outputUnitOfMeasure: 'MILLILITER',
+        requirements: [
+          { inventoryItemId: ingredientItem.id, quantity: '5', unitOfMeasure: 'MILLILITER' },
+        ],
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [ProductionRegistrationPage],
       providers: [
         provideRouter([]),
-        { provide: ProductionFormulaApiService, useValue: { list: vi.fn(() => of(formulas)) } },
+        {
+          provide: ProductionFormulaApiService,
+          useValue: { list: vi.fn(() => of(formulas)), getRequirements },
+        },
         {
           provide: InventoryItemApiService,
           useValue: {
@@ -116,6 +137,23 @@ describe('ProductionRegistrationPage', () => {
     ) as HTMLAnchorElement | null;
     expect(formulaLink?.textContent).toContain('Cadastrar fórmula');
     expect(register).not.toHaveBeenCalled();
+  });
+
+  it('should request and display backend-confirmed scaled requirements', async () => {
+    await configure();
+    fillBaseForm();
+
+    expect(getRequirements).toHaveBeenCalledWith(formula.id, '100');
+    expect(fixture.nativeElement.textContent).toContain('Requisitos confirmados pelo sistema');
+    expect(fixture.nativeElement.textContent).toContain('Necessário para a quantidade informada');
+  });
+
+  it('should explain packaged generated lot format without predicting a sequence', async () => {
+    await configure([{ ...formula, kind: 'PACKAGED_FILLING' }]);
+    fillBaseForm();
+
+    expect(fixture.nativeElement.textContent).toContain('SSS-MM-AAAA');
+    expect(fixture.nativeElement.textContent).not.toContain('001-09-2026');
   });
 
   it('should review generated production before sending the backend request', async () => {
@@ -236,10 +274,7 @@ describe('ProductionRegistrationPage', () => {
   it.each([
     ['INSUFFICIENT_STOCK', 'Um dos lotes selecionados não possui saldo suficiente.'],
     ['EXPIRED_BATCH', 'Um dos lotes selecionados está vencido e não pode ser consumido.'],
-    [
-      'INVALID_PRODUCTION_ALLOCATION',
-      'As quantidades dos lotes não correspondem aos requisitos da fórmula.',
-    ],
+    ['INVALID_PRODUCTION_ALLOCATION', 'As quantidades dos lotes não correspondem aos requisitos da fórmula.'],
   ])('should preserve input and show backend rejection %s', async (code, expectedMessage) => {
     await configure();
     fillBaseForm();

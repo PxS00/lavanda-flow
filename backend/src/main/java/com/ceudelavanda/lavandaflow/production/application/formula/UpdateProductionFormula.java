@@ -22,6 +22,7 @@ public class UpdateProductionFormula {
         var definition = definitionResolver.resolve(command);
 
         formula.replaceDefinition(
+            definition.kind(),
             definition.outputItem().inventoryItemId(),
             command.outputQuantity(),
             definition.outputItem().unitOfMeasure(),

@@ -18,6 +18,7 @@ public class CreateProductionFormula {
     public ProductionFormulaResult execute(ProductionFormulaDefinitionCommand command) {
         var definition = definitionResolver.resolve(command);
         var formula = ProductionFormula.create(
+            definition.kind(),
             definition.outputItem().inventoryItemId(),
             command.outputQuantity(),
             definition.outputItem().unitOfMeasure(),

@@ -24,6 +24,7 @@ describe('ProductionFormulaFormPage', () => {
       { inventoryItemId: 'ingredient-a', quantity: '1.25', unitOfMeasure: 'MILLILITER' },
       { inventoryItemId: 'ingredient-b', quantity: '2', unitOfMeasure: 'MILLILITER' },
     ],
+    kind: 'STANDARD',
   };
 
   let fixture: ComponentFixture<ProductionFormulaFormPage>;
@@ -90,6 +91,18 @@ describe('ProductionFormulaFormPage', () => {
     expect(navigate).toHaveBeenCalledWith(['/production/formulas', 'created-formula']);
   });
 
+  it('should send explicit packaged filling kind when selected', async () => {
+    await configure(null);
+    setCreateValues();
+    fixture.componentInstance.formulaForm.controls.kind.setValue('PACKAGED_FILLING');
+    fixture.detectChanges();
+
+    submit();
+
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ kind: 'PACKAGED_FILLING' }));
+    expect(fixture.nativeElement.textContent).toContain('produto finalizado a granel');
+  });
+
   it('should add and remove ingredient rows while retaining one required row', async () => {
     await configure(null);
 
@@ -109,6 +122,7 @@ describe('ProductionFormulaFormPage', () => {
     expect(getInventoryItemById).toHaveBeenCalledWith('ingredient-a');
     expect(getInventoryItemById).toHaveBeenCalledWith('ingredient-b');
     expect(fixture.componentInstance.formulaForm.getRawValue()).toEqual({
+      kind: 'STANDARD',
       outputInventoryItem: items[0],
       outputQuantity: '12.5',
       ingredients: [
@@ -160,6 +174,7 @@ describe('ProductionFormulaFormPage', () => {
   it('should preserve an API-valid decimal that JavaScript cannot represent exactly', async () => {
     await configure(null);
     fixture.componentInstance.formulaForm.setValue({
+      kind: 'STANDARD',
       outputInventoryItem: items[0], outputQuantity: '9999999999999.123456',
       ingredients: [{ inventoryItem: items[1], quantity: '8589934592.000001' }],
     });
@@ -175,6 +190,7 @@ describe('ProductionFormulaFormPage', () => {
 
   function setCreateValues(): void {
     fixture.componentInstance.formulaForm.setValue({
+      kind: 'STANDARD',
       outputInventoryItem: items[0], outputQuantity: '12.5',
       ingredients: [{ inventoryItem: items[1], quantity: '1.25' }],
     });

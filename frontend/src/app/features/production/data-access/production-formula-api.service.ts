@@ -3,7 +3,11 @@ import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { API_BASE_URL } from '../../../core/config/api-base-url.token';
-import { ProductionFormulaDto, UpsertProductionFormulaRequest } from './production-formula.dto';
+import {
+  ProductionFormulaDto,
+  ProductionFormulaRequirementsDto,
+  UpsertProductionFormulaRequest,
+} from './production-formula.dto';
 
 /** Typed HTTP client for the production formula setup endpoints. */
 @Service()
@@ -18,6 +22,16 @@ export class ProductionFormulaApiService {
 
   getById(formulaId: string): Observable<ProductionFormulaDto> {
     return this.http.get<ProductionFormulaDto>(`${this.formulasUrl}/${formulaId}`);
+  }
+
+  getRequirements(
+    formulaId: string,
+    outputQuantity: string,
+  ): Observable<ProductionFormulaRequirementsDto> {
+    return this.http.get<ProductionFormulaRequirementsDto>(
+      `${this.formulasUrl}/${formulaId}/requirements`,
+      { params: { outputQuantity } },
+    );
   }
 
   create(request: UpsertProductionFormulaRequest): Observable<ProductionFormulaDto> {

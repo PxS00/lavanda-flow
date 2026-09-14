@@ -23,7 +23,8 @@ class CatalogProductionItemReferenceLookup implements ProductionItemReferenceLoo
                 item.getUnitOfMeasure(),
                 item.isActive(),
                 item.getEssenceReference(),
-                item.getProductionTypeCode()
+                item.getProductionTypeCode(),
+                item.getCategory().name()
             ));
     }
 }

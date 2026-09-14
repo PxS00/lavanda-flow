@@ -37,6 +37,7 @@ class CatalogProductionItemReferenceLookupTest {
             assertThat(found.active()).isTrue();
             assertThat(found.essenceReference()).isEqualTo("014");
             assertThat(found.productionTypeCode()).isEqualTo("PRF");
+            assertThat(found.category()).isEqualTo("FINISHED_PRODUCT");
         });
     }
 }

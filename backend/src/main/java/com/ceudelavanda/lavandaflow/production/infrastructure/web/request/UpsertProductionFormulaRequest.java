@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.production.infrastructure.web.request;
 
+import com.ceudelavanda.lavandaflow.production.domain.ProductionFormulaKind;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
@@ -22,6 +23,16 @@ public record UpsertProductionFormulaRequest(
     BigDecimal outputQuantity,
     @NotEmpty
     @Schema(description = "One or more catalog item requirements; duplicate item identifiers are rejected")
-    List<@NotNull @Valid ProductionFormulaIngredientRequest> ingredients
+    List<@NotNull @Valid ProductionFormulaIngredientRequest> ingredients,
+    @Schema(description = "Production process kind; omitted values preserve STANDARD behavior")
+    ProductionFormulaKind kind
 ) {
+
+    public UpsertProductionFormulaRequest(
+        UUID outputInventoryItemId,
+        BigDecimal outputQuantity,
+        List<ProductionFormulaIngredientRequest> ingredients
+    ) {
+        this(outputInventoryItemId, outputQuantity, ingredients, ProductionFormulaKind.STANDARD);
+    }
 }
