@@ -11,6 +11,7 @@ import com.ceudelavanda.lavandaflow.inventory.ProductionStockCommand;
 import com.ceudelavanda.lavandaflow.inventory.ProductionStockResult;
 import com.ceudelavanda.lavandaflow.production.application.lot.AllocateInternalProductionLotCode;
 import com.ceudelavanda.lavandaflow.production.application.lot.AllocateInternalProductionLotCodeCommand;
+import com.ceudelavanda.lavandaflow.production.application.lot.AllocatePackagedProductionLotCode;
 import com.ceudelavanda.lavandaflow.production.application.lot.InternalProductionLotCode;
 import com.ceudelavanda.lavandaflow.production.domain.FormulaIngredient;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionExecutionRepository;
@@ -55,6 +56,7 @@ class RegisterProductionTest {
     @Mock private ProductionItemReferenceLookup productionItemReferenceLookup;
     @Mock private ProductionBatchReferenceLookup productionBatchReferenceLookup;
     @Mock private AllocateInternalProductionLotCode allocateInternalProductionLotCode;
+    @Mock private AllocatePackagedProductionLotCode allocatePackagedProductionLotCode;
     @Mock private ProductionStockApplication productionStockApplication;
 
     private RegisterProduction registerProduction;
@@ -67,6 +69,8 @@ class RegisterProductionTest {
             productionItemReferenceLookup,
             productionBatchReferenceLookup,
             allocateInternalProductionLotCode,
+            allocatePackagedProductionLotCode,
+            new ProductionRequirementCalculator(),
             productionStockApplication,
             CLOCK
         );
@@ -117,6 +121,7 @@ class RegisterProductionTest {
         verify(allocateInternalProductionLotCode).execute(
             new AllocateInternalProductionLotCodeCommand(outputItemId, LocalDate.of(2026, 9, 3))
         );
+        verifyNoInteractions(allocatePackagedProductionLotCode);
 
         var stockCommand = ArgumentCaptor.forClass(ProductionStockCommand.class);
         verify(productionStockApplication).apply(stockCommand.capture());
@@ -151,7 +156,7 @@ class RegisterProductionTest {
 
         assertThat(result.lotCode()).isEqualTo("MANUAL-LOT-42");
         assertThat(result.lotCodeMode()).isEqualTo(ProductionLotCodeMode.MANUAL);
-        verifyNoInteractions(allocateInternalProductionLotCode);
+        verifyNoInteractions(allocateInternalProductionLotCode, allocatePackagedProductionLotCode);
     }
 
     @Test
@@ -200,7 +205,7 @@ class RegisterProductionTest {
             null
         ))).isInstanceOf(InvalidProductionAllocationException.class);
 
-        verifyNoInteractions(allocateInternalProductionLotCode, productionStockApplication);
+        verifyNoInteractions(allocateInternalProductionLotCode, allocatePackagedProductionLotCode, productionStockApplication);
         verify(productionExecutionRepository, never()).save(any());
     }
 
@@ -293,7 +298,12 @@ class RegisterProductionTest {
             "   "
         ))).isInstanceOf(InvalidManualProductionLotCodeException.class);
 
-        verifyNoInteractions(productionFormulaRepository, allocateInternalProductionLotCode, productionStockApplication);
+        verifyNoInteractions(
+            productionFormulaRepository,
+            allocateInternalProductionLotCode,
+            allocatePackagedProductionLotCode,
+            productionStockApplication
+        );
     }
 
     private void prepareFormula(ProductionFormula formula, UUID outputItemId, UUID ingredientItemId) {

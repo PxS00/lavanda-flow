@@ -69,7 +69,7 @@ class InventoryItemTest {
         assertThatThrownBy(() -> InventoryItem.create(
             "Bottle", null, Category.BOTTLE, UnitOfMeasure.UNIT, "014", null
         )).isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("essenceReference is only valid for ESSENCE items");
+            .hasMessage("essenceReference is only valid for ESSENCE or FINISHED_PRODUCT items");
     }
 
     @Test
@@ -206,8 +206,8 @@ class InventoryItemTest {
         );
 
         assertThatThrownBy(() -> item.changeCategory(Category.CHEMICAL_INPUT))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("essenceReference is only valid for ESSENCE items");
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("canonical essence with an assigned reference cannot change category");
     }
 
     @Test

@@ -120,6 +120,28 @@ describe('V1 operational readiness', () => {
     harness.fixture.detectChanges();
 
     page.registrationForm.controls.outputQuantity.setValue('10');
+    http
+      .expectOne(
+        `${apiUrl}/production/formulas/${formula.id}/requirements?outputQuantity=10`,
+      )
+      .flush({
+        formulaId: formula.id,
+        outputInventoryItemId: outputItem.id,
+        outputQuantity: '10',
+        outputUnitOfMeasure: 'MILLILITER',
+        requirements: [
+          {
+            inventoryItemId: sourceItem.id,
+            quantity: '4.25',
+            unitOfMeasure: 'MILLILITER',
+          },
+        ],
+      });
+    harness.fixture.detectChanges();
+    expect(text(harness)).toContain('Requisitos confirmados pelo sistema');
+    expect(text(harness)).toContain(
+      'O código definitivo será gerado pelo servidor somente quando a produção for registrada com sucesso. Nenhuma sequência é reservada nesta tela.',
+    );
     page.registrationForm.controls.productionDate.setValue('2026-09-30');
     page.registrationForm.controls.outputReceivedAt.setValue('2026-09-30');
     page.registrationForm.controls.allocationGroups.at(0).controls.allocations.at(0).setValue({
@@ -133,7 +155,6 @@ describe('V1 operational readiness', () => {
     harness.fixture.detectChanges();
 
     expect(text(harness)).toContain('Revisar produção');
-    expect(text(harness)).toContain('definido pelo servidor ao concluir');
     expect(text(harness)).not.toContain(execution.lotCode);
     findButton(harness, 'Confirmar produção').click();
     harness.fixture.detectChanges();
@@ -253,6 +274,7 @@ function item(id: string, name: string, productionTypeCode: string): InventoryIt
     active: true,
     essenceReference: null,
     productionTypeCode,
+    gender: null,
   };
 }
 

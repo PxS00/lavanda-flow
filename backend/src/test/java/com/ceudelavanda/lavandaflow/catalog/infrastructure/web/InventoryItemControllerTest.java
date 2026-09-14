@@ -12,6 +12,10 @@ import com.ceudelavanda.lavandaflow.catalog.application.SearchInventoryItems;
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import com.ceudelavanda.lavandaflow.catalog.ProductGender;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -48,6 +52,54 @@ class InventoryItemControllerTest {
 
     @MockitoBean
     private SearchInventoryItems searchInventoryItems;
+
+    @ParameterizedTest
+    @EnumSource(ProductGender.class)
+    void shouldRoundTripFinishedProductGender(ProductGender gender) throws Exception {
+        var id = UUID.randomUUID();
+        var command = new RegisterInventoryItemCommand("Perfume", null, Category.FINISHED_PRODUCT,
+            UnitOfMeasure.UNIT, "229", "PRF", gender);
+        var result = new InventoryItemResult(id, "Perfume", null, Category.FINISHED_PRODUCT,
+            UnitOfMeasure.UNIT, true, "229", "PRF", gender);
+        when(registerInventoryItem.execute(command)).thenReturn(result);
+        when(getInventoryItem.execute(id)).thenReturn(result);
+        mockMvc.perform(post("/api/v1/inventory-items").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"name":"Perfume","category":"FINISHED_PRODUCT","unitOfMeasure":"UNIT",
+                     "essenceReference":"229","productionTypeCode":"PRF","gender":"%s"}
+                    """.formatted(gender.code())))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.category").value("FINISHED_PRODUCT"))
+            .andExpect(jsonPath("$.gender").value(gender.code()));
+        mockMvc.perform(get("/api/v1/inventory-items/{id}", id))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.gender").value(gender.code()));
+        verify(registerInventoryItem).execute(command);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "X", "MC", "m", "M /C"})
+    void shouldRejectInvalidGenderBeforeRegistration(String gender) throws Exception {
+        mockMvc.perform(post("/api/v1/inventory-items").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"name":"Perfume","category":"FINISHED_PRODUCT","unitOfMeasure":"MILLILITER","gender":"%s"}
+                    """.formatted(gender)))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.details.gender").exists());
+    }
+
+    @Test
+    void shouldExposeGenderEligibilityAsFieldValidation() throws Exception {
+        var command = new RegisterInventoryItemCommand("Bottle", null, Category.BOTTLE,
+            UnitOfMeasure.UNIT, null, null, ProductGender.SHARED);
+        when(registerInventoryItem.execute(command))
+            .thenThrow(new com.ceudelavanda.lavandaflow.catalog.domain.InvalidProductGenderException());
+        mockMvc.perform(post("/api/v1/inventory-items").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"name":"Bottle","category":"BOTTLE","unitOfMeasure":"UNIT","gender":"C"}
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.details.gender").exists());
+    }
 
     @Test
     void shouldRegisterInventoryItem() throws Exception {

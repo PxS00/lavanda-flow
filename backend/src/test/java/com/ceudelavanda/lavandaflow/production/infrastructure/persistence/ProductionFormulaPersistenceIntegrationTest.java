@@ -80,8 +80,8 @@ class ProductionFormulaPersistenceIntegrationTest {
         var formulaId = UUID.randomUUID();
 
         jdbcTemplate.update(
-            "insert into production_formula (id, output_inventory_item_id, output_quantity, output_unit_of_measure) values (?, ?, ?, ?)",
-            formulaId, outputItemId, BigDecimal.ONE, "UNIT"
+            "insert into production_formula (id, output_inventory_item_id, output_quantity, output_unit_of_measure, formula_kind) values (?, ?, ?, ?, ?)",
+            formulaId, outputItemId, BigDecimal.ONE, "UNIT", "STANDARD"
         );
         jdbcTemplate.update(
             "insert into production_formula_ingredient (formula_id, position, inventory_item_id, quantity, unit_of_measure) values (?, ?, ?, ?, ?)",
@@ -100,8 +100,8 @@ class ProductionFormulaPersistenceIntegrationTest {
         )).isInstanceOf(DataAccessException.class);
 
         assertThatThrownBy(() -> jdbcTemplate.update(
-            "insert into production_formula (id, output_inventory_item_id, output_quantity, output_unit_of_measure) values (?, ?, ?, ?)",
-            UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "UNIT"
+            "insert into production_formula (id, output_inventory_item_id, output_quantity, output_unit_of_measure, formula_kind) values (?, ?, ?, ?, ?)",
+            UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "UNIT", "STANDARD"
         )).isInstanceOf(DataAccessException.class);
     }
 

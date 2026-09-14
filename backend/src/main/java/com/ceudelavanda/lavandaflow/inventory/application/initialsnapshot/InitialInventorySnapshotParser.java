@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.inventory.application.initialsnapshot;
 
+import com.ceudelavanda.lavandaflow.catalog.ProductGender;
 import com.ceudelavanda.lavandaflow.inventory.domain.StockQuantityRules;
 import org.springframework.stereotype.Component;
 
@@ -13,26 +14,31 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 @Component
 class InitialInventorySnapshotParser {
 
-    private static final List<String> ORIGINAL_HEADER = List.of(
-        "Nome do Perfume", "Genero", "Ml Disponiveis", "Expired"
+    private static final List<String> REVISED_HEADER = List.of(
+        "Nome do Perfume",
+        "Genero",
+        "Ml Disponiveis",
+        "Expired",
+        "Retirada",
+        "EssenceReference",
+        "ProductionTypeCode",
+        "LotCode"
     );
-    private static final List<String> FINAL_SNAPSHOT_HEADER = List.of(
-        "Nome do Perfume", "Genero", "Ml Disponiveis", "Expired", "Retirada"
-    );
-    private static final Set<String> REFERENCES = Set.of("F", "M", "C", "M/C", "F/C");
     private static final Pattern DECIMAL = Pattern.compile("-?\\d+(?:\\.\\d+)?");
     private static final Pattern WITHDRAWAL_ADJUSTMENT = Pattern.compile("-\\s*(\\d+(?:\\.\\d+)?)ml");
     private static final Pattern EXPIRATION = Pattern.compile("\\d{2}/\\d{2}");
+    private static final Pattern ESSENCE_REFERENCE = Pattern.compile("\\d{3}");
+    private static final Pattern PRODUCTION_TYPE_CODE = Pattern.compile("[A-Z]{3}");
+    private static final int MAX_LOT_CODE_LENGTH = 255;
 
     InitialInventoryImportPlan parse(
         Path file,
@@ -44,20 +50,16 @@ class InitialInventorySnapshotParser {
         }
 
         var lines = Files.readAllLines(file, StandardCharsets.UTF_8);
-        if (lines.isEmpty()) {
-            throw invalidHeader();
-        }
-        var header = parseCsvLine(lines.getFirst());
-        var hasWithdrawalAdjustment = header.equals(FINAL_SNAPSHOT_HEADER);
-        if (!header.equals(ORIGINAL_HEADER) && !hasWithdrawalAdjustment) {
+        if (lines.isEmpty() || !parseCsvLine(lines.getFirst()).equals(REVISED_HEADER)) {
             throw invalidHeader();
         }
 
         var rows = new ArrayList<ParsedRow>();
         for (int index = 1; index < lines.size(); index++) {
-            rows.add(parseRow(index, lines.get(index), effectiveDate, hasWithdrawalAdjustment));
+            rows.add(parseRow(index, lines.get(index), effectiveDate));
         }
-        resolveDuplicateNames(rows);
+        validateProductIdentityGroups(rows);
+        validateFragranceGenderConsistency(rows);
 
         var results = rows.stream().map(ParsedRow::toResult).toList();
         var report = new InitialInventoryImportReport(
@@ -69,23 +71,14 @@ class InitialInventorySnapshotParser {
             count(results, InitialInventoryImportOutcome.REJECTED),
             results
         );
-        return new InitialInventoryImportPlan(report, rows.stream()
-            .filter(row -> row.errorCode == null)
-            .map(row -> new ValidInitialInventoryRow(row.catalogName, row.quantity, row.expiration))
-            .toList());
+        return new InitialInventoryImportPlan(report, buildProductPlans(rows));
     }
 
-    private ParsedRow parseRow(
-        int sourceRowNumber,
-        String line,
-        LocalDate effectiveDate,
-        boolean hasWithdrawalAdjustment
-    ) {
+    private ParsedRow parseRow(int sourceRowNumber, String line, LocalDate effectiveDate) {
         var fields = parseCsvLine(line);
-        var expectedColumnCount = hasWithdrawalAdjustment ? FINAL_SNAPSHOT_HEADER.size() : ORIGINAL_HEADER.size();
-        if (fields.size() != expectedColumnCount) {
+        if (fields.size() != REVISED_HEADER.size()) {
             return ParsedRow.rejected(sourceRowNumber, InitialInventoryImportValidationCode.MALFORMED_ROW,
-                "Expected " + expectedColumnCount + " columns but found " + fields.size());
+                "Expected " + REVISED_HEADER.size() + " columns but found " + fields.size());
         }
 
         var row = new ParsedRow(sourceRowNumber);
@@ -94,16 +87,16 @@ class InitialInventorySnapshotParser {
             row.reject(InitialInventoryImportValidationCode.BLANK_NAME, "Name must not be blank");
         }
 
-        row.reference = normalizeReference(fields.get(1));
-        if (!REFERENCES.contains(row.reference)) {
-            row.reject(InitialInventoryImportValidationCode.INVALID_REFERENCE, "Unsupported legacy reference");
-        }
-
+        row.gender = parseGender(fields.get(1), row);
         row.quantity = parseQuantity(fields.get(2), row);
-        if (row.quantity != null && hasWithdrawalAdjustment) {
+        if (row.quantity != null) {
             row.quantity = adjustQuantity(row.quantity, fields.get(4), row);
         }
         row.expiration = parseExpiration(fields.get(3), row);
+        row.essenceReference = parseEssenceReference(fields.get(5), row);
+        row.productionTypeCode = parseProductionTypeCode(fields.get(6), row);
+        row.lotCode = parseLotCode(fields.get(7), row);
+
         if (row.quantity != null && row.quantity.signum() > 0) {
             if (row.expiration == null && row.errorCode == null) {
                 row.reject(InitialInventoryImportValidationCode.EXPIRATION_REQUIRED,
@@ -112,8 +105,22 @@ class InitialInventorySnapshotParser {
                 row.reject(InitialInventoryImportValidationCode.EXPIRATION_BEFORE_EFFECTIVE_DATE,
                     "Expiration must not precede the effective date");
             }
+            if (row.lotCode == null) {
+                row.reject(InitialInventoryImportValidationCode.LOT_CODE_REQUIRED,
+                    "Lot code is required for positive stock");
+            }
         }
         return row;
+    }
+
+    private ProductGender parseGender(String value, ParsedRow row) {
+        var normalized = value.trim().toUpperCase(Locale.ROOT).replaceAll("\\s*/\\s*", "/");
+        try {
+            return ProductGender.fromCode(normalized);
+        } catch (IllegalArgumentException exception) {
+            row.reject(InitialInventoryImportValidationCode.INVALID_GENDER, exception.getMessage());
+            return null;
+        }
     }
 
     private BigDecimal adjustQuantity(BigDecimal availableQuantity, String value, ParsedRow row) {
@@ -182,34 +189,104 @@ class InitialInventorySnapshotParser {
         }
     }
 
-    private void resolveDuplicateNames(List<ParsedRow> rows) {
-        var groups = new HashMap<String, List<ParsedRow>>();
-        rows.stream()
-            .filter(row -> row.catalogName != null && !row.catalogName.isBlank())
-            .forEach(row -> groups.computeIfAbsent(row.catalogName.toLowerCase(Locale.ROOT), ignored -> new ArrayList<>())
-                .add(row));
+    private String parseEssenceReference(String value, ParsedRow row) {
+        var normalized = value.trim();
+        if (!ESSENCE_REFERENCE.matcher(normalized).matches() || normalized.equals("000")) {
+            row.reject(InitialInventoryImportValidationCode.INVALID_ESSENCE_REFERENCE,
+                "Essence reference must be 001 through 999");
+        }
+        return normalized;
+    }
 
-        groups.values().stream().filter(group -> group.size() > 1).forEach(group -> {
-            var references = new HashSet<String>();
-            var resolvable = group.stream().allMatch(row -> REFERENCES.contains(row.reference)
-                && references.add(row.reference));
-            if (resolvable) {
-                group.forEach(row -> row.catalogName = row.catalogName + " (" + row.reference + ")");
-            } else {
-                group.forEach(row -> row.reject(InitialInventoryImportValidationCode.DUPLICATE_NAME,
-                    "Duplicate name cannot be uniquely disambiguated by legacy reference"));
+    private String parseProductionTypeCode(String value, ParsedRow row) {
+        var normalized = value.trim();
+        if (!PRODUCTION_TYPE_CODE.matcher(normalized).matches()) {
+            row.reject(InitialInventoryImportValidationCode.INVALID_PRODUCTION_TYPE_CODE,
+                "Production type code must be exactly three uppercase letters");
+        }
+        return normalized;
+    }
+
+    private String parseLotCode(String value, ParsedRow row) {
+        var normalized = value.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        if (normalized.length() > MAX_LOT_CODE_LENGTH) {
+            row.reject(InitialInventoryImportValidationCode.INVALID_LOT_CODE,
+                "Lot code must not exceed 255 characters");
+        }
+        return normalized;
+    }
+
+    private void validateProductIdentityGroups(List<ParsedRow> rows) {
+        var groups = new LinkedHashMap<ProductIdentity, List<ParsedRow>>();
+        rows.stream()
+            .filter(ParsedRow::hasValidIdentity)
+            .forEach(row -> groups.computeIfAbsent(row.identity(), ignored -> new ArrayList<>()).add(row));
+
+        groups.values().forEach(group -> {
+            var names = group.stream().map(row -> row.catalogName).distinct().count();
+            var genders = group.stream().filter(row -> row.gender != null).map(row -> row.gender).distinct().count();
+            if (names > 1 || genders > 1) {
+                group.forEach(row -> row.reject(InitialInventoryImportValidationCode.CONFLICTING_PRODUCT_METADATA,
+                    "Rows for one product identity must use identical name and gender"));
+            }
+
+            var lots = new HashMap<String, List<ParsedRow>>();
+            group.stream()
+                .filter(row -> row.quantity != null && row.quantity.signum() > 0 && row.hasValidLotCode())
+                .forEach(row -> lots.computeIfAbsent(row.lotCode, ignored -> new ArrayList<>()).add(row));
+            lots.values().stream().filter(duplicates -> duplicates.size() > 1).forEach(duplicates ->
+                duplicates.forEach(row -> row.reject(InitialInventoryImportValidationCode.DUPLICATE_LOT_CODE,
+                    "Lot code must be unique within one imported product identity"))
+            );
+        });
+    }
+
+    private void validateFragranceGenderConsistency(List<ParsedRow> rows) {
+        var groups = new LinkedHashMap<String, List<ParsedRow>>();
+        rows.stream()
+            .filter(row -> isValidEssenceReference(row.essenceReference) && row.gender != null)
+            .forEach(row -> groups.computeIfAbsent(row.essenceReference, ignored -> new ArrayList<>()).add(row));
+
+        groups.values().forEach(group -> {
+            if (group.stream().map(row -> row.gender).distinct().count() > 1) {
+                group.forEach(row -> row.reject(InitialInventoryImportValidationCode.CONFLICTING_FRAGRANCE_GENDER,
+                    "Rows sharing one essence reference must use the same gender"));
             }
         });
     }
 
-    private static String normalizeReference(String value) {
-        return value.trim().toUpperCase(Locale.ROOT).replaceAll("\\s*/\\s*", "/");
+    private List<InitialInventoryProductPlan> buildProductPlans(List<ParsedRow> rows) {
+        var groups = new LinkedHashMap<ProductIdentity, List<ParsedRow>>();
+        rows.stream()
+            .filter(row -> row.errorCode == null)
+            .forEach(row -> groups.computeIfAbsent(row.identity(), ignored -> new ArrayList<>()).add(row));
+
+        return groups.values().stream().map(group -> {
+            var first = group.getFirst();
+            return new InitialInventoryProductPlan(
+                first.catalogName,
+                first.gender,
+                first.essenceReference,
+                first.productionTypeCode,
+                group.stream().map(ParsedRow::toValidRow).toList()
+            );
+        }).toList();
+    }
+
+    private static boolean isValidEssenceReference(String value) {
+        return value != null && ESSENCE_REFERENCE.matcher(value).matches() && !value.equals("000");
+    }
+
+    private static boolean isValidProductionTypeCode(String value) {
+        return value != null && PRODUCTION_TYPE_CODE.matcher(value).matches();
     }
 
     private static IllegalArgumentException invalidHeader() {
         return new IllegalArgumentException(
-            "CSV header must be exactly: " + String.join(",", ORIGINAL_HEADER)
-                + " or " + String.join(",", FINAL_SNAPSHOT_HEADER)
+            "CSV header must be exactly: " + String.join(",", REVISED_HEADER)
         );
     }
 
@@ -224,12 +301,18 @@ class InitialInventorySnapshotParser {
         return List.of(line.split(",", -1));
     }
 
+    private record ProductIdentity(String productionTypeCode, String essenceReference) {
+    }
+
     private static final class ParsedRow {
         private final int sourceRowNumber;
         private String catalogName;
-        private String reference;
+        private ProductGender gender;
         private BigDecimal quantity;
         private LocalDate expiration;
+        private String essenceReference;
+        private String productionTypeCode;
+        private String lotCode;
         private InitialInventoryImportValidationCode errorCode;
         private String errorReason;
 
@@ -247,6 +330,20 @@ class InitialInventorySnapshotParser {
             return row;
         }
 
+        private boolean hasValidIdentity() {
+            return catalogName != null && !catalogName.isBlank()
+                && isValidEssenceReference(essenceReference)
+                && isValidProductionTypeCode(productionTypeCode);
+        }
+
+        private boolean hasValidLotCode() {
+            return lotCode != null && lotCode.length() <= MAX_LOT_CODE_LENGTH;
+        }
+
+        private ProductIdentity identity() {
+            return new ProductIdentity(productionTypeCode, essenceReference);
+        }
+
         private void reject(InitialInventoryImportValidationCode code, String reason) {
             if (errorCode == null) {
                 errorCode = code;
@@ -261,17 +358,40 @@ class InitialInventorySnapshotParser {
                     ? InitialInventoryImportOutcome.CATALOG_ONLY
                     : InitialInventoryImportOutcome.OPENING_STOCK;
             return new InitialInventoryImportRowResult(
-                sourceRowNumber, catalogName, reference, quantity, expiration, outcome, errorCode, errorReason
+                sourceRowNumber,
+                catalogName,
+                gender == null ? null : gender.code(),
+                essenceReference,
+                productionTypeCode,
+                lotCode,
+                quantity,
+                expiration,
+                outcome,
+                errorCode,
+                errorReason
             );
+        }
+
+        private ValidInitialInventoryRow toValidRow() {
+            return new ValidInitialInventoryRow(lotCode, quantity, expiration);
         }
     }
 }
 
 record InitialInventoryImportPlan(
     InitialInventoryImportReport report,
-    List<ValidInitialInventoryRow> validRows
+    List<InitialInventoryProductPlan> products
 ) {
 }
 
-record ValidInitialInventoryRow(String catalogName, BigDecimal quantity, LocalDate expiration) {
+record InitialInventoryProductPlan(
+    String catalogName,
+    ProductGender gender,
+    String essenceReference,
+    String productionTypeCode,
+    List<ValidInitialInventoryRow> rows
+) {
+}
+
+record ValidInitialInventoryRow(String lotCode, BigDecimal quantity, LocalDate expiration) {
 }

@@ -20,6 +20,7 @@ describe('InventoryItemRegistrationPage', () => {
     active: true,
     essenceReference: null,
     productionTypeCode: null,
+    gender: null,
   };
 
   let fixture: ComponentFixture<InventoryItemRegistrationPage>;
@@ -41,6 +42,62 @@ describe('InventoryItemRegistrationPage', () => {
     router = TestBed.inject(Router);
     fixture = TestBed.createComponent(InventoryItemRegistrationPage);
     fixture.detectChanges();
+  });
+
+  it.each(['M', 'F', 'C', 'M/C', 'F/C'] as const)(
+    'should submit exact gender %s for finished products',
+    (gender) => {
+      setValidModel({
+        category: 'FINISHED_PRODUCT',
+        gender,
+        essenceReference: '229',
+        productionTypeCode: 'PRF',
+      });
+      submitForm();
+      expect(register).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: 'FINISHED_PRODUCT',
+          gender,
+          unitOfMeasure: 'MILLILITER',
+          essenceReference: '229',
+          productionTypeCode: 'PRF',
+        }),
+      );
+    },
+  );
+
+  it('should register an independently stocked packaged presentation', () => {
+    setValidModel({ category: 'FINISHED_PRODUCT', unitOfMeasure: 'UNIT', gender: 'M/C' });
+    submitForm();
+    expect(register).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'FINISHED_PRODUCT',
+        unitOfMeasure: 'UNIT',
+        gender: 'M/C',
+      }),
+    );
+  });
+
+  it('should localize backend gender validation and keep the selection', () => {
+    setValidModel({ category: 'BOTTLE', gender: 'C' });
+    submitForm();
+    response.error(
+      new HttpErrorResponse({
+        status: 400,
+        error: {
+          code: 'VALIDATION_ERROR',
+          timestamp: '2026-09-12T12:00:00Z',
+          status: 400, error: 'Bad Request', path: '/api/v1/inventory-items',
+          message: 'Invalid gender',
+          details: { gender: 'Not eligible' },
+        },
+      }),
+    );
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#gender-backend-error')?.textContent).toContain(
+      'Verifique o valor informado.',
+    );
+    expect(fixture.componentInstance.registrationModel().gender).toBe('C');
   });
 
   it('should show required validation and avoid submitting an invalid form', () => {
@@ -79,6 +136,7 @@ describe('InventoryItemRegistrationPage', () => {
       unitOfMeasure: 'MILLILITER',
       essenceReference: '027',
       productionTypeCode: 'BDS',
+      gender: null,
     });
   });
 
@@ -164,6 +222,7 @@ describe('InventoryItemRegistrationPage', () => {
       unitOfMeasure: 'MILLILITER',
       essenceReference: '',
       productionTypeCode: '',
+      gender: null,
       ...overrides,
     });
     fixture.detectChanges();

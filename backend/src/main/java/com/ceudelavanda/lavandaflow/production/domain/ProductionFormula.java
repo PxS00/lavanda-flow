@@ -19,6 +19,7 @@ import java.util.UUID;
 public class ProductionFormula {
 
     private final UUID id;
+    private ProductionFormulaKind kind;
     private UUID outputInventoryItemId;
     private BigDecimal outputQuantity;
     private UnitOfMeasure outputUnitOfMeasure;
@@ -26,6 +27,7 @@ public class ProductionFormula {
 
     public ProductionFormula(
         UUID id,
+        ProductionFormulaKind kind,
         UUID outputInventoryItemId,
         BigDecimal outputQuantity,
         UnitOfMeasure outputUnitOfMeasure,
@@ -35,10 +37,22 @@ public class ProductionFormula {
             throw new InvalidProductionFormulaException("id", "Formula id must not be null");
         }
         this.id = id;
-        replaceDefinition(outputInventoryItemId, outputQuantity, outputUnitOfMeasure, ingredients);
+        replaceDefinition(kind, outputInventoryItemId, outputQuantity, outputUnitOfMeasure, ingredients);
+    }
+
+    /** Backward-compatible constructor for pre-kind callers; existing formulas are standard production. */
+    public ProductionFormula(
+        UUID id,
+        UUID outputInventoryItemId,
+        BigDecimal outputQuantity,
+        UnitOfMeasure outputUnitOfMeasure,
+        List<FormulaIngredient> ingredients
+    ) {
+        this(id, ProductionFormulaKind.STANDARD, outputInventoryItemId, outputQuantity, outputUnitOfMeasure, ingredients);
     }
 
     public static ProductionFormula create(
+        ProductionFormulaKind kind,
         UUID outputInventoryItemId,
         BigDecimal outputQuantity,
         UnitOfMeasure outputUnitOfMeasure,
@@ -46,6 +60,7 @@ public class ProductionFormula {
     ) {
         return new ProductionFormula(
             UUID.randomUUID(),
+            kind,
             outputInventoryItemId,
             outputQuantity,
             outputUnitOfMeasure,
@@ -53,13 +68,27 @@ public class ProductionFormula {
         );
     }
 
-    /** Replaces the editable current definition while preserving formula identity. */
-    public void replaceDefinition(
+    /** Backward-compatible factory preserving standard production semantics. */
+    public static ProductionFormula create(
         UUID outputInventoryItemId,
         BigDecimal outputQuantity,
         UnitOfMeasure outputUnitOfMeasure,
         List<FormulaIngredient> ingredients
     ) {
+        return create(ProductionFormulaKind.STANDARD, outputInventoryItemId, outputQuantity, outputUnitOfMeasure, ingredients);
+    }
+
+    /** Replaces the editable current definition while preserving formula identity. */
+    public void replaceDefinition(
+        ProductionFormulaKind kind,
+        UUID outputInventoryItemId,
+        BigDecimal outputQuantity,
+        UnitOfMeasure outputUnitOfMeasure,
+        List<FormulaIngredient> ingredients
+    ) {
+        if (kind == null) {
+            throw new InvalidProductionFormulaException("kind", "Formula kind must not be null");
+        }
         if (outputInventoryItemId == null) {
             throw new InvalidProductionFormulaException("outputInventoryItemId", "Output inventory item must not be null");
         }
@@ -69,10 +98,21 @@ public class ProductionFormula {
         }
 
         var validatedIngredients = requireIngredients(ingredients);
+        this.kind = kind;
         this.outputInventoryItemId = outputInventoryItemId;
         this.outputQuantity = outputQuantity;
         this.outputUnitOfMeasure = outputUnitOfMeasure;
         this.ingredients = validatedIngredients;
+    }
+
+    /** Replaces the definition while retaining the current formula kind. */
+    public void replaceDefinition(
+        UUID outputInventoryItemId,
+        BigDecimal outputQuantity,
+        UnitOfMeasure outputUnitOfMeasure,
+        List<FormulaIngredient> ingredients
+    ) {
+        replaceDefinition(kind, outputInventoryItemId, outputQuantity, outputUnitOfMeasure, ingredients);
     }
 
     static void requireSupportedPositiveQuantity(BigDecimal quantity, String field) {

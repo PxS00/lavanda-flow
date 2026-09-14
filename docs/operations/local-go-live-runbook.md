@@ -39,7 +39,7 @@ The operator must not need PowerShell, Git Bash, Docker Desktop UI, repository n
 
 The maintainer keeps the operational checkout in a controlled Windows directory, for example `%USERPROFILE%\LavandaFlow\app`. Production always runs an immutable `vX.Y.Z` Git tag, never `develop`, an issue branch, a release branch, or another floating reference.
 
-For #187 pre-release validation, record the approved candidate commit from `develop`. It is not production cutover. For #188 production cutover, use `v0.6.0` only after #188 publishes that tag.
+Repository validation on a release branch is not production cutover. For the corrected v0.6.1 cutover tracked by #233, use `v0.6.1` only after that immutable tag is published.
 
 From the operational checkout, select and record an exact released version:
 
@@ -50,7 +50,7 @@ git rev-parse HEAD
 git status --short
 ```
 
-For v0.6.0, replace `vX.Y.Z` with `v0.6.0` after the tag exists. Record the resolved commit SHA in the cutover evidence. A non-empty `git status --short` must be investigated before build or production use.
+For v0.6.1, replace `vX.Y.Z` with `v0.6.1` after the tag exists. Record the resolved commit SHA in the cutover evidence. A non-empty `git status --short` must be investigated before build or production use.
 
 ## Required configuration and secrets
 
@@ -134,13 +134,13 @@ Use it only when the approved external CSV is the cutover source and the importe
 6. Run `APPLY` only once, against the importer-accepted uninitialized catalog; never bypass its guard.
 7. Verify catalog items, batches, current stock, and immutable movement history after apply.
 
-The optional final `Retirada` field has the #136/#168 migration meaning only: it adjusts the opening quantity and never creates reconstructed withdrawal or `CONSUMPTION` history.
+The required `Retirada` column has the #136/#168 migration meaning only: it adjusts the opening quantity and never creates reconstructed withdrawal or `CONSUMPTION` history.
 
 The established import documentation uses a one-off non-web Compose container from the exact selected
 operational image, with the external CSV mounted read-only. It requires no host Java, Maven, or separately
-built JAR. For #187, follow the explicitly isolated disposable-project validation path in [Initial inventory
-snapshot import](initial-inventory-import.md#187-isolated-acceptance-validation); it must not use
-`.env.operational`, `lavanda-flow-operational`, or its volume. For #188, use the documented operational
+built JAR. For v0.6.1 repository validation, follow the explicitly [isolated disposable-project validation
+path](initial-inventory-import.md#isolated-validation); it must not use `.env.operational`,
+`lavanda-flow-operational`, or its volume. For the corrected operational cutover, use the documented
 `DRY_RUN` then accepted `APPLY` path there, against the existing healthy private PostgreSQL service only.
 
 ## Automatic startup, availability, and shortcut

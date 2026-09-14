@@ -67,6 +67,10 @@ A formula describes required inventory items and proportions. A production execu
 
 Lot codes are human operational identifiers, not database identities or genealogy storage. Genealogy must come from explicit production, consumption, source-batch, and output-batch relationships.
 
+Normal generated bulk/intermediate internal outputs keep the existing `TTT-EEE-LLL-MM-YYYY` convention and its `TTT-EEE`-scoped monthly sequence. Generated packaged finished-product outputs use the separate `SSS-MM-YYYY` convention, where `SSS` is a backend-allocated global packaged-output sequence for one calendar month/year. Packaged lot strings do not encode `productionTypeCode`, `essenceReference`, source bulk lots, presentation size, or packaging source lots.
+
+The packaged lot convention does not change the production aggregate or module partitioning. A filling/bottling operation remains a production execution inside `production`, creates exactly one output batch, and records every concrete source batch through the existing production-consumption/genealogy model. One packaged output may therefore trace to one or multiple bulk finished-product batches plus inventory-controlled packaging/component batches without changing the generated lot format. Issue #232 owns implementation of packaged allocation and filling behavior.
+
 `production` depends on the public APIs of `catalog` and `inventory`; it never accesses their domain or infrastructure internals. `catalog` owns stable inventory-item metadata, including stable essence references. `inventory` creates the internally produced output batch and applies every stock effect through a production-facing public contract. Cross-module references use stable identifiers and public contract values rather than direct JPA entity relationships.
 
 ## Application and transaction boundaries
@@ -89,13 +93,13 @@ persist explicit genealogy relationships
 commit all or roll back all
 ```
 
-Concurrent operations must not produce negative balances, lost updates, duplicate generated internal lot codes, or partial production state. The implemented transaction and locking behavior is covered by production rollback and concurrency tests.
+Concurrent operations must not produce negative balances, lost updates, duplicate generated internal lot codes, or partial production state. Backend/PostgreSQL authority applies to both the existing normal generated sequence and the packaged generated sequence implemented by #232.
 
 ## API boundaries
 
 Frontend/backend communication uses REST over JSON, initially versioned under `/api/v1`. HTTP boundaries use specific DTOs and input validation, return consistent errors, and never expose JPA entities directly. V1 includes inventory, formula-management, production-registration, and recursive-genealogy contracts. The v0.6.0 baseline uses same-origin Spring Security stateful operator sessions: `POST /api/v1/auth/login` and `GET /api/v1/auth/session` are the public bootstrap contracts, `POST /api/v1/auth/logout` requires authentication, and other operational `/api/v1/**` routes require authentication unless a later explicit contract states otherwise.
 
-The production UI supports backend-confirmed generated allocation and explicit manual lot entry. It cannot reserve or authoritatively calculate the next sequence; the backend assigns the definitive generated code only when production succeeds.
+The production UI supports backend-confirmed generated allocation and explicit manual lot entry for the existing production path. It cannot reserve or authoritatively calculate a generated sequence. For packaged outputs, Angular likewise cannot reserve or definitively calculate `SSS`; the backend assigns the definitive `SSS-MM-YYYY` only when the packaged production transaction succeeds under the #232 implementation.
 
 ## Persistence and consistency
 
@@ -109,7 +113,9 @@ The production UI supports backend-confirmed generated allocation and explicit m
 - FEFO, expiration, available stock, and consumption eligibility remain backend-authoritative;
 - date-dependent rules use the application `Clock`.
 
-Database constraints enforce production integrity where applicable. Flyway V10-V13 define the production metadata, formula, lot-sequence, execution, and consumption schema.
+Database constraints enforce production integrity where applicable. Flyway V10-V13 define the currently implemented production metadata, formula, normal internal lot-sequence, execution, and consumption schema. Issue #235 changes documentation only; any persistence needed for packaged `SSS-MM-YYYY` allocation belongs to #232 and must use Flyway if schema evolution is required.
+
+Packaged-product expiration derivation is not defined by the lot convention. Filling must not be assumed to renew, copy, shorten, or derive expiration automatically; genealogy remains explicit regardless of the later expiration policy.
 
 ## Security and observability
 

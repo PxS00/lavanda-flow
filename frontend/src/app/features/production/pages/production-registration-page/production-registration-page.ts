@@ -20,6 +20,7 @@ import {
   Observable,
   Subject,
   catchError,
+  combineLatest,
   distinctUntilChanged,
   finalize,
   forkJoin,
@@ -57,6 +58,10 @@ import { ProductionExecutionApiService } from '../../data-access/production-exec
 import {
   ProductionFormulaDto,
   ProductionFormulaIngredientDto,
+  ProductionFormulaKind,
+  ProductionFormulaRequirementDto,
+  ProductionFormulaRequirementsDto,
+  productionFormulaKind,
 } from '../../data-access/production-formula.dto';
 import { ProductionFormulaApiService } from '../../data-access/production-formula-api.service';
 
@@ -123,6 +128,12 @@ type FormulaContextState =
   | { readonly kind: 'ready'; readonly context: FormulaContext }
   | { readonly kind: 'error'; readonly error: UiError };
 
+type RequirementsState =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly data: ProductionFormulaRequirementsDto }
+  | { readonly kind: 'error'; readonly error: UiError };
+
 type RefreshState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'loading' }
@@ -185,6 +196,7 @@ export class ProductionRegistrationPage {
   protected readonly allocationGroups = this.registrationForm.controls.allocationGroups;
   protected readonly formulaLoadState = signal<FormulaLoadState>({ kind: 'loading' });
   protected readonly contextState = signal<FormulaContextState>({ kind: 'idle' });
+  protected readonly requirementsState = signal<RequirementsState>({ kind: 'idle' });
   protected readonly lotCodeMode = signal<ProductionLotCodeMode>('GENERATED');
   protected readonly allocationError = signal<string | null>(null);
   protected readonly submissionError = signal<UiError | null>(null);
@@ -236,6 +248,35 @@ export class ProductionRegistrationPage {
 
         this.contextRequests.next(formulaId);
       });
+
+    combineLatest([
+      this.registrationForm.controls.formulaId.valueChanges.pipe(
+        startWith(this.registrationForm.controls.formulaId.value),
+        distinctUntilChanged(),
+      ),
+      this.registrationForm.controls.outputQuantity.valueChanges.pipe(
+        startWith(this.registrationForm.controls.outputQuantity.value),
+        distinctUntilChanged(),
+      ),
+    ])
+      .pipe(
+        switchMap(([formulaId, outputQuantity]) => {
+          const normalizedQuantity = outputQuantity.trim();
+          if (formulaId.length === 0 || !isSupportedPositiveDecimal(normalizedQuantity)) {
+            return of<RequirementsState>({ kind: 'idle' });
+          }
+
+          this.requirementsState.set({ kind: 'loading' });
+          return this.formulaApi.getRequirements(formulaId, normalizedQuantity).pipe(
+            map((data): RequirementsState => ({ kind: 'ready', data })),
+            catchError((error: unknown) =>
+              of<RequirementsState>({ kind: 'error', error: mapHttpError(error) }),
+            ),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((state) => this.requirementsState.set(state));
 
     this.registrationForm.controls.lotCodeMode.valueChanges
       .pipe(
@@ -323,6 +364,10 @@ export class ProductionRegistrationPage {
     if (currentContext.kind !== 'ready' || this.registrationForm.invalid) {
       return;
     }
+    if (this.requirementsState().kind !== 'ready') {
+      this.allocationError.set('Aguarde a confirmação dos requisitos da fórmula pelo sistema.');
+      return;
+    }
 
     const request = this.toRequest();
     const duplicateBatchId = findDuplicateBatchId(request.sourceAllocations);
@@ -349,11 +394,7 @@ export class ProductionRegistrationPage {
 
   protected confirmProduction(): void {
     const currentReview = this.review();
-    if (
-      currentReview === null ||
-      this.isSubmitting() ||
-      this.productionResult() !== null
-    ) {
+    if (currentReview === null || this.isSubmitting() || this.productionResult() !== null) {
       return;
     }
 
@@ -394,6 +435,24 @@ export class ProductionRegistrationPage {
     return context.ingredients[index]!;
   }
 
+  protected requirementFor(inventoryItemId: string): ProductionFormulaRequirementDto | null {
+    const state = this.requirementsState();
+    if (state.kind !== 'ready') {
+      return null;
+    }
+    return state.data.requirements.find((requirement) => requirement.inventoryItemId === inventoryItemId) ?? null;
+  }
+
+  protected selectedFormulaKind(): ProductionFormulaKind {
+    const formulaId = this.registrationForm.controls.formulaId.value;
+    const formula = this.formulaOptions().find((option) => option.formula.id === formulaId)?.formula;
+    return formula === undefined ? 'STANDARD' : productionFormulaKind(formula);
+  }
+
+  protected formulaKindLabel(kind: ProductionFormulaKind): string {
+    return kind === 'PACKAGED_FILLING' ? 'Envase de produto final' : 'Produção padrão';
+  }
+
   protected selectedBatch(
     batches: readonly BatchInventoryEntryDto[],
     batchId: string,
@@ -424,8 +483,7 @@ export class ProductionRegistrationPage {
 
     return context.outputItem.id === inventoryItemId
       ? context.outputItem
-      : (context.ingredients.find((ingredient) => ingredient.item.id === inventoryItemId)?.item ??
-          null);
+      : (context.ingredients.find((ingredient) => ingredient.item.id === inventoryItemId)?.item ?? null);
   }
 
   protected sourceBatchLabel(batchId: string): string {
@@ -527,8 +585,7 @@ export class ProductionRegistrationPage {
       outputReceivedAt: value.outputReceivedAt,
       outputExpiresAt: normalizeOptional(value.outputExpiresAt),
       lotCodeMode: value.lotCodeMode,
-      manualLotCode:
-        value.lotCodeMode === 'MANUAL' ? normalizeOptional(value.manualLotCode) : null,
+      manualLotCode: value.lotCodeMode === 'MANUAL' ? normalizeOptional(value.manualLotCode) : null,
     };
   }
 
@@ -541,9 +598,7 @@ export class ProductionRegistrationPage {
       const ingredient = context.ingredients.find((candidate) =>
         candidate.batches.some((batch) => batch.batchId === allocation.batchId),
       );
-      const batch = ingredient?.batches.find(
-        (candidate) => candidate.batchId === allocation.batchId,
-      );
+      const batch = ingredient?.batches.find((candidate) => candidate.batchId === allocation.batchId);
       if (ingredient === undefined || batch === undefined) {
         return null;
       }
@@ -562,9 +617,7 @@ export class ProductionRegistrationPage {
 
     this.refreshState.set({ kind: 'loading' });
     forkJoin(
-      inventoryItemIds.map((inventoryItemId) =>
-        this.inventoryOperationsApi.getOverview(inventoryItemId),
-      ),
+      inventoryItemIds.map((inventoryItemId) => this.inventoryOperationsApi.getOverview(inventoryItemId)),
     )
       .pipe(
         map(
@@ -610,16 +663,16 @@ function positiveDecimal(control: AbstractControl<string>): ValidationErrors | n
   if (normalized.length === 0) {
     return null;
   }
-  if (!DECIMAL_PATTERN.test(normalized)) {
-    return { decimal: true };
-  }
+  return isSupportedPositiveDecimal(normalized) ? null : { decimal: true };
+}
 
+function isSupportedPositiveDecimal(normalized: string): boolean {
+  if (!DECIMAL_PATTERN.test(normalized)) {
+    return false;
+  }
   const [integerPart] = normalized.split('.');
   const significantIntegerDigits = integerPart.replace(/^0+/, '').length;
-  if (significantIntegerDigits > 13 || !/[1-9]/.test(normalized)) {
-    return { decimal: true };
-  }
-  return null;
+  return significantIntegerDigits <= 13 && /[1-9]/.test(normalized);
 }
 
 function manualLotCodeValidator(control: AbstractControl<string>): ValidationErrors | null {

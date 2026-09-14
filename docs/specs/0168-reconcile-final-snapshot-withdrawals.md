@@ -1,5 +1,7 @@
 # Issue #168 — Reconcile final snapshot withdrawal adjustments
 
+> **Historical source contract superseded for the corrected operational cutover.** Issue #231 and `docs/specs/0231-correct-initial-bulk-perfume-snapshot-mapping.md` replace the four/five-column accepted headers with the exact revised eight-column source. Keep this file as historical #168 evidence. Its `Retirada` formula, exact-decimal handling, adjusted-quantity classification, and prohibition on fabricated historical withdrawal movements remain authoritative where #231 explicitly preserves them.
+
 ## Objective
 
 Extend the one-time initial inventory migration so the frozen final Céu de Lavanda spreadsheet snapshot can be imported without modifying the source file, while preserving the original #134/#136 four-column contract and all existing inventory invariants.

@@ -37,9 +37,25 @@ Confirmed movements are historical. Corrections create new adjustment movements 
 
 Represents the commercial source of externally supplied stock. It supports basic identification and contact information and allows externally supplied batches to be located by supplier. An internally produced batch has a production origin rather than a supplier origin.
 
+### Fragrance metadata and finished products
+
+`FINISHED_PRODUCT` covers formulated bulk stock and independently stocked packaged presentations.
+They remain separate `InventoryItem` identities with separate batches and movements, even when
+sharing an `essenceReference`. Bulk perfume commonly uses `MILLILITER`; packaged presentations use
+`UNIT`. Neither category nor reference implies unit conversion or stock consolidation.
+
+Optional `gender` is allowed only for `ESSENCE` and `FINISHED_PRODUCT`: `M`, `F`, `C`, `M/C`, `F/C`.
+The last two values mean shared with masculine/feminine tendency. Gender is descriptive and is not
+a lot-code component. Optional `productionTypeCode` remains the stable three-uppercase-letter family code.
+
+References remain `001`–`999`, nullable for legacy items and immutable after one-time assignment.
+Only canonical essence references are unique; finished products may share them. A canonical essence
+with an assigned reference cannot change category, preventing reference recycling through reclassification.
+Assigned-reference deletion protection remains in effect for both categories.
+
 ### Category and unit of measure
 
-Categories organize items and may include essence, chemical input, base, alcohol, colorant, fixative, bottle, valve, cap, label, packaging, and other. Classification does not create separate inventory models or determine every business rule.
+Categories organize items and include finished product, essence, chemical input, base, alcohol, colorant, fixative, bottle, valve, cap, label, packaging, and other. Classification does not create separate inventory models or determine every business rule.
 
 Quantities use exact decimal representation: `BigDecimal` in the backend and an appropriate `NUMERIC`/`DECIMAL` database type. Automatic conversion between units is not part of V1.
 
@@ -92,6 +108,8 @@ Genealogy is explicit and bidirectional:
 
 Lot codes and notes may help operators recognize stock but are not database identity and must not be used to infer genealogy.
 
+A packaged finished-product output uses the same relationship. Its producing execution may consume one or multiple bulk finished-product batches and any inventory-controlled packaging/component batches actually used. The packaged output still has exactly one output batch, while every concrete source remains represented by its own production-consumption relationship.
+
 ## Invariants
 
 ### Quantities and stock
@@ -123,9 +141,13 @@ A production execution is one atomic business operation. It must validate and pe
 
 If any part fails, no source balance reduction, consumption record, output batch, or partial production state remains. PostgreSQL is the source of truth, and Flyway controls schema evolution.
 
-## Internal production lot policy
+## Production lot policy
 
-Internally produced batches use the operational format `TTT-EEE-LLL-MM-YYYY`, for example `BDS-014-003-12-2026`:
+All internal lot codes are human operational identifiers, not database keys, product identity, or genealogy authority. Genealogy is always represented by explicit production relationships.
+
+### Bulk and normal internal production lots
+
+Normal internally produced bulk, intermediate, and other non-packaged batches keep the operational format `TTT-EEE-LLL-MM-YYYY`, for example `BDS-014-003-12-2026`:
 
 - `TTT` is a stable three-letter product-type code such as `BDS`, `SBN`, or `BAS`;
 - `EEE` is a stable essence reference: `000` means no essence; actual references use `001` through `999`, are never recycled, and survive display-name changes;
@@ -133,6 +155,30 @@ Internally produced batches use the operational format `TTT-EEE-LLL-MM-YYYY`, fo
 - `MM` and `YYYY` are the production month and year.
 
 Automatic generation is recommended but optional. For generated codes, the backend authoritatively assigns the definitive collision-free sequence when the transaction succeeds; a frontend preview does not reserve it. Manual entry remains available for explicit operational cases and need not encode genealogy.
+
+### Packaged finished-product lots
+
+Generated packaged finished-product outputs use:
+
+```text
+SSS-MM-YYYY
+```
+
+For example, `017-09-2026` identifies one packaged production output created in September 2026.
+
+- `SSS` is exactly `001` through `999`;
+- the backend allocates `SSS` globally across generated packaged finished-product outputs for one calendar month/year;
+- the sequence does not restart by fragrance, `productionTypeCode`, presentation, or source bulk batch;
+- `MM` and `YYYY` identify the packaged production/filling month and year;
+- the sequence resets when month/year changes.
+
+The packaged generated code deliberately excludes `productionTypeCode`, `essenceReference`, source lot codes, presentation size, and packaging lot codes. Those values remain structured metadata or explicit source relationships rather than encoded identifiers.
+
+A packaged production execution remains one execution -> one output batch. Its genealogy may contain one or multiple bulk source batches and any actual bottle, valve, cap, label, or other component batches consumed. Multiple source batches do not change the packaged lot format.
+
+Packaged sequence allocation is backend-authoritative. Angular cannot reserve or definitively calculate the next `SSS`. Issue #232 owns the implementation of this convention inside the existing `production` module; this policy does not introduce a filling module.
+
+Packaged expiration derivation remains deliberately unspecified. Filling does not, by this policy alone, renew, copy, shorten, or otherwise derive expiration from the source bulk batch or lot code.
 
 ## V1 use cases
 

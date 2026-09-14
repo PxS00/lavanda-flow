@@ -43,6 +43,17 @@ class AllocateInternalProductionLotCodeIntegrationTest {
     }
 
     @Test
+    void shouldUseFinishedProductMetadataWithoutGenderInTheLotCode() {
+        var id = UUID.randomUUID();
+        jdbcTemplate.update("""
+            insert into inventory_item (id, name, category, default_unit, active,
+                essence_reference, production_type_code, product_gender)
+            values (?, 'Issue229 Perfume', 'FINISHED_PRODUCT', 'MILLILITER', true, '729', 'PRF', 'F/C')
+            """, id);
+        assertThat(allocate(id, 2026, 9)).isEqualTo("PRF-729-001-09-2026");
+    }
+
+    @Test
     void shouldRequireAnEncompassingProductionTransaction() {
         var outputItemId = insertCatalogItem("BDS");
 

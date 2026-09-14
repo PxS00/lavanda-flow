@@ -33,7 +33,7 @@
           <mat-card-content>
             <dl class="summary-grid">
               <div>
-                <dt>Lote interno definitivo</dt>
+                <dt>Lote definitivo</dt>
                 <dd><strong>{{ result.lotCode }}</strong></dd>
               </div>
               <div>
@@ -106,22 +106,14 @@
           }
           @case ('ready') {
             <mat-card appearance="outlined">
-              <mat-card-header>
-                <mat-card-title>Estoque atualizado</mat-card-title>
-              </mat-card-header>
+              <mat-card-header><mat-card-title>Estoque atualizado</mat-card-title></mat-card-header>
               <mat-card-content>
                 <ul class="overview-list" aria-label="Estoque atualizado após a produção">
                   @for (overview of refresh.overviews; track overview.inventoryItemId) {
                     <li>
                       <strong>{{ itemName(overview.inventoryItemId) }}</strong>
-                      <span>
-                        Saldo atual: {{ formatDecimal(overview.totalCurrentQuantity) }}
-                        {{ unitLabel(overview.unitOfMeasure) }}
-                      </span>
-                      <span>
-                        Disponível: {{ formatDecimal(overview.availableQuantity) }}
-                        {{ unitLabel(overview.unitOfMeasure) }}
-                      </span>
+                      <span>Saldo atual: {{ formatDecimal(overview.totalCurrentQuantity) }} {{ unitLabel(overview.unitOfMeasure) }}</span>
+                      <span>Disponível: {{ formatDecimal(overview.availableQuantity) }} {{ unitLabel(overview.unitOfMeasure) }}</span>
                     </li>
                   }
                 </ul>
@@ -131,18 +123,12 @@
           @case ('error') {
             <section class="refresh-error" aria-labelledby="refresh-error-heading">
               <h2 id="refresh-error-heading">Produção concluída; atualização do estoque pendente</h2>
-              <p>
-                A produção já foi registrada. Não envie a produção novamente; tente apenas atualizar
-                os dados de estoque.
-              </p>
+              <p>A produção já foi registrada. Não envie a produção novamente; tente apenas atualizar os dados de estoque.</p>
               <app-error-state [error]="refresh.error" />
-              <button mat-stroked-button type="button" (click)="retryRefresh()">
-                Tentar atualizar estoque novamente
-              </button>
+              <button mat-stroked-button type="button" (click)="retryRefresh()">Tentar atualizar estoque novamente</button>
             </section>
           }
         }
-
         <a mat-button routerLink="/production/formulas">Voltar à área de produção</a>
       } @else {
         @if (globalSubmissionError(); as error) {
@@ -171,31 +157,27 @@
                   </dd>
                 </div>
                 <div>
+                  <dt>Tipo de produção</dt>
+                  <dd>{{ formulaKindLabel(currentReview.context.formula.kind ?? 'STANDARD') }}</dd>
+                </div>
+                <div>
                   <dt>Quantidade produzida</dt>
-                  <dd>
-                    {{ formatDecimal(currentReview.request.outputQuantity) }}
-                    {{ unitLabel(currentReview.context.formula.outputUnitOfMeasure) }}
-                  </dd>
+                  <dd>{{ formatDecimal(currentReview.request.outputQuantity) }} {{ unitLabel(currentReview.context.formula.outputUnitOfMeasure) }}</dd>
                 </div>
-                <div>
-                  <dt>Data da produção</dt>
-                  <dd>{{ formatLocalDate(currentReview.request.productionDate) }}</dd>
-                </div>
-                <div>
-                  <dt>Entrada do lote produzido</dt>
-                  <dd>{{ formatLocalDate(currentReview.request.outputReceivedAt) }}</dd>
-                </div>
+                <div><dt>Data da produção</dt><dd>{{ formatLocalDate(currentReview.request.productionDate) }}</dd></div>
+                <div><dt>Entrada do lote produzido</dt><dd>{{ formatLocalDate(currentReview.request.outputReceivedAt) }}</dd></div>
                 @if (currentReview.request.outputExpiresAt) {
-                  <div>
-                    <dt>Validade do lote produzido</dt>
-                    <dd>{{ formatLocalDate(currentReview.request.outputExpiresAt) }}</dd>
-                  </div>
+                  <div><dt>Validade do lote produzido</dt><dd>{{ formatLocalDate(currentReview.request.outputExpiresAt) }}</dd></div>
                 }
                 <div>
-                  <dt>Modo do lote interno</dt>
+                  <dt>Modo do lote</dt>
                   <dd>
                     @if (currentReview.request.lotCodeMode === 'GENERATED') {
-                      Automático — definido pelo servidor ao concluir
+                      @if ((currentReview.context.formula.kind ?? 'STANDARD') === 'PACKAGED_FILLING') {
+                        Automático — definido pelo servidor ao concluir no padrão SSS-MM-AAAA
+                      } @else {
+                        Automático — definido pelo servidor ao concluir
+                      }
                     } @else {
                       Manual — {{ currentReview.request.manualLotCode }}
                     }
@@ -214,25 +196,15 @@
                         [productionTypeCode]="allocation.inventoryItem.productionTypeCode"
                       />
                       <span>Lote: {{ allocation.batch.lotCode || allocation.batch.batchId }}</span>
-                      <span>
-                        Quantidade informada: {{ formatDecimal(allocation.quantity) }}
-                        {{ unitLabel(allocation.inventoryItem.unitOfMeasure) }}
-                      </span>
+                      <span>Quantidade informada: {{ formatDecimal(allocation.quantity) }} {{ unitLabel(allocation.inventoryItem.unitOfMeasure) }}</span>
                     </li>
                   }
                 </ul>
               </section>
             </mat-card-content>
             <mat-card-actions align="end">
-              <button mat-button type="button" [disabled]="isSubmitting()" (click)="editReview()">
-                Voltar e editar
-              </button>
-              <button
-                mat-flat-button
-                type="button"
-                [disabled]="isSubmitting()"
-                (click)="confirmProduction()"
-              >
+              <button mat-button type="button" [disabled]="isSubmitting()" (click)="editReview()">Voltar e editar</button>
+              <button mat-flat-button type="button" [disabled]="isSubmitting()" (click)="confirmProduction()">
                 {{ isSubmitting() ? 'Registrando...' : 'Confirmar produção' }}
               </button>
             </mat-card-actions>
@@ -240,45 +212,30 @@
         } @else {
           <form [formGroup]="registrationForm" (submit)="prepareReview($event)" novalidate>
             <mat-card appearance="outlined">
-              <mat-card-header>
-                <mat-card-title>Dados da produção</mat-card-title>
-              </mat-card-header>
+              <mat-card-header><mat-card-title>Dados da produção</mat-card-title></mat-card-header>
               <mat-card-content>
                 <mat-form-field appearance="outline">
                   <mat-label>Fórmula</mat-label>
                   <mat-select formControlName="formulaId">
                     @for (option of loadState.options; track option.formula.id) {
                       <mat-option [value]="option.formula.id">
-                        {{ option.outputItem.name }} · referência
+                        {{ option.outputItem.name }} ·
+                        {{ formulaKindLabel(option.formula.kind ?? 'STANDARD') }} · referência
                         {{ formatDecimal(option.formula.outputQuantity) }}
                         {{ unitLabel(option.formula.outputUnitOfMeasure) }}
                       </mat-option>
                     }
                   </mat-select>
-                  @if (
-                    registrationForm.controls.formulaId.touched &&
-                    registrationForm.controls.formulaId.invalid
-                  ) {
+                  @if (registrationForm.controls.formulaId.touched && registrationForm.controls.formulaId.invalid) {
                     <mat-error>Selecione uma fórmula.</mat-error>
                   }
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Quantidade produzida</mat-label>
-                  <input
-                    matInput
-                    type="text"
-                    inputmode="decimal"
-                    formControlName="outputQuantity"
-                    [attr.aria-describedby]="
-                      backendFieldError('outputQuantity') ? 'output-quantity-backend-error' : null
-                    "
-                  />
+                  <input matInput type="text" inputmode="decimal" formControlName="outputQuantity" />
                   <mat-hint>Quantidade positiva com até 13 dígitos inteiros e 6 casas decimais</mat-hint>
-                  @if (
-                    registrationForm.controls.outputQuantity.touched &&
-                    registrationForm.controls.outputQuantity.invalid
-                  ) {
+                  @if (registrationForm.controls.outputQuantity.touched && registrationForm.controls.outputQuantity.invalid) {
                     <mat-error>Informe uma quantidade positiva com até 6 casas decimais.</mat-error>
                   }
                 </mat-form-field>
@@ -286,29 +243,45 @@
                   <p id="output-quantity-backend-error" class="field-error" role="alert">{{ error }}</p>
                 }
 
+                @let requirements = requirementsState();
+                @switch (requirements.kind) {
+                  @case ('loading') {
+                    <app-loading-state message="Calculando requisitos no servidor..." />
+                  }
+                  @case ('error') {
+                    <app-error-state [error]="requirements.error" />
+                  }
+                  @case ('ready') {
+                    <section aria-labelledby="confirmed-requirements-heading">
+                      <h2 id="confirmed-requirements-heading">Requisitos confirmados pelo sistema</h2>
+                      <ul class="review-list">
+                        @for (requirement of requirements.data.requirements; track requirement.inventoryItemId) {
+                          <li>
+                            <strong>{{ requirementFor(requirement.inventoryItemId) ? itemName(requirement.inventoryItemId) : requirement.inventoryItemId }}</strong>
+                            <span>{{ formatDecimal(requirement.quantity) }} {{ unitLabel(requirement.unitOfMeasure) }}</span>
+                          </li>
+                        }
+                      </ul>
+                      <p class="field-hint">Esta consulta não reserva estoque, lotes nem sequência de produção.</p>
+                    </section>
+                  }
+                }
+
                 <div class="date-grid">
                   <mat-form-field appearance="outline">
                     <mat-label>Data da produção</mat-label>
                     <input matInput type="date" formControlName="productionDate" />
-                    @if (
-                      registrationForm.controls.productionDate.touched &&
-                      registrationForm.controls.productionDate.invalid
-                    ) {
+                    @if (registrationForm.controls.productionDate.touched && registrationForm.controls.productionDate.invalid) {
                       <mat-error>Informe a data da produção.</mat-error>
                     }
                   </mat-form-field>
-
                   <mat-form-field appearance="outline">
                     <mat-label>Entrada do lote produzido</mat-label>
                     <input matInput type="date" formControlName="outputReceivedAt" />
-                    @if (
-                      registrationForm.controls.outputReceivedAt.touched &&
-                      registrationForm.controls.outputReceivedAt.invalid
-                    ) {
+                    @if (registrationForm.controls.outputReceivedAt.touched && registrationForm.controls.outputReceivedAt.invalid) {
                       <mat-error>Informe a data de entrada do lote produzido.</mat-error>
                     }
                   </mat-form-field>
-
                   <mat-form-field appearance="outline">
                     <mat-label>Validade do lote produzido</mat-label>
                     <input matInput type="date" formControlName="outputExpiresAt" />
@@ -317,17 +290,18 @@
                 </div>
 
                 <fieldset class="lot-mode-fieldset">
-                  <legend>Modo do lote interno</legend>
-                  <mat-radio-group formControlName="lotCodeMode" aria-label="Modo do lote interno">
-                    <mat-radio-button value="GENERATED">
-                      Gerar automaticamente (recomendado)
-                    </mat-radio-button>
+                  <legend>Modo do lote</legend>
+                  <mat-radio-group formControlName="lotCodeMode" aria-label="Modo do lote">
+                    <mat-radio-button value="GENERATED">Gerar automaticamente (recomendado)</mat-radio-button>
                     <mat-radio-button value="MANUAL">Informar manualmente</mat-radio-button>
                   </mat-radio-group>
                   @if (lotCodeMode() === 'GENERATED') {
                     <p class="field-hint">
-                      O código definitivo será gerado pelo servidor somente quando a produção for
-                      registrada com sucesso. Nenhuma sequência é reservada nesta tela.
+                      @if (selectedFormulaKind() === 'PACKAGED_FILLING') {
+                        O lote definitivo seguirá SSS-MM-AAAA e será definido pelo servidor ao concluir. Nenhuma sequência é prevista ou reservada nesta tela.
+                      } @else {
+                        O código definitivo será gerado pelo servidor somente quando a produção for registrada com sucesso. Nenhuma sequência é reservada nesta tela.
+                      }
                     </p>
                   }
                 </fieldset>
@@ -335,19 +309,8 @@
                 @if (lotCodeMode() === 'MANUAL') {
                   <mat-form-field appearance="outline">
                     <mat-label>Código do lote manual</mat-label>
-                    <input
-                      matInput
-                      type="text"
-                      formControlName="manualLotCode"
-                      maxlength="255"
-                      [attr.aria-describedby]="
-                        backendFieldError('manualLotCode') ? 'manual-lot-backend-error' : null
-                      "
-                    />
-                    @if (
-                      registrationForm.controls.manualLotCode.touched &&
-                      registrationForm.controls.manualLotCode.invalid
-                    ) {
+                    <input matInput type="text" formControlName="manualLotCode" maxlength="255" />
+                    @if (registrationForm.controls.manualLotCode.touched && registrationForm.controls.manualLotCode.invalid) {
                       <mat-error>Informe um código de lote com até 255 caracteres.</mat-error>
                     }
                   </mat-form-field>
@@ -368,16 +331,14 @@
               }
               @case ('error') {
                 <app-error-state [error]="selectedContext.error" />
-                <button mat-stroked-button type="button" (click)="retryContext()">
-                  Tentar carregar os lotes novamente
-                </button>
+                <button mat-stroked-button type="button" (click)="retryContext()">Tentar carregar os lotes novamente</button>
               }
               @case ('ready') {
                 <mat-card appearance="outlined">
                   <mat-card-header>
                     <mat-card-title>{{ selectedContext.context.outputItem.name }}</mat-card-title>
                     <mat-card-subtitle>
-                      Saída de referência da fórmula:
+                      {{ formulaKindLabel(selectedContext.context.formula.kind ?? 'STANDARD') }} · saída de referência:
                       {{ formatDecimal(selectedContext.context.formula.outputQuantity) }}
                       {{ unitLabel(selectedContext.context.formula.outputUnitOfMeasure) }}
                     </mat-card-subtitle>
@@ -387,28 +348,24 @@
                       [essenceReference]="selectedContext.context.outputItem.essenceReference"
                       [productionTypeCode]="selectedContext.context.outputItem.productionTypeCode"
                     />
-                    <p class="field-hint">
-                      As quantidades de referência são apenas contexto. O escalonamento para a
-                      quantidade produzida será validado exclusivamente pelo sistema.
-                    </p>
+                    <p class="field-hint">As quantidades efetivas abaixo são calculadas pelo backend para a quantidade produzida informada.</p>
                   </mat-card-content>
                 </mat-card>
 
                 <section formArrayName="allocationGroups" class="ingredient-section" aria-labelledby="source-batches-heading">
                   <h2 id="source-batches-heading">Lotes consumidos</h2>
-                  @for (
-                    group of allocationGroups.controls;
-                    track group.controls.inventoryItemId.value;
-                    let ingredientIndex = $index
-                  ) {
+                  @for (group of allocationGroups.controls; track group.controls.inventoryItemId.value; let ingredientIndex = $index) {
                     @let ingredient = ingredientAt(selectedContext.context, ingredientIndex);
+                    @let requirement = requirementFor(ingredient.item.id);
                     <mat-card appearance="outlined" [formGroupName]="ingredientIndex">
                       <mat-card-header>
                         <mat-card-title>{{ ingredient.item.name }}</mat-card-title>
                         <mat-card-subtitle>
-                          Referência da fórmula:
-                          {{ formatDecimal(ingredient.ingredient.quantity) }}
-                          {{ unitLabel(ingredient.ingredient.unitOfMeasure) }}
+                          @if (requirement) {
+                            Necessário para a quantidade informada: {{ formatDecimal(requirement.quantity) }} {{ unitLabel(requirement.unitOfMeasure) }}
+                          } @else {
+                            Referência da fórmula: {{ formatDecimal(ingredient.ingredient.quantity) }} {{ unitLabel(ingredient.ingredient.unitOfMeasure) }}
+                          }
                         </mat-card-subtitle>
                       </mat-card-header>
                       <mat-card-content formArrayName="allocations">
@@ -417,15 +374,9 @@
                           [productionTypeCode]="ingredient.item.productionTypeCode"
                         />
                         @if (ingredient.batches.length === 0) {
-                          <p class="context-message">
-                            Nenhum lote foi retornado pelo estoque para este ingrediente.
-                          </p>
+                          <p class="context-message">Nenhum lote foi retornado pelo estoque para este ingrediente.</p>
                         }
-                        @for (
-                          allocation of group.controls.allocations.controls;
-                          track $index;
-                          let allocationIndex = $index
-                        ) {
+                        @for (allocation of group.controls.allocations.controls; track $index; let allocationIndex = $index) {
                           <fieldset class="allocation-row" [formGroupName]="allocationIndex">
                             <legend>Lote {{ allocationIndex + 1 }}</legend>
                             <mat-form-field appearance="outline">
@@ -433,9 +384,7 @@
                               <mat-select formControlName="batchId">
                                 @for (batch of ingredient.batches; track batch.batchId) {
                                   <mat-option [value]="batch.batchId">
-                                    {{ batch.lotCode || 'Sem código de lote' }} ·
-                                    {{ formatDecimal(batch.currentQuantity) }} ·
-                                    {{ batchStatusLabel(batch.status) }}
+                                    {{ batch.lotCode || 'Sem código de lote' }} · {{ formatDecimal(batch.currentQuantity) }} · {{ batchStatusLabel(batch.status) }}
                                   </mat-option>
                                 }
                               </mat-select>
@@ -443,77 +392,36 @@
                                 <mat-error>Selecione o lote realmente consumido.</mat-error>
                               }
                             </mat-form-field>
-
                             <mat-form-field appearance="outline">
                               <mat-label>Quantidade consumida</mat-label>
-                              <input
-                                matInput
-                                type="text"
-                                inputmode="decimal"
-                                formControlName="quantity"
-                              />
-                              @if (
-                                allocation.controls.quantity.touched &&
-                                allocation.controls.quantity.invalid
-                              ) {
+                              <input matInput type="text" inputmode="decimal" formControlName="quantity" />
+                              @if (allocation.controls.quantity.touched && allocation.controls.quantity.invalid) {
                                 <mat-error>Informe uma quantidade positiva com até 6 casas decimais.</mat-error>
                               }
                             </mat-form-field>
-
-                            <button
-                              mat-button
-                              type="button"
-                              [disabled]="group.controls.allocations.length === 1"
-                              (click)="removeAllocation(ingredientIndex, allocationIndex)"
-                            >
-                              Remover lote
-                            </button>
-
-                            @if (
-                              selectedBatch(ingredient.batches, allocation.controls.batchId.value);
-                              as batch
-                            ) {
+                            <button mat-button type="button" [disabled]="group.controls.allocations.length === 1" (click)="removeAllocation(ingredientIndex, allocationIndex)">Remover lote</button>
+                            @if (selectedBatch(ingredient.batches, allocation.controls.batchId.value); as batch) {
                               <p class="batch-facts">
-                                Status informado pelo sistema: {{ batchStatusLabel(batch.status) }} ·
-                                saldo atual: {{ formatDecimal(batch.currentQuantity) }}
-                                {{ unitLabel(ingredient.item.unitOfMeasure) }}
-                                @if (batch.expiresAt) {
-                                  · validade: {{ formatLocalDate(batch.expiresAt) }}
-                                }
+                                Status informado pelo sistema: {{ batchStatusLabel(batch.status) }} · saldo atual:
+                                {{ formatDecimal(batch.currentQuantity) }} {{ unitLabel(ingredient.item.unitOfMeasure) }}
+                                @if (batch.expiresAt) { · validade: {{ formatLocalDate(batch.expiresAt) }} }
                               </p>
                             }
                           </fieldset>
                         }
-
-                        <button
-                          mat-stroked-button
-                          type="button"
-                          (click)="addAllocation(ingredientIndex)"
-                        >
-                          Adicionar lote
-                        </button>
+                        <button mat-stroked-button type="button" (click)="addAllocation(ingredientIndex)">Adicionar lote</button>
                       </mat-card-content>
                     </mat-card>
                   }
                 </section>
 
-                @if (allocationError(); as error) {
-                  <p class="field-error" role="alert">{{ error }}</p>
-                }
-                @if (backendFieldError('sourceAllocations'); as error) {
-                  <p class="field-error" role="alert">{{ error }}</p>
-                }
+                @if (allocationError(); as error) { <p class="field-error" role="alert">{{ error }}</p> }
+                @if (backendFieldError('sourceAllocations'); as error) { <p class="field-error" role="alert">{{ error }}</p> }
               }
             }
 
             <div class="form-actions">
-              <button
-                mat-flat-button
-                type="submit"
-                [disabled]="contextState().kind !== 'ready' || isSubmitting()"
-              >
-                Revisar produção
-              </button>
+              <button mat-flat-button type="submit" [disabled]="contextState().kind !== 'ready' || requirementsState().kind !== 'ready' || isSubmitting()">Revisar produção</button>
               <a mat-button routerLink="/production/formulas">Cancelar</a>
             </div>
           </form>

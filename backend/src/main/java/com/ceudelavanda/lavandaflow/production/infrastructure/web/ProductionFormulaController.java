@@ -2,11 +2,13 @@ package com.ceudelavanda.lavandaflow.production.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.production.application.formula.CreateProductionFormula;
 import com.ceudelavanda.lavandaflow.production.application.formula.GetProductionFormula;
+import com.ceudelavanda.lavandaflow.production.application.formula.GetProductionFormulaRequirements;
 import com.ceudelavanda.lavandaflow.production.application.formula.ListProductionFormulas;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaDefinitionCommand;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaIngredientCommand;
 import com.ceudelavanda.lavandaflow.production.application.formula.UpdateProductionFormula;
 import com.ceudelavanda.lavandaflow.production.infrastructure.web.request.UpsertProductionFormulaRequest;
+import com.ceudelavanda.lavandaflow.production.infrastructure.web.response.ProductionFormulaRequirementsResponse;
 import com.ceudelavanda.lavandaflow.production.infrastructure.web.response.ProductionFormulaResponse;
 import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,8 +26,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +43,7 @@ public class ProductionFormulaController {
     private final UpdateProductionFormula updateProductionFormula;
     private final GetProductionFormula getProductionFormula;
     private final ListProductionFormulas listProductionFormulas;
+    private final GetProductionFormulaRequirements getProductionFormulaRequirements;
 
     @Operation(summary = "Create a production formula")
     @ApiResponses({
@@ -83,6 +88,22 @@ public class ProductionFormulaController {
         return ResponseEntity.ok(ProductionFormulaResponse.from(getProductionFormula.execute(formulaId)));
     }
 
+    @Operation(summary = "Calculate scaled production requirements")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Scaled requirements calculated", content = @Content(schema = @Schema(implementation = ProductionFormulaRequirementsResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Production formula not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "422", description = "Requested quantity cannot be represented exactly", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @GetMapping("/{formulaId}/requirements")
+    public ResponseEntity<ProductionFormulaRequirementsResponse> requirements(
+        @PathVariable UUID formulaId,
+        @RequestParam BigDecimal outputQuantity
+    ) {
+        return ResponseEntity.ok(ProductionFormulaRequirementsResponse.from(
+            getProductionFormulaRequirements.execute(formulaId, outputQuantity)
+        ));
+    }
+
     @Operation(summary = "List production formulas")
     @GetMapping
     public ResponseEntity<List<ProductionFormulaResponse>> list() {
@@ -100,7 +121,8 @@ public class ProductionFormulaController {
                     ingredient.inventoryItemId(),
                     ingredient.quantity()
                 ))
-                .toList()
+                .toList(),
+            request.kind()
         );
     }
 }

@@ -20,7 +20,11 @@ import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../../../shared/ui/loading-state/loading-state';
 import { InventoryItemDto } from '../../data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
-import { inventoryItemCategoryLabel, inventoryItemUnitLabel } from '../../inventory-item-display';
+import {
+  productGenderLabel,
+  inventoryItemCategoryLabel,
+  inventoryItemUnitLabel,
+} from '../../inventory-item-display';
 
 type InventoryItemDetailState =
   | { readonly kind: 'loading' }
@@ -39,6 +43,7 @@ export class InventoryItemDetailPage {
   private readonly retries = new Subject<void>();
 
   protected readonly state = signal<InventoryItemDetailState>({ kind: 'loading' });
+  protected readonly genderLabel = productGenderLabel;
   protected readonly categoryLabel = inventoryItemCategoryLabel;
   protected readonly unitLabel = inventoryItemUnitLabel;
 

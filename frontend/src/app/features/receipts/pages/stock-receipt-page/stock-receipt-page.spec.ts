@@ -38,6 +38,7 @@ describe('StockReceiptPage', () => {
     active: true,
     essenceReference: null,
     productionTypeCode: null,
+    gender: null,
   };
   const supplier: SupplierDto = {
     id: '9a38562f-e43c-4565-9f79-cd75bc08e39d',

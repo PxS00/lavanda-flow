@@ -21,7 +21,8 @@ public class RegisterInventoryItem {
             command.category(),
             command.unitOfMeasure(),
             command.essenceReference(),
-            command.productionTypeCode()
+            command.productionTypeCode(),
+            command.gender()
         );
         return InventoryItemResult.from(inventoryItemRepository.save(item));
     }

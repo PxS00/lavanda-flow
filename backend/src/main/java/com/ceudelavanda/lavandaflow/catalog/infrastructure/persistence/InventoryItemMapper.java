@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.catalog.infrastructure.persistence;
 
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
+import com.ceudelavanda.lavandaflow.catalog.ProductGender;
 
 final class InventoryItemMapper {
 
@@ -16,7 +17,8 @@ final class InventoryItemMapper {
             item.getUnitOfMeasure(),
             item.isActive(),
             item.getEssenceReference(),
-            item.getProductionTypeCode()
+            item.getProductionTypeCode(),
+            item.getGender() == null ? null : item.getGender().code()
         );
     }
 
@@ -29,7 +31,8 @@ final class InventoryItemMapper {
             entity.getUnitOfMeasure(),
             entity.isActive(),
             entity.getEssenceReference(),
-            entity.getProductionTypeCode()
+            entity.getProductionTypeCode(),
+            entity.getGender() == null ? null : ProductGender.fromCode(entity.getGender())
         );
     }
 }

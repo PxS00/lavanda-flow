@@ -1,5 +1,7 @@
 # V1 operational readiness
 
+> **Historical v0.6.0 evidence.** The real-cutover interpretation recorded below was later found to be wrong for Céu de Lavanda's bulk perfume stock. Issue #231 and `docs/specs/0231-correct-initial-bulk-perfume-snapshot-mapping.md` supersede the five-column source contract, `ESSENCE` mapping, null-lot assumption, and the frozen checksum for the corrected operational cutover. The counts and checks below remain evidence of what was tested on 2026-09-06; they are not approval to reuse that source or mapping. Corrected v0.6.1 cutover evidence belongs to #233.
+
 ## Tested revision
 
 - Branch: `test/138/validate-v1-operational-readiness`
@@ -12,7 +14,9 @@
 ### Backend — PASSED
 
 `V1OperationalReadinessAcceptanceTest` passed against PostgreSQL 17 through Testcontainers with a fixed
-application clock. The scenario uses a synthetic #134-shaped CSV and proves:
+application clock. The scenario used the then-approved synthetic #134-shaped CSV. The test fixture is updated
+by #231 to the revised eight-column source so current acceptance no longer exercises an obsolete contract.
+The historical run proved:
 
 - `DRY_RUN` performs zero database writes and `APPLY` creates the expected catalog, opening batches, and
   auditable entry movements;
@@ -37,19 +41,30 @@ genealogy. It verifies pt-BR operator copy, exact source-batch identity, generat
 frontend-authored authoritative sequence, no success before the POST response, and genealogy rendered from
 backend response data. Existing `app.operational-workflow.spec.ts` coverage remains intact.
 
-## Real operational CSV — PASSED
+## Real operational CSV — HISTORICAL v0.6.0 EVIDENCE
+
+The following source/checksum is retained only to document the first technically successful but semantically
+incorrect v0.6.0 import validation. **Do not use it for the corrected v0.6.1 cutover.**
 
 - File: `inventory-snapshot-2026-09-06.csv`
-- SHA-256: `0d2c799d1efdb5d0924c36612b449ac6e42275da49f2d35c153e35165d2793b8`
-- Checksum verification: **PASSED** before `DRY_RUN`, immediately before `APPLY`, and after acceptance.
-- Effective date: `2026-09-06`, the explicit date when Lavanda Flow establishes the opening snapshot; it is
+- Historical SHA-256: `0d2c799d1efdb5d0924c36612b449ac6e42275da49f2d35c153e35165d2793b8`
+- Historical checksum verification: **PASSED** before `DRY_RUN`, immediately before `APPLY`, and after acceptance.
+- Effective date: `2026-09-06`, the explicit date when Lavanda Flow established the opening snapshot; it is
   not a fabricated historical purchase, receipt, or withdrawal date.
-- Approved source shape: `Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada`.
+- Historical source shape: `Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada`.
 
-### DRY_RUN — PASSED
+The corrected source must instead use:
+
+```text
+Nome do Perfume,Genero,Ml Disponiveis,Expired,Retirada,EssenceReference,ProductionTypeCode,LotCode
+```
+
+and must receive a new external SHA-256 after operator edits.
+
+### Historical DRY_RUN — PASSED
 
 A fresh disposable PostgreSQL 17 database contained zero public tables before normal Flyway startup. Two
-consecutive runs against the same immutable source completed with the same normalized report fingerprint:
+consecutive runs against the same immutable historical source completed with the same normalized report fingerprint:
 
 ```text
 totalRowCount=92
@@ -60,26 +75,24 @@ normalizedReportSha256=c0f021aa15ccfaf417d07ab481d5f1d64cf2e4922209bcec7480c7668
 ```
 
 After `DRY_RUN`, database counts remained zero for catalog items, inventory batches, stock movements,
-suppliers, and production executions. This proves that classification and reporting performed no business or
-domain writes.
+suppliers, and production executions. This proved that classification and reporting performed no business or
+domain writes under the then-approved mapping.
 
 All three nonblank `Retirada` values were checked locally with Java `BigDecimal`: each adjusted quantity
 equalled `Ml Disponiveis + Retirada` exactly, none was negative, and the report used the adjusted opening
 quantity. `Retirada` was treated only as an opening-balance adjustment; no historical movement was inferred.
 
-Representative #134 normalization passed:
+The old `Scandall` name-disambiguation and essence-only interpretation are superseded by #231. Current
+corrected identity uses explicit `ProductionTypeCode + EssenceReference`, persists `Genero` as product gender,
+and preserves explicit source lot codes.
 
-- `Scandall (M)` and `Scandall (F)` classified as distinct opening-stock catalog items;
-- Aura Mugler's whitespace-bearing expiration normalized to `2027-09-30`;
-- Hugo Boss Men normalized with blank expiration as catalog-only with zero opening quantity.
+The dedicated historical `DRY_RUN` database/container was stopped and removed before `APPLY`.
 
-The dedicated `DRY_RUN` database/container was stopped and removed before `APPLY`.
+### Historical disposable PostgreSQL APPLY — PASSED
 
-### Disposable PostgreSQL APPLY — PASSED
-
-A separate brand-new PostgreSQL 17 database contained zero public tables before startup. Flyway applied all
-13 migrations normally. `APPLY` used the same checksum-verified CSV and effective date as `DRY_RUN` and
-completed without partial or rejected rows:
+A separate brand-new PostgreSQL 17 database contained zero public tables before startup. Flyway applied the
+then-current migrations normally. `APPLY` used the same checksum-verified historical CSV and effective date as
+`DRY_RUN` and completed without partial or rejected rows:
 
 ```text
 totalRowCount=92
@@ -91,27 +104,25 @@ openingBatches=89
 openingEntryMovements=89
 ```
 
-Post-import consistency checks found:
+Historical consistency checks found:
 
 - zero negative batch balances;
 - zero differences between adjusted initial quantity, current batch balance, and opening `ENTRY` quantity;
 - exactly one batch and one `ENTRY` for every positive adjusted opening row;
 - exactly three catalog-only items with no opening stock;
 - zero orphan movements and zero non-`ENTRY` movements;
-- zero non-null supplier IDs or lot codes on opening batches;
+- zero non-null supplier IDs or lot codes on opening batches under the obsolete mapping;
 - zero suppliers, production formulas, production executions, and production consumptions;
 - every opening batch used the effective date `2026-09-06`.
 
-Representative public API reads from a normal application restart, with the importer disabled and no CSV
-property configured, returned all 92 catalog items and the dashboard from PostgreSQL. They also returned both
-exact Scandall names, Aura Mugler's normalized expiration, and Hugo Boss Men with quantity `0.000000`, zero
-batches, and zero movements. This confirms normal operation depends only on PostgreSQL after import.
+The null-lot and `ESSENCE` conclusions above are **not** the corrected business contract. #231 requires
+`FINISHED_PRODUCT`, persisted gender/reference/type metadata, and an explicit source `LotCode` for every
+positive opening-stock row.
 
-The disposable `APPLY` database/container was stopped and removed after evidence collection. The CSV and
-checksum remained unchanged in the Git-ignored `operational-data.local` area; neither was copied, moved,
-staged, or committed, and no row-level operational data was added to this report.
+The disposable historical `APPLY` database/container was stopped and removed after evidence collection. No
+row-level operational data is added to this report.
 
-## Validation gates
+## Historical validation gates
 
 - `backend/ ./mvnw verify`: **PASSED** — 398 tests, 0 failures, 0 errors, 0 skipped; build successful.
 - Spring Modulith: **PASSED** — `ModularityTest` passed with no module-boundary violations.
@@ -119,27 +130,17 @@ staged, or committed, and no row-level operational data was added to this report
 - `frontend/ pnpm test`: **PASSED** — 47 test files and 231 tests passed.
 - `frontend/ pnpm build`: **PASSED** — production bundle generated successfully.
 
-Known non-blocking warnings:
+Known non-blocking warnings from that run:
 
-- Angular reports the initial bundle at 667.75 kB, 167.75 kB above the configured 500 kB budget.
-- A sandboxed Angular build could not resolve Google Fonts; the required build passed when network access was
-  available.
-- One frontend run exceeded the existing operational-workflow test's five-second timeout by 275 ms; an
-  immediate unchanged full-suite rerun passed all 231 tests.
-- Maven logs existing CycloneDX schema-keyword, Lombok/Unsafe deprecation, Mockito dynamic-agent,
-  Testcontainers Docker-auth fallback, generated development security password, and enabled SpringDoc
-  endpoint warnings.
+- Angular reported the initial bundle above the configured budget.
+- A sandboxed Angular build could not resolve Google Fonts; the required build passed when network access was available.
+- One frontend run exceeded an existing test timeout slightly; an immediate unchanged full-suite rerun passed.
+- Maven logged existing non-blocking development/tooling warnings.
 
-## Blockers and remaining risks
+## Corrected cutover requirement
 
-- No release blocker was found.
-- The real import was intentionally executed only in disposable acceptance databases. The production cutover
-  still requires the documented backup, immutable-source checksum verification, `DRY_RUN`-before-`APPLY`,
-  empty-target guard, operator review, and post-import verification procedure.
-- Operational monitoring and backup/restore rehearsal remain deployment responsibilities outside this
-  repository acceptance run.
-
-## Conclusion
-
-**READY** — automated backend/frontend composition, the checksum-verified frozen real-source `DRY_RUN`, the
-fresh disposable PostgreSQL `APPLY`, persisted-state invariants, and PostgreSQL-only public reads all passed.
+The corrected v0.6.1 cutover tracked by #233 must produce fresh evidence after #231 using the revised external
+CSV and its new checksum. The operational sequence is documented in
+[`initial-inventory-import.md`](initial-inventory-import.md): restore the known-good pre-import database,
+verify the corrected checksum, run `DRY_RUN`, require `rejected=0` and operator review, run one atomic `APPLY`,
+verify representative finished products/lots/balances/history, and create a verified post-import backup.

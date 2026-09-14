@@ -33,6 +33,7 @@ describe('inventory routes', () => {
                 active: true,
                 essenceReference: '027',
                 productionTypeCode: null,
+                gender: null,
               }),
           },
         },

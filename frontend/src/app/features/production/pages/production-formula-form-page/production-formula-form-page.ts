@@ -13,6 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   Observable,
@@ -37,12 +38,14 @@ import { InventoryItemApiService } from '../../../catalog/data-access/inventory-
 import { InventoryItemSelector } from '../../../catalog/ui/inventory-item-selector/inventory-item-selector';
 import {
   ProductionFormulaDto,
+  ProductionFormulaKind,
   UpsertProductionFormulaRequest,
+  productionFormulaKind,
 } from '../../data-access/production-formula.dto';
 import { ProductionFormulaApiService } from '../../data-access/production-formula-api.service';
 
 const DECIMAL_PATTERN = /^\d+(?:\.\d{1,6})?$/;
-const INLINE_ERROR_FIELDS = ['outputInventoryItemId', 'outputQuantity', 'ingredients'];
+const INLINE_ERROR_FIELDS = ['outputInventoryItemId', 'outputQuantity', 'ingredients', 'kind'];
 
 type IngredientForm = FormGroup<{
   inventoryItem: FormControl<InventoryItemDto | null>;
@@ -63,6 +66,7 @@ type FormulaFormLoadState =
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     InventoryItemSelector,
     ReactiveFormsModule,
     RouterLink,
@@ -80,6 +84,7 @@ export class ProductionFormulaFormPage {
   private readonly formulaId = signal<string | null>(null);
 
   readonly formulaForm = new FormGroup({
+    kind: new FormControl<ProductionFormulaKind>('STANDARD', { nonNullable: true }),
     outputInventoryItem: new FormControl<InventoryItemDto | null>(null, Validators.required),
     outputQuantity: new FormControl('', {
       nonNullable: true,
@@ -219,12 +224,13 @@ export class ProductionFormulaFormPage {
   private populateForm(formula: ProductionFormulaDto | null, items: readonly InventoryItemDto[] = []): void {
     this.ingredients.clear();
     if (formula === null) {
-      this.formulaForm.reset({ outputInventoryItem: null, outputQuantity: '' });
+      this.formulaForm.reset({ kind: 'STANDARD', outputInventoryItem: null, outputQuantity: '' });
       this.ingredients.push(createIngredientForm());
       return;
     }
 
     const itemById = new Map(items.map((item) => [item.id, item]));
+    this.formulaForm.controls.kind.setValue(productionFormulaKind(formula));
     this.formulaForm.controls.outputInventoryItem.setValue(itemById.get(formula.outputInventoryItemId) ?? null);
     this.formulaForm.controls.outputQuantity.setValue(formula.outputQuantity);
     formula.ingredients.forEach((ingredient) => {
@@ -246,6 +252,7 @@ export class ProductionFormulaFormPage {
         inventoryItemId: ingredient.inventoryItem!.id,
         quantity: ingredient.quantity.trim(),
       })),
+      ...(value.kind === 'PACKAGED_FILLING' ? { kind: value.kind } : {}),
     };
   }
 }

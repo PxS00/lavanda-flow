@@ -22,6 +22,7 @@ describe('InventoryItemListPage', () => {
     active: true,
     essenceReference: null,
     productionTypeCode: null,
+    gender: null,
   };
   const populatedPage: InventoryItemPageDto = {
     content: [item],
@@ -43,11 +44,25 @@ describe('InventoryItemListPage', () => {
 
     await TestBed.configureTestingModule({
       imports: [InventoryItemListPage],
-      providers: [provideRouter([]), { provide: InventoryItemApiService, useValue: { search } }, { provide: MatPaginatorIntl, useFactory: createPtBrPaginatorIntl }],
+      providers: [
+        provideRouter([]),
+        { provide: InventoryItemApiService, useValue: { search } },
+        { provide: MatPaginatorIntl, useFactory: createPtBrPaginatorIntl },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(InventoryItemListPage);
     fixture.detectChanges();
+  });
+
+  it('should display finished product category and gender in Portuguese', () => {
+    response.next({
+      ...populatedPage,
+      content: [{ ...item, category: 'FINISHED_PRODUCT', gender: 'F/C' }],
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Produto finalizado');
+    expect(fixture.nativeElement.textContent).toContain('Compartilhável com tendência feminina');
   });
 
   it('should issue the initial request and show loading feedback', () => {
@@ -99,7 +114,11 @@ describe('InventoryItemListPage', () => {
 
   it('should keep a filtered empty result distinct from initial empty and error states', () => {
     response.next(populatedPage);
-    fixture.componentInstance.filtersModel.set({ name: 'inexistente', category: '', active: 'all' });
+    fixture.componentInstance.filtersModel.set({
+      name: 'inexistente',
+      category: '',
+      active: 'all',
+    });
     fixture.detectChanges();
     submitFilters();
 

@@ -1,7 +1,9 @@
 package com.ceudelavanda.lavandaflow.inventory.application.initialsnapshot;
 
+import com.ceudelavanda.lavandaflow.catalog.FinishedProductRegistration;
 import com.ceudelavanda.lavandaflow.catalog.InventoryItemLookup;
 import com.ceudelavanda.lavandaflow.catalog.InventoryItemRegistration;
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.inventory.application.receipt.RegisterStockReceipt;
 import com.ceudelavanda.lavandaflow.inventory.application.receipt.RegisterStockReceiptCommand;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +15,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 
-/** Inventory-owned one-time importer for the initial operational snapshot defined by issue #134. */
+/** Inventory-owned one-time importer for the corrected initial operational snapshot defined by issue #231. */
 @Service
 @RequiredArgsConstructor
 public class ImportInitialInventorySnapshot {
@@ -48,18 +50,27 @@ public class ImportInitialInventorySnapshot {
             throw new InitialInventoryImportException("Operational catalog is already initialized", report);
         }
 
-        for (var row : plan.validRows()) {
-            var item = inventoryItemRegistration.registerEssence(row.catalogName());
-            if (row.quantity().signum() > 0) {
-                registerStockReceipt.execute(new RegisterStockReceiptCommand(
-                    item.id(),
-                    null,
-                    null,
-                    row.quantity(),
-                    effectiveDate,
-                    row.expiration(),
-                    RECEIPT_REASON
-                ));
+        for (var product : plan.products()) {
+            var item = inventoryItemRegistration.registerFinishedProduct(new FinishedProductRegistration(
+                product.catalogName(),
+                null,
+                UnitOfMeasure.MILLILITER,
+                product.essenceReference(),
+                product.productionTypeCode(),
+                product.gender()
+            ));
+            for (var row : product.rows()) {
+                if (row.quantity().signum() > 0) {
+                    registerStockReceipt.execute(new RegisterStockReceiptCommand(
+                        item.id(),
+                        null,
+                        row.lotCode(),
+                        row.quantity(),
+                        effectiveDate,
+                        row.expiration(),
+                        RECEIPT_REASON
+                    ));
+                }
             }
         }
         return report;

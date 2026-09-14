@@ -1,4 +1,6 @@
 import {
+  PRODUCT_GENDERS,
+  ProductGender,
   INVENTORY_ITEM_CATEGORIES,
   INVENTORY_ITEM_UNITS_OF_MEASURE,
   InventoryItemCategory,
@@ -18,12 +20,43 @@ export const INVENTORY_ITEM_UNIT_OPTIONS: readonly InventoryItemDisplayOption<In
 
 export function inventoryItemCategoryLabel(category: InventoryItemCategory): string {
   return {
-    ESSENCE: 'Essência', CHEMICAL_INPUT: 'Insumo químico', BASE: 'Base', ALCOHOL: 'Álcool',
-    COLORANT: 'Corante', FIXATIVE: 'Fixador', BOTTLE: 'Frasco', VALVE: 'Válvula', CAP: 'Tampa',
-    LABEL: 'Rótulo', PACKAGING: 'Embalagem', OTHER: 'Outros',
+    ESSENCE: 'Essência',
+    FINISHED_PRODUCT: 'Produto finalizado',
+    CHEMICAL_INPUT: 'Insumo químico',
+    BASE: 'Base',
+    ALCOHOL: 'Álcool',
+    COLORANT: 'Corante',
+    FIXATIVE: 'Fixador',
+    BOTTLE: 'Frasco',
+    VALVE: 'Válvula',
+    CAP: 'Tampa',
+    LABEL: 'Rótulo',
+    PACKAGING: 'Embalagem',
+    OTHER: 'Outros',
   }[category];
 }
 
 export function inventoryItemUnitLabel(unit: InventoryItemUnitOfMeasure): string {
-  return { MILLILITER: 'Mililitro', LITER: 'Litro', GRAM: 'Grama', KILOGRAM: 'Quilograma', UNIT: 'Unidade' }[unit];
+  return {
+    MILLILITER: 'Mililitro',
+    LITER: 'Litro',
+    GRAM: 'Grama',
+    KILOGRAM: 'Quilograma',
+    UNIT: 'Unidade',
+  }[unit];
+}
+
+export const PRODUCT_GENDER_OPTIONS: readonly InventoryItemDisplayOption<ProductGender>[] =
+  PRODUCT_GENDERS.map((value) => ({ value, label: productGenderLabel(value) }));
+
+export function productGenderLabel(gender: ProductGender | null): string {
+  return gender === null
+    ? 'Não informado'
+    : {
+        M: 'Masculino',
+        F: 'Feminino',
+        C: 'Compartilhável',
+        'M/C': 'Compartilhável com tendência masculina',
+        'F/C': 'Compartilhável com tendência feminina',
+      }[gender];
 }

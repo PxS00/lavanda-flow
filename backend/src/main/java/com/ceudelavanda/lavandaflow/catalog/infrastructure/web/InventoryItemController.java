@@ -1,5 +1,6 @@
 package com.ceudelavanda.lavandaflow.catalog.infrastructure.web;
 
+import com.ceudelavanda.lavandaflow.catalog.ProductGender;
 import com.ceudelavanda.lavandaflow.catalog.application.GetInventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.application.InventoryItemSearchQuery;
 import com.ceudelavanda.lavandaflow.catalog.application.RegisterInventoryItem;
@@ -53,7 +54,8 @@ public class InventoryItemController {
             request.category(),
             request.unitOfMeasure(),
             request.essenceReference(),
-            request.productionTypeCode()
+            request.productionTypeCode(),
+            request.gender() == null ? null : ProductGender.fromCode(request.gender())
         ));
         return ResponseEntity
             .status(HttpStatus.CREATED)

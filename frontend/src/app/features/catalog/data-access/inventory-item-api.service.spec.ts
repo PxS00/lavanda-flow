@@ -22,6 +22,7 @@ describe('InventoryItemApiService', () => {
     active: true,
     essenceReference: '027',
     productionTypeCode: 'BDS',
+    gender: null,
   };
   const page: InventoryItemPageDto = {
     content: [item],
@@ -129,6 +130,7 @@ describe('InventoryItemApiService', () => {
       unitOfMeasure: 'MILLILITER',
       essenceReference: '027',
       productionTypeCode: 'BDS',
+      gender: null,
     };
     let result: InventoryItemDto | undefined;
 

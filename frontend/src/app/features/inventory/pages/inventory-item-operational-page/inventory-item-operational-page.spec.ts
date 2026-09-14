@@ -183,6 +183,7 @@ describe('InventoryItemOperationalPage', () => {
       active: overview.active,
       essenceReference: '027',
       productionTypeCode: 'BHC',
+      gender: null,
     });
     fixture.detectChanges();
 
@@ -236,6 +237,7 @@ describe('InventoryItemOperationalPage', () => {
       active: true,
       essenceReference: '027',
       productionTypeCode: null,
+      gender: null,
     });
     fixture.detectChanges();
 
@@ -251,6 +253,7 @@ describe('InventoryItemOperationalPage', () => {
       active: true,
       essenceReference: null,
       productionTypeCode: 'BHC',
+      gender: null,
     });
     fixture.detectChanges();
 

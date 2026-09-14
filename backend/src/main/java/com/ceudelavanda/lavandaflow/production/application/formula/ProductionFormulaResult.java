@@ -2,6 +2,7 @@ package com.ceudelavanda.lavandaflow.production.application.formula;
 
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionFormula;
+import com.ceudelavanda.lavandaflow.production.domain.ProductionFormulaKind;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,11 +13,22 @@ public record ProductionFormulaResult(
     UUID outputInventoryItemId,
     BigDecimal outputQuantity,
     UnitOfMeasure outputUnitOfMeasure,
-    List<IngredientResult> ingredients
+    List<IngredientResult> ingredients,
+    ProductionFormulaKind kind
 ) {
 
     public ProductionFormulaResult {
         ingredients = List.copyOf(ingredients);
+    }
+
+    public ProductionFormulaResult(
+        UUID id,
+        UUID outputInventoryItemId,
+        BigDecimal outputQuantity,
+        UnitOfMeasure outputUnitOfMeasure,
+        List<IngredientResult> ingredients
+    ) {
+        this(id, outputInventoryItemId, outputQuantity, outputUnitOfMeasure, ingredients, ProductionFormulaKind.STANDARD);
     }
 
     public static ProductionFormulaResult from(ProductionFormula formula) {
@@ -31,7 +43,8 @@ public record ProductionFormulaResult(
                     ingredient.quantity(),
                     ingredient.unitOfMeasure()
                 ))
-                .toList()
+                .toList(),
+            formula.getKind()
         );
     }
 

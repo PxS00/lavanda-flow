@@ -12,6 +12,7 @@ class CategoryTest {
         assertThat(Set.of(Category.values()))
             .containsExactlyInAnyOrder(
                 Category.ESSENCE,
+                Category.FINISHED_PRODUCT,
                 Category.CHEMICAL_INPUT,
                 Category.BASE,
                 Category.ALCOHOL,

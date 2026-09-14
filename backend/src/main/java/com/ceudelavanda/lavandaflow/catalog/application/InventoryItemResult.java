@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.catalog.application;
 
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
+import com.ceudelavanda.lavandaflow.catalog.ProductGender;
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
 
@@ -15,8 +16,13 @@ public record InventoryItemResult(
     UnitOfMeasure unitOfMeasure,
     boolean active,
     String essenceReference,
-    String productionTypeCode
+    String productionTypeCode,
+    ProductGender gender
 ) {
+    public InventoryItemResult(UUID id, String name, String description, Category category,
+        UnitOfMeasure unitOfMeasure, boolean active, String essenceReference, String productionTypeCode) {
+        this(id, name, description, category, unitOfMeasure, active, essenceReference, productionTypeCode, null);
+    }
     public InventoryItemResult(
         UUID id,
         String name,
@@ -37,7 +43,8 @@ public record InventoryItemResult(
             item.getUnitOfMeasure(),
             item.isActive(),
             item.getEssenceReference(),
-            item.getProductionTypeCode()
+            item.getProductionTypeCode(),
+            item.getGender()
         );
     }
 }

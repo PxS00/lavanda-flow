@@ -16,7 +16,9 @@ public record InventoryItemResponse(
     UnitOfMeasure unitOfMeasure,
     boolean active,
     String essenceReference,
-    String productionTypeCode
+    String productionTypeCode,
+    @Schema(nullable = true, allowableValues = {"M", "F", "C", "M/C", "F/C"})
+    String gender
 ) {
     public static InventoryItemResponse from(InventoryItemResult result) {
         return new InventoryItemResponse(
@@ -27,7 +29,8 @@ public record InventoryItemResponse(
             result.unitOfMeasure(),
             result.active(),
             result.essenceReference(),
-            result.productionTypeCode()
+            result.productionTypeCode(),
+            result.gender() == null ? null : result.gender().code()
         );
     }
 }

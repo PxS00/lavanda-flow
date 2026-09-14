@@ -18,6 +18,7 @@ describe('InventoryItemDetailPage', () => {
     active: true,
     essenceReference: '027',
     productionTypeCode: 'BDS',
+    gender: null,
   };
 
   let fixture: ComponentFixture<InventoryItemDetailPage>;
@@ -48,6 +49,13 @@ describe('InventoryItemDetailPage', () => {
     fixture.detectChanges();
   });
 
+  it('should display finished product category and gender in Portuguese', () => {
+    response.next({ ...item, category: 'FINISHED_PRODUCT', gender: 'F/C' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Produto finalizado');
+    expect(fixture.nativeElement.textContent).toContain('Compartilhável com tendência feminina');
+  });
+
   it('should use the direct route ID and show loading feedback', () => {
     expect(getById).toHaveBeenCalledWith(inventoryItemId);
     expect(fixture.nativeElement.textContent).toContain('Carregando item de estoque...');
@@ -68,8 +76,8 @@ describe('InventoryItemDetailPage', () => {
       ),
     ).toEqual(['027', 'BDS']);
 
-    const operationLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find(
-      (link) => (link as HTMLAnchorElement).textContent?.includes('Abrir operações de estoque'),
+    const operationLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find((link) =>
+      (link as HTMLAnchorElement).textContent?.includes('Abrir operações de estoque'),
     ) as HTMLAnchorElement | undefined;
     expect(operationLink?.getAttribute('href')).toBe(`/inventory/items/${inventoryItemId}`);
   });
@@ -85,6 +93,7 @@ describe('InventoryItemDetailPage', () => {
     response.next({ ...item, essenceReference: null, productionTypeCode: null });
     fixture.detectChanges();
 
+    expect(fixture.nativeElement.textContent).toContain('Não informado');
     expect(fixture.nativeElement.textContent).toContain('Não atribuída.');
     expect(fixture.nativeElement.textContent).toContain('Não atribuído.');
   });
