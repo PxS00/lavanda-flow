@@ -303,7 +303,9 @@ describe('InventoryItemRegistrationPage', () => {
 
   function essenceSelector(): InventoryItemSelector {
     const selector = fixture.debugElement.query(By.directive(InventoryItemSelector));
-    expect(selector).not.toBeNull();
+    if (selector === null) {
+      throw new Error('Expected finished-product essence selector to be rendered.');
+    }
     return selector.componentInstance as InventoryItemSelector;
   }
 
