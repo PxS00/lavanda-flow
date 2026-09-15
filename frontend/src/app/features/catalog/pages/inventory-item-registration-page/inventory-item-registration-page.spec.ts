@@ -1,13 +1,15 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
 
 import {
   InventoryItemDto,
   RegisterInventoryItemRequest,
 } from '../../data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
+import { InventoryItemSelector } from '../../ui/inventory-item-selector/inventory-item-selector';
 import { InventoryItemRegistrationPage } from './inventory-item-registration-page';
 
 describe('InventoryItemRegistrationPage', () => {
@@ -22,21 +24,45 @@ describe('InventoryItemRegistrationPage', () => {
     productionTypeCode: null,
     gender: null,
   };
+  const canonicalEssence: InventoryItemDto = {
+    id: 'canonical-essence',
+    name: 'Essência Delina',
+    description: null,
+    category: 'ESSENCE',
+    unitOfMeasure: 'MILLILITER',
+    active: true,
+    essenceReference: '229',
+    productionTypeCode: null,
+    gender: 'F/C',
+  };
 
   let fixture: ComponentFixture<InventoryItemRegistrationPage>;
   let response: Subject<InventoryItemDto>;
   let register: ReturnType<
     typeof vi.fn<(request: RegisterInventoryItemRequest) => Observable<InventoryItemDto>>
   >;
+  let search: ReturnType<typeof vi.fn>;
   let router: Router;
 
   beforeEach(async () => {
     response = new Subject<InventoryItemDto>();
     register = vi.fn(() => response);
+    search = vi.fn(() =>
+      of({
+        content: [canonicalEssence],
+        page: 0,
+        size: 10,
+        totalElements: 1,
+        totalPages: 1,
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [InventoryItemRegistrationPage],
-      providers: [provideRouter([]), { provide: InventoryItemApiService, useValue: { register } }],
+      providers: [
+        provideRouter([]),
+        { provide: InventoryItemApiService, useValue: { register, search } },
+      ],
     }).compileComponents();
 
     router = TestBed.inject(Router);
@@ -50,9 +76,9 @@ describe('InventoryItemRegistrationPage', () => {
       setValidModel({
         category: 'FINISHED_PRODUCT',
         gender,
-        essenceReference: '229',
         productionTypeCode: 'PRF',
       });
+      selectEssence(canonicalEssence);
       submitForm();
       expect(register).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -66,6 +92,50 @@ describe('InventoryItemRegistrationPage', () => {
     },
   );
 
+  it('should select an active essence by name and submit its stable reference', () => {
+    setValidModel({ category: 'FINISHED_PRODUCT', productionTypeCode: 'PFM' });
+
+    const selector = essenceSelector();
+    expect(selector.category()).toBe('ESSENCE');
+
+    selectEssence(canonicalEssence);
+    submitForm();
+
+    expect(fixture.nativeElement.textContent).toContain('Essência Delina');
+    expect(fixture.nativeElement.textContent).toContain('229');
+    expect(register).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'FINISHED_PRODUCT',
+        essenceReference: '229',
+        productionTypeCode: 'PFM',
+      }),
+    );
+  });
+
+  it('should clear the derived reference when the essence selection is cleared', () => {
+    setValidModel({ category: 'FINISHED_PRODUCT', productionTypeCode: 'PFM' });
+    selectEssence(canonicalEssence);
+    selectEssence(null);
+
+    submitForm();
+
+    expect(register).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'FINISHED_PRODUCT', essenceReference: null }),
+    );
+  });
+
+  it('should reject a selected essence that has no stable reference', () => {
+    setValidModel({ category: 'FINISHED_PRODUCT', productionTypeCode: 'PFM' });
+    selectEssence({ ...canonicalEssence, essenceReference: null });
+
+    submitForm();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'A essência selecionada ainda não possui referência estável.',
+    );
+    expect(register).not.toHaveBeenCalled();
+  });
+
   it('should register an independently stocked packaged presentation', () => {
     setValidModel({ category: 'FINISHED_PRODUCT', unitOfMeasure: 'UNIT', gender: 'M/C' });
     submitForm();
@@ -74,6 +144,7 @@ describe('InventoryItemRegistrationPage', () => {
         category: 'FINISHED_PRODUCT',
         unitOfMeasure: 'UNIT',
         gender: 'M/C',
+        essenceReference: null,
       }),
     );
   });
@@ -87,7 +158,9 @@ describe('InventoryItemRegistrationPage', () => {
         error: {
           code: 'VALIDATION_ERROR',
           timestamp: '2026-09-12T12:00:00Z',
-          status: 400, error: 'Bad Request', path: '/api/v1/inventory-items',
+          status: 400,
+          error: 'Bad Request',
+          path: '/api/v1/inventory-items',
           message: 'Invalid gender',
           details: { gender: 'Not eligible' },
         },
@@ -225,6 +298,19 @@ describe('InventoryItemRegistrationPage', () => {
       gender: null,
       ...overrides,
     });
+    fixture.detectChanges();
+  }
+
+  function essenceSelector(): InventoryItemSelector {
+    const selector = fixture.debugElement.query(By.directive(InventoryItemSelector));
+    if (selector === null) {
+      throw new Error('Expected finished-product essence selector to be rendered.');
+    }
+    return selector.componentInstance as InventoryItemSelector;
+  }
+
+  function selectEssence(essence: InventoryItemDto | null): void {
+    essenceSelector().selectionChange.emit(essence);
     fixture.detectChanges();
   }
 

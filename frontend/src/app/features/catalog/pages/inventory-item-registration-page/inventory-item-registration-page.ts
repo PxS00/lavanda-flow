@@ -13,17 +13,19 @@ import { hasUnhandledDetails, localizeFieldError } from '../../../../core/http/l
 import { UiError } from '../../../../core/http/ui-error';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import {
-  ProductGender,
   InventoryItemCategory,
+  InventoryItemDto,
   InventoryItemUnitOfMeasure,
+  ProductGender,
   RegisterInventoryItemRequest,
 } from '../../data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
 import {
-  PRODUCT_GENDER_OPTIONS,
   INVENTORY_ITEM_CATEGORY_OPTIONS,
   INVENTORY_ITEM_UNIT_OPTIONS,
+  PRODUCT_GENDER_OPTIONS,
 } from '../../inventory-item-display';
+import { InventoryItemSelector } from '../../ui/inventory-item-selector/inventory-item-selector';
 
 interface RegistrationModel {
   readonly name: string;
@@ -62,6 +64,7 @@ const EMPTY_REGISTRATION: RegistrationModel = {
   imports: [
     ErrorState,
     FormField,
+    InventoryItemSelector,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -107,6 +110,13 @@ export class InventoryItemRegistrationPage {
   protected readonly genderOptions = PRODUCT_GENDER_OPTIONS;
   protected readonly categoryOptions = INVENTORY_ITEM_CATEGORY_OPTIONS;
   protected readonly unitOptions = INVENTORY_ITEM_UNIT_OPTIONS;
+  protected readonly selectedEssence = signal<InventoryItemDto | null>(null);
+  protected readonly selectedEssenceReferenceError = computed(() => {
+    const essence = this.selectedEssence();
+    return essence !== null && essence.essenceReference === null
+      ? 'A essência selecionada ainda não possui referência estável.'
+      : null;
+  });
   protected readonly isSubmitting = signal(false);
   protected readonly submissionError = signal<UiError | null>(null);
   protected readonly globalSubmissionError = computed(() => {
@@ -122,6 +132,21 @@ export class InventoryItemRegistrationPage {
 
     return hasUnhandledDetails(error, INLINE_ERROR_FIELDS) ? error : null;
   });
+
+  protected categorySelectionChanged(category: InventoryItemCategory): void {
+    if (category === 'FINISHED_PRODUCT' || this.selectedEssence() !== null) {
+      this.selectedEssence.set(null);
+      this.registrationModel.update((model) => ({ ...model, essenceReference: '' }));
+    }
+  }
+
+  protected essenceSelectionChanged(essence: InventoryItemDto | null): void {
+    this.selectedEssence.set(essence);
+    this.registrationModel.update((model) => ({
+      ...model,
+      essenceReference: essence?.essenceReference ?? '',
+    }));
+  }
 
   protected submit(event: SubmitEvent): void {
     event.preventDefault();
@@ -141,12 +166,19 @@ export class InventoryItemRegistrationPage {
       return;
     }
 
+    if (model.category === 'FINISHED_PRODUCT' && this.selectedEssenceReferenceError() !== null) {
+      return;
+    }
+
     const request: RegisterInventoryItemRequest = {
       name: model.name,
       description: normalizeDescription(model.description),
       category: model.category,
       unitOfMeasure: model.unitOfMeasure,
-      essenceReference: normalizeOptionalText(model.essenceReference),
+      essenceReference:
+        model.category === 'FINISHED_PRODUCT'
+          ? (this.selectedEssence()?.essenceReference ?? null)
+          : normalizeOptionalText(model.essenceReference),
       productionTypeCode: normalizeOptionalText(model.productionTypeCode),
       gender: model.gender,
     };

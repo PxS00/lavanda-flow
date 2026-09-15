@@ -48,6 +48,7 @@
       <mat-select
         [formField]="registrationForm.category"
         [attr.aria-describedby]="backendFieldError('category') ? 'category-backend-error' : null"
+        (selectionChange)="categorySelectionChanged($event.value)"
       >
         @for (option of categoryOptions; track option.value) {
           <mat-option [value]="option.value">{{ option.label }}</mat-option>
@@ -83,27 +84,46 @@
       <p id="unit-of-measure-backend-error" class="field-error" role="alert">{{ error }}</p>
     }
 
-    <mat-form-field appearance="outline">
-      <mat-label>Referência da essência</mat-label>
-      <input
-        matInput
-        inputmode="numeric"
-        [formField]="registrationForm.essenceReference"
-        autocomplete="off"
-        [attr.aria-describedby]="
-          backendFieldError('essenceReference') ? 'essence-reference-backend-error' : null
-        "
-      />
-      <mat-hint>Opcional · atribuição estável e deliberada · de 001 a 999</mat-hint>
-      @if (
-        registrationForm.essenceReference().touched() &&
-        registrationForm.essenceReference().invalid()
-      ) {
-        <mat-error>{{ registrationForm.essenceReference().errors()[0].message }}</mat-error>
+    @if (registrationModel().category === 'FINISHED_PRODUCT') {
+      <div class="essence-selector-field">
+        <p><strong>Essência / fragrância</strong></p>
+        <p>Selecione pelo nome. A referência estável será preenchida automaticamente.</p>
+        <app-inventory-item-selector
+          [category]="'ESSENCE'"
+          [selected]="selectedEssence()"
+          [disabled]="isSubmitting()"
+          (selectionChange)="essenceSelectionChanged($event)"
+        />
+        @if (selectedEssenceReferenceError(); as error) {
+          <p class="field-error" role="alert">{{ error }}</p>
+        }
+        @if (backendFieldError('essenceReference'); as error) {
+          <p id="essence-reference-backend-error" class="field-error" role="alert">{{ error }}</p>
+        }
+      </div>
+    } @else {
+      <mat-form-field appearance="outline">
+        <mat-label>Referência da essência</mat-label>
+        <input
+          matInput
+          inputmode="numeric"
+          [formField]="registrationForm.essenceReference"
+          autocomplete="off"
+          [attr.aria-describedby]="
+            backendFieldError('essenceReference') ? 'essence-reference-backend-error' : null
+          "
+        />
+        <mat-hint>Opcional · atribuição estável e deliberada · de 001 a 999</mat-hint>
+        @if (
+          registrationForm.essenceReference().touched() &&
+          registrationForm.essenceReference().invalid()
+        ) {
+          <mat-error>{{ registrationForm.essenceReference().errors()[0].message }}</mat-error>
+        }
+      </mat-form-field>
+      @if (backendFieldError('essenceReference'); as error) {
+        <p id="essence-reference-backend-error" class="field-error" role="alert">{{ error }}</p>
       }
-    </mat-form-field>
-    @if (backendFieldError('essenceReference'); as error) {
-      <p id="essence-reference-backend-error" class="field-error" role="alert">{{ error }}</p>
     }
 
     <mat-form-field appearance="outline">

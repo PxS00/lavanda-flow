@@ -57,6 +57,25 @@ describe('InventoryItemSelector', () => {
     expect(search).toHaveBeenCalledWith({ name: '', active: true, page: 0, size: 10 });
   });
 
+  it('should apply the requested category to subsequent searches', () => {
+    fixture.componentRef.setInput('category', 'ESSENCE');
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('.search-field input') as HTMLInputElement;
+    input.value = 'lavanda';
+    input.dispatchEvent(new Event('input'));
+    vi.advanceTimersByTime(200);
+    fixture.detectChanges();
+
+    expect(search).toHaveBeenLastCalledWith({
+      name: 'lavanda',
+      active: true,
+      category: 'ESSENCE',
+      page: 0,
+      size: 10,
+    });
+  });
+
   it('associates the search helper without changing selector guidance', () => {
     const searchField = fixture.nativeElement.querySelector('.search-field') as HTMLElement;
     const input = searchField.querySelector('input') as HTMLInputElement;
@@ -64,7 +83,9 @@ describe('InventoryItemSelector', () => {
 
     expect(helper.textContent?.trim()).toBe('Os resultados são limitados a 10 itens ativos');
     expect(input.getAttribute('aria-describedby')).toContain('inventory-item-search-hint');
-    expect(fixture.nativeElement.querySelector('.selector-heading h2')?.textContent?.trim()).toBe('Item de estoque');
+    expect(fixture.nativeElement.querySelector('.selector-heading h2')?.textContent?.trim()).toBe(
+      'Item de estoque',
+    );
     expect(fixture.nativeElement.querySelector('.selector-heading p')?.textContent?.trim()).toBe(
       'Busca apenas itens ativos do catálogo.',
     );
