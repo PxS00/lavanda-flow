@@ -3,13 +3,23 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
+import {
+  Subject,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  map,
+  of,
+  startWith,
+  switchMap,
+  tap,
+} from 'rxjs';
 
 import { mapHttpError } from '../../../../core/http/map-http-error';
 import { UiError } from '../../../../core/http/ui-error';
 import { ErrorState } from '../../../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../../../shared/ui/loading-state/loading-state';
-import { InventoryItemDto } from '../../data-access/inventory-item.dto';
+import { InventoryItemCategory, InventoryItemDto } from '../../data-access/inventory-item.dto';
 import { InventoryItemApiService } from '../../data-access/inventory-item-api.service';
 import { inventoryItemUnitLabel } from '../../inventory-item-display';
 import { InventoryItemReferenceMetadata } from '../inventory-item-reference-metadata/inventory-item-reference-metadata';
@@ -23,7 +33,14 @@ type SearchState =
 
 @Component({
   selector: 'app-inventory-item-selector',
-  imports: [ErrorState, InventoryItemReferenceMetadata, LoadingState, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [
+    ErrorState,
+    InventoryItemReferenceMetadata,
+    LoadingState,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+  ],
   templateUrl: './inventory-item-selector.html',
   styleUrl: './inventory-item-selector.scss',
 })
@@ -34,6 +51,7 @@ export class InventoryItemSelector {
 
   readonly selected = input<InventoryItemDto | null>(null);
   readonly disabled = input(false);
+  readonly category = input<InventoryItemCategory | undefined>(undefined);
   readonly selectionChange = output<InventoryItemDto | null>();
 
   protected readonly query = signal('');
@@ -54,14 +72,23 @@ export class InventoryItemSelector {
         debounceTime(180),
         distinctUntilChanged(),
         tap(() => this.state.set({ kind: 'loading' })),
-        switchMap((name) =>
-          this.api.search({ name, active: true, page: 0, size: SEARCH_PAGE_SIZE }).pipe(
-            map((page): SearchState => ({ kind: 'loaded', items: page.content })),
-            catchError((error: unknown) =>
-              of<SearchState>({ kind: 'error', error: mapHttpError(error) }),
-            ),
-          ),
-        ),
+        switchMap((name) => {
+          const category = this.category();
+          return this.api
+            .search({
+              name,
+              active: true,
+              page: 0,
+              size: SEARCH_PAGE_SIZE,
+              ...(category === undefined ? {} : { category }),
+            })
+            .pipe(
+              map((page): SearchState => ({ kind: 'loaded', items: page.content })),
+              catchError((error: unknown) =>
+                of<SearchState>({ kind: 'error', error: mapHttpError(error) }),
+              ),
+            );
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((state) => this.state.set(state));
