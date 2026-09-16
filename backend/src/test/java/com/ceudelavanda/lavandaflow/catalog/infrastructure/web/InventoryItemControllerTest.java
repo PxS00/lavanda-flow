@@ -9,6 +9,9 @@ import com.ceudelavanda.lavandaflow.catalog.application.InventoryItemSearchQuery
 import com.ceudelavanda.lavandaflow.catalog.application.RegisterInventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.application.RegisterInventoryItemCommand;
 import com.ceudelavanda.lavandaflow.catalog.application.SearchInventoryItems;
+import com.ceudelavanda.lavandaflow.catalog.application.UpdateInventoryItem;
+import com.ceudelavanda.lavandaflow.catalog.application.UpdateInventoryItemCommand;
+import com.ceudelavanda.lavandaflow.catalog.application.InvalidInventoryItemMaintenanceException;
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import org.junit.jupiter.api.Test;
@@ -29,9 +32,11 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,6 +57,9 @@ class InventoryItemControllerTest {
 
     @MockitoBean
     private SearchInventoryItems searchInventoryItems;
+
+    @MockitoBean
+    private UpdateInventoryItem updateInventoryItem;
 
     @ParameterizedTest
     @EnumSource(ProductGender.class)
@@ -222,6 +230,94 @@ class InventoryItemControllerTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("INVENTORY_ITEM_NOT_FOUND"))
             .andExpect(jsonPath("$.details.inventoryItemId").value(itemId.toString()));
+    }
+
+    @Test
+    void shouldUpdateSupportedInventoryItemFields() throws Exception {
+        var itemId = UUID.randomUUID();
+        var command = new UpdateInventoryItemCommand(
+            itemId, "Lavanda Premium", "Updated description", false, "014", "PRF"
+        );
+        var result = new InventoryItemResult(
+            itemId, "Lavanda Premium", "Updated description", Category.ESSENCE,
+            UnitOfMeasure.MILLILITER, false, "014", "PRF"
+        );
+        when(updateInventoryItem.execute(command)).thenReturn(result);
+
+        mockMvc.perform(put("/api/v1/inventory-items/{inventoryItemId}", itemId)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"name":"Lavanda Premium","description":"Updated description","active":false,
+                     "essenceReference":"014","productionTypeCode":"PRF"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(itemId.toString()))
+            .andExpect(jsonPath("$.name").value("Lavanda Premium"))
+            .andExpect(jsonPath("$.active").value(false))
+            .andExpect(jsonPath("$.essenceReference").value("014"));
+
+        verify(updateInventoryItem).execute(command);
+    }
+
+    @Test
+    void shouldValidateUpdateRequestAndRequireCsrf() throws Exception {
+        var itemId = UUID.randomUUID();
+        var body = """
+            {"name":" ","active":null,"essenceReference":"000","productionTypeCode":"prf"}
+            """;
+
+        mockMvc.perform(put("/api/v1/inventory-items/{inventoryItemId}", itemId)
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.details.name").exists())
+            .andExpect(jsonPath("$.details.active").exists())
+            .andExpect(jsonPath("$.details.essenceReference").exists())
+            .andExpect(jsonPath("$.details.productionTypeCode").exists());
+
+        mockMvc.perform(put("/api/v1/inventory-items/{inventoryItemId}", itemId)
+                .contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRejectAnonymousUpdate() throws Exception {
+        var itemId = UUID.randomUUID();
+
+        mockMvc.perform(put("/api/v1/inventory-items/{inventoryItemId}", itemId)
+                .with(anonymous()).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Essence\",\"active\":true}"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldReturnNotFoundForUpdate() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(updateInventoryItem.execute(new UpdateInventoryItemCommand(
+            itemId, "Essence", null, true, null, null
+        ))).thenThrow(new InventoryItemNotFoundException(itemId));
+
+        mockMvc.perform(put("/api/v1/inventory-items/{inventoryItemId}", itemId)
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Essence\",\"active\":true}"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("INVENTORY_ITEM_NOT_FOUND"));
+    }
+
+    @Test
+    void shouldExposeStableMetadataRejectionAsStructuredBusinessError() throws Exception {
+        var itemId = UUID.randomUUID();
+        when(updateInventoryItem.execute(new UpdateInventoryItemCommand(
+            itemId, "Essence", null, true, "015", "ESS"
+        ))).thenThrow(InvalidInventoryItemMaintenanceException.immutable("essenceReference"));
+
+        mockMvc.perform(put("/api/v1/inventory-items/{inventoryItemId}", itemId)
+                .with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Essence\",\"active\":true,\"essenceReference\":\"015\",\"productionTypeCode\":\"ESS\"}"))
+            .andExpect(status().isUnprocessableContent())
+            .andExpect(jsonPath("$.code").value("INVENTORY_ITEM_STABLE_METADATA_IMMUTABLE"))
+            .andExpect(jsonPath("$.details.essenceReference").exists());
     }
 
     @Test

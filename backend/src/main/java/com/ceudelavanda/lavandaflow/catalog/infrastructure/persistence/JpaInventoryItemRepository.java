@@ -2,6 +2,9 @@ package com.ceudelavanda.lavandaflow.catalog.infrastructure.persistence;
 
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItemRepository;
+import com.ceudelavanda.lavandaflow.catalog.application.InvalidInventoryItemMaintenanceException;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -28,10 +31,17 @@ class JpaInventoryItemRepository
 
     @Override
     public InventoryItem save(InventoryItem item) {
-        var entity = InventoryItemMapper.toEntity(item);
-        var savedEntity = repository.save(entity);
+        try {
+            var entity = InventoryItemMapper.toEntity(item);
+            var savedEntity = repository.saveAndFlush(entity);
 
-        return InventoryItemMapper.toDomain(savedEntity);
+            return InventoryItemMapper.toDomain(savedEntity);
+        } catch (DataIntegrityViolationException exception) {
+            if (hasCanonicalEssenceReferenceConflict(exception)) {
+                throw InvalidInventoryItemMaintenanceException.canonicalEssenceReferenceConflict();
+            }
+            throw exception;
+        }
     }
 
     @Override
@@ -52,5 +62,15 @@ class JpaInventoryItemRepository
         return repository.findAllById(ids).stream()
             .map(InventoryItemMapper::toDomain)
             .toList();
+    }
+
+    private static boolean hasCanonicalEssenceReferenceConflict(Throwable exception) {
+        for (var cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException constraintViolation
+                && "uq_inventory_item_essence_reference".equals(constraintViolation.getConstraintName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

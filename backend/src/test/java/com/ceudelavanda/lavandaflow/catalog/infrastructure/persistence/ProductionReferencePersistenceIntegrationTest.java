@@ -2,6 +2,7 @@ package com.ceudelavanda.lavandaflow.catalog.infrastructure.persistence;
 
 import com.ceudelavanda.lavandaflow.TestcontainersConfiguration;
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
+import com.ceudelavanda.lavandaflow.catalog.application.InvalidInventoryItemMaintenanceException;
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.domain.InventoryItemRepository;
@@ -59,7 +60,7 @@ class ProductionReferencePersistenceIntegrationTest {
         );
 
         assertThatThrownBy(() -> inventoryItemRepository.save(duplicate))
-            .isInstanceOf(DataAccessException.class);
+            .isInstanceOf(InvalidInventoryItemMaintenanceException.class);
         assertThatThrownBy(() -> jdbcTemplate.update(
             "update inventory_item set essence_reference = ? where id = ?", "148", first.getId()
         )).isInstanceOf(DataAccessException.class);
