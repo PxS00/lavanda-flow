@@ -8,6 +8,7 @@ import {
   InventoryItemPageDto,
   InventoryItemSearchQuery,
   RegisterInventoryItemRequest,
+  UpdateInventoryItemRequest,
 } from './inventory-item.dto';
 
 /** Typed HTTP client for the catalog inventory-item endpoints. */
@@ -42,6 +43,13 @@ export class InventoryItemApiService {
 
   register(request: RegisterInventoryItemRequest): Observable<InventoryItemDto> {
     return this.http.post<InventoryItemDto>(this.inventoryItemsUrl, request);
+  }
+
+  update(
+    inventoryItemId: string,
+    request: UpdateInventoryItemRequest,
+  ): Observable<InventoryItemDto> {
+    return this.http.put<InventoryItemDto>(`${this.inventoryItemsUrl}/${inventoryItemId}`, request);
   }
 }
 

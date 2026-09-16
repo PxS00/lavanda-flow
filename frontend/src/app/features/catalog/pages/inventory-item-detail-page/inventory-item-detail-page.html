@@ -15,6 +15,13 @@
       <header>
         <h2>{{ currentState.item.name }}</h2>
         <p>{{ currentState.item.active ? 'Ativo' : 'Inativo' }}</p>
+        <a
+          mat-stroked-button
+          [routerLink]="['/catalog', currentState.item.id, 'edit']"
+          aria-label="Editar item de estoque"
+        >
+          Editar item
+        </a>
         <a mat-flat-button [routerLink]="['/inventory/items', currentState.item.id]">
           Abrir operações de estoque
         </a>

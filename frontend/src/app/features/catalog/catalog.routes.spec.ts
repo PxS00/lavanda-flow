@@ -58,4 +58,10 @@ describe('catalog routes', () => {
 
     expect(harness.routeNativeElement?.textContent).toContain('Direct item');
   });
+
+  it('should resolve the edit route before the detail route', async () => {
+    const harness = await RouterTestingHarness.create('/catalog/item-123/edit');
+
+    expect(harness.routeNativeElement?.textContent).toContain('Editar item de estoque');
+  });
 });
