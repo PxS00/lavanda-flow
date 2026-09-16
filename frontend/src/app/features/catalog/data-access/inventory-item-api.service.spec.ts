@@ -7,6 +7,7 @@ import {
   InventoryItemDto,
   InventoryItemPageDto,
   RegisterInventoryItemRequest,
+  UpdateInventoryItemRequest,
 } from './inventory-item.dto';
 import { InventoryItemApiService } from './inventory-item-api.service';
 
@@ -145,5 +146,29 @@ describe('InventoryItemApiService', () => {
     request.flush(item);
 
     expect(result).toEqual(item);
+  });
+
+  it('should update an inventory item with the exact request body', () => {
+    const requestBody: UpdateInventoryItemRequest = {
+      name: 'Lavender Premium',
+      description: null,
+      active: false,
+      essenceReference: '027',
+      productionTypeCode: 'BDS',
+    };
+    let result: InventoryItemDto | undefined;
+
+    service.update(item.id, requestBody).subscribe((response) => {
+      result = response;
+    });
+
+    const request = httpTesting.expectOne(`${inventoryItemsUrl}/${item.id}`);
+
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual(requestBody);
+    request.flush({ ...item, name: 'Lavender Premium', active: false, description: null });
+
+    expect(result?.name).toBe('Lavender Premium');
+    expect(result?.active).toBe(false);
   });
 });

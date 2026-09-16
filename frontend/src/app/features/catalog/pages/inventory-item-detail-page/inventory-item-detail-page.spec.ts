@@ -80,6 +80,11 @@ describe('InventoryItemDetailPage', () => {
       (link as HTMLAnchorElement).textContent?.includes('Abrir operações de estoque'),
     ) as HTMLAnchorElement | undefined;
     expect(operationLink?.getAttribute('href')).toBe(`/inventory/items/${inventoryItemId}`);
+
+    const editLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find((link) =>
+      (link as HTMLAnchorElement).textContent?.includes('Editar item'),
+    ) as HTMLAnchorElement | undefined;
+    expect(editLink?.getAttribute('href')).toBe(`/catalog/${inventoryItemId}/edit`);
   });
 
   it('should render the mapped not-found state', () => {
