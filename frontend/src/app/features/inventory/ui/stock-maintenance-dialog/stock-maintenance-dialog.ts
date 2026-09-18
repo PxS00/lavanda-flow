@@ -31,13 +31,16 @@ import {
   StockMaintenanceRequest,
 } from '../../data-access/stock-maintenance.dto';
 
-type StockMaintenanceOperation = 'ADJUSTMENT' | 'LOSS' | 'EXPIRED_DISPOSAL';
+export type StockMaintenanceOperation = 'ADJUSTMENT' | 'LOSS' | 'EXPIRED_DISPOSAL';
 
 interface PendingMaintenance extends StockMaintenanceRequest {
   readonly operation: StockMaintenanceOperation;
 }
 
-export type StockMaintenanceDialogData = BatchInventoryEntryDto;
+export interface StockMaintenanceDialogData {
+  readonly batch: BatchInventoryEntryDto;
+  readonly initialOperation?: StockMaintenanceOperation;
+}
 
 const ADJUSTMENT_PATTERN = /^-?\d{1,13}(?:\.\d{1,6})?$/;
 const POSITIVE_PATTERN = /^\d{1,13}(?:\.\d{1,6})?$/;
@@ -64,9 +67,13 @@ export class StockMaintenanceDialog {
   );
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly batch = inject<StockMaintenanceDialogData>(MAT_DIALOG_DATA);
+  private readonly data = inject<StockMaintenanceDialogData>(MAT_DIALOG_DATA);
+  readonly batch = this.data.batch;
   readonly maintenanceForm = new FormGroup({
-    operation: new FormControl<StockMaintenanceOperation>('ADJUSTMENT', { nonNullable: true }),
+    operation: new FormControl<StockMaintenanceOperation>(
+      this.data.initialOperation ?? 'ADJUSTMENT',
+      { nonNullable: true },
+    ),
     quantity: new FormControl('', { nonNullable: true, validators: [quantityValidator] }),
     reason: new FormControl('', {
       nonNullable: true,

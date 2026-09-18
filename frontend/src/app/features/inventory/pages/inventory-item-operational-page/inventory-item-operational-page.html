@@ -9,6 +9,9 @@
   @if (maintenanceNotice(); as notice) {
     <p class="notice" aria-live="polite">{{ notice }}</p>
   }
+  @if (batchTargetNotice(); as notice) {
+    <p class="notice" aria-live="polite">{{ notice }}</p>
+  }
 
   <section class="panel" aria-labelledby="overview-heading">
     <h2 id="overview-heading">Visão geral</h2>
@@ -136,7 +139,7 @@
     />
   }
 
-  <section class="panel" aria-labelledby="batches-heading">
+  <section id="batches" class="panel" aria-labelledby="batches-heading">
     <h2 id="batches-heading">Lotes</h2>
     @let batches = batchState();
     @switch (batches.kind) {
@@ -176,9 +179,12 @@
               </thead>
               <tbody>
                 @for (batch of batches.data.batches; track batch.batchId) {
-                  <tr>
+                  <tr [class.batch-targeted]="targetedBatchId() === batch.batchId">
                     <td>
                       <strong>{{ batchStatusLabel(batch.status) }}</strong>
+                      @if (targetedBatchId() === batch.batchId) {
+                        <span class="batch-target-label">Lote selecionado</span>
+                      }
                     </td>
                     <td>{{ batch.lotCode || '—' }}</td>
                     <td>{{ batch.supplierId || '—' }}</td>
