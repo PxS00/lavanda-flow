@@ -9,6 +9,8 @@ import com.ceudelavanda.lavandaflow.suppliers.application.SupplierNotFoundExcept
 import com.ceudelavanda.lavandaflow.suppliers.application.SupplierPage;
 import com.ceudelavanda.lavandaflow.suppliers.application.SupplierResult;
 import com.ceudelavanda.lavandaflow.suppliers.application.SupplierSearchQuery;
+import com.ceudelavanda.lavandaflow.suppliers.application.UpdateSupplier;
+import com.ceudelavanda.lavandaflow.suppliers.application.UpdateSupplierCommand;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -24,8 +26,10 @@ import java.util.UUID;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -37,6 +41,7 @@ class SupplierControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @MockitoBean private RegisterSupplier registerSupplier;
+    @MockitoBean private UpdateSupplier updateSupplier;
     @MockitoBean private GetSupplier getSupplier;
     @MockitoBean private SearchSuppliers searchSuppliers;
 
@@ -104,6 +109,83 @@ class SupplierControllerTest {
         when(getSupplier.execute(supplierId)).thenThrow(new SupplierNotFoundException(supplierId));
 
         mockMvc.perform(get("/api/v1/suppliers/{supplierId}", supplierId))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("SUPPLIER_NOT_FOUND"))
+            .andExpect(jsonPath("$.details.supplierId").value(supplierId.toString()));
+    }
+
+    @Test
+    void shouldUpdateSupplier() throws Exception {
+        var supplierId = UUID.randomUUID();
+        var command = new UpdateSupplierCommand(
+            supplierId, "Updated supplier", "ID-223", "updated@example.com", "Updated notes", false
+        );
+        when(updateSupplier.execute(command)).thenReturn(new SupplierResult(
+            supplierId, "Updated supplier", "ID-223", "updated@example.com", "Updated notes", false
+        ));
+
+        mockMvc.perform(put("/api/v1/suppliers/{supplierId}", supplierId)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "name": "Updated supplier",
+                      "identifier": "ID-223",
+                      "contact": "updated@example.com",
+                      "notes": "Updated notes",
+                      "active": false
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(supplierId.toString()))
+            .andExpect(jsonPath("$.name").value("Updated supplier"))
+            .andExpect(jsonPath("$.identifier").value("ID-223"))
+            .andExpect(jsonPath("$.contact").value("updated@example.com"))
+            .andExpect(jsonPath("$.notes").value("Updated notes"))
+            .andExpect(jsonPath("$.active").value(false));
+
+        verify(updateSupplier).execute(command);
+    }
+
+    @Test
+    void shouldValidateAndSecureSupplierUpdate() throws Exception {
+        var supplierId = UUID.randomUUID();
+        var body = """
+            {"name":" ","identifier":"ID-223","active":null}
+            """;
+
+        mockMvc.perform(put("/api/v1/suppliers/{supplierId}", supplierId)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.details.name").exists())
+            .andExpect(jsonPath("$.details.active").exists());
+
+        mockMvc.perform(put("/api/v1/suppliers/{supplierId}", supplierId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(put("/api/v1/suppliers/{supplierId}", supplierId)
+                .with(anonymous())
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Supplier\",\"active\":true}"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldReturnNotFoundForSupplierUpdate() throws Exception {
+        var supplierId = UUID.randomUUID();
+        var command = new UpdateSupplierCommand(supplierId, "Supplier", null, null, null, true);
+        when(updateSupplier.execute(command)).thenThrow(new SupplierNotFoundException(supplierId));
+
+        mockMvc.perform(put("/api/v1/suppliers/{supplierId}", supplierId)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Supplier\",\"active\":true}"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("SUPPLIER_NOT_FOUND"))
             .andExpect(jsonPath("$.details.supplierId").value(supplierId.toString()));

@@ -7,10 +7,13 @@ import com.ceudelavanda.lavandaflow.catalog.application.RegisterInventoryItemCom
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.inventory.application.batch.GetBatchInventory;
 import com.ceudelavanda.lavandaflow.inventory.domain.BatchRepository;
+import com.ceudelavanda.lavandaflow.inventory.domain.exception.InactiveSupplierException;
 import com.ceudelavanda.lavandaflow.inventory.domain.MovementType;
 import com.ceudelavanda.lavandaflow.inventory.domain.StockMovementRepository;
 import com.ceudelavanda.lavandaflow.suppliers.application.RegisterSupplier;
 import com.ceudelavanda.lavandaflow.suppliers.application.RegisterSupplierCommand;
+import com.ceudelavanda.lavandaflow.suppliers.application.UpdateSupplier;
+import com.ceudelavanda.lavandaflow.suppliers.application.UpdateSupplierCommand;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -29,6 +33,7 @@ class RegisterStockReceiptIntegrationTest {
 
     @Autowired private RegisterInventoryItem registerInventoryItem;
     @Autowired private RegisterSupplier registerSupplier;
+    @Autowired private UpdateSupplier updateSupplier;
     @Autowired private RegisterStockReceipt registerStockReceipt;
     @Autowired private BatchRepository batchRepository;
     @Autowired private StockMovementRepository stockMovementRepository;
@@ -83,5 +88,63 @@ class RegisterStockReceiptIntegrationTest {
                 assertThat(entry.supplierId()).isEqualTo(supplier.id());
                 assertThat(entry.lotCode()).isEqualTo("LOT-96-INTEGRATION");
             });
+    }
+
+    @Test
+    void shouldApplySupplierMaintenanceToNewReceiptsWithoutChangingExistingBatchOrigin() {
+        var item = registerInventoryItem.execute(new RegisterInventoryItemCommand(
+            "Receipt-223 essence",
+            "Supplier maintenance integration fixture",
+            Category.ESSENCE,
+            UnitOfMeasure.MILLILITER
+        ));
+        var supplier = registerSupplier.execute(new RegisterSupplierCommand(
+            "Receipt-223 supplier",
+            "SUP-223",
+            "supplier@example.test",
+            null
+        ));
+        var today = LocalDate.now();
+        var firstReceipt = registerStockReceipt.execute(new RegisterStockReceiptCommand(
+            item.id(),
+            supplier.id(),
+            "LOT-223-ORIGINAL",
+            new BigDecimal("10.000000"),
+            today,
+            today.plusYears(1),
+            "Initial receipt"
+        ));
+
+        updateSupplier.execute(new UpdateSupplierCommand(
+            supplier.id(), supplier.name(), supplier.identifier(), supplier.contact(), supplier.notes(), false
+        ));
+
+        assertThatThrownBy(() -> registerStockReceipt.execute(new RegisterStockReceiptCommand(
+            item.id(),
+            supplier.id(),
+            "LOT-223-INACTIVE",
+            new BigDecimal("10.000000"),
+            today,
+            today.plusYears(1),
+            "Rejected receipt"
+        ))).isInstanceOf(InactiveSupplierException.class);
+        assertThat(batchRepository.findById(firstReceipt.batchId()).orElseThrow().getSupplierId())
+            .isEqualTo(supplier.id());
+
+        updateSupplier.execute(new UpdateSupplierCommand(
+            supplier.id(), supplier.name(), supplier.identifier(), supplier.contact(), supplier.notes(), true
+        ));
+
+        var reactivatedReceipt = registerStockReceipt.execute(new RegisterStockReceiptCommand(
+            item.id(),
+            supplier.id(),
+            "LOT-223-REACTIVATED",
+            new BigDecimal("10.000000"),
+            today,
+            today.plusYears(1),
+            "Reactivated receipt"
+        ));
+
+        assertThat(reactivatedReceipt.supplierId()).isEqualTo(supplier.id());
     }
 }
