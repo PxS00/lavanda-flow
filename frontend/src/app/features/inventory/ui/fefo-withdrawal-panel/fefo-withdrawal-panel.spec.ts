@@ -51,6 +51,7 @@ describe('FefoWithdrawalPanel', () => {
   it('should explain automatic FEFO allocation before confirmation without manual allocation controls', () => {
     const text = fixture.nativeElement.textContent as string;
 
+    expect(text).toContain('Registrar saída');
     expect(text).toContain('Informe a quantidade desejada');
     expect(text).toContain('seleciona automaticamente os lotes elegíveis por validade (FEFO)');
     expect(text).toContain('não é alterada manualmente');

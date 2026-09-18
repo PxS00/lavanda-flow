@@ -499,6 +499,7 @@ export class InventoryItemOperationalPage {
 function formatEnumLabel(value: string): string {
   const labels: Readonly<Record<string, string>> = {
     ESSENCE: 'Essência',
+    FINISHED_PRODUCT: 'Produto finalizado',
     CHEMICAL_INPUT: 'Insumo químico',
     BASE: 'Base',
     ALCOHOL: 'Álcool',

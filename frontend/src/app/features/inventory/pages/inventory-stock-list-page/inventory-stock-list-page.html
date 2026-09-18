@@ -1,0 +1,92 @@
+<section class="stock-page" aria-labelledby="stock-heading">
+  <header class="page-header">
+    <div>
+      <h1 id="stock-heading">{{ title }}</h1>
+      <p>{{ helperText }}</p>
+    </div>
+  </header>
+
+  <nav class="group-navigation" aria-label="Grupos de estoque">
+    <a mat-stroked-button routerLink="/inventory/all" routerLinkActive="active-group" ariaCurrentWhenActive="page">Todo o estoque</a>
+    <a mat-stroked-button routerLink="/inventory/finished-products" routerLinkActive="active-group" ariaCurrentWhenActive="page">Produtos finalizados</a>
+    <a mat-stroked-button routerLink="/inventory/essences" routerLinkActive="active-group" ariaCurrentWhenActive="page">Essências</a>
+    <a mat-stroked-button routerLink="/inventory/inputs" routerLinkActive="active-group" ariaCurrentWhenActive="page">Insumos</a>
+    <a mat-stroked-button routerLink="/inventory/packaging" routerLinkActive="active-group" ariaCurrentWhenActive="page">Embalagens e componentes</a>
+  </nav>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando estoque..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      @if (currentState.page.content.length === 0) {
+        <app-empty-state title="Nenhum item encontrado" message="Não há itens neste grupo de estoque." />
+      } @else {
+        <p class="context" aria-live="polite">
+          {{ currentState.page.totalElements }} item(ns) · posição do estoque em
+          {{ formatDate(currentState.page.asOfDate) }}
+        </p>
+        <div class="table-scroll">
+          <table>
+            <caption>Estoque físico e disponível confirmado pelo sistema</caption>
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col">Estoque</th>
+                <th scope="col">Status</th>
+                <th scope="col">Validade e referências</th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of currentState.page.content; track item.inventoryItemId) {
+                <tr>
+                  <td>
+                    <strong>{{ item.name }}</strong>
+                    <span>{{ categoryLabel(item.category) }} · {{ item.active ? 'Ativo' : 'Inativo' }}</span>
+                  </td>
+                  <td>
+                    <span>Físico: {{ formatDecimal(item.totalCurrentQuantity) }} {{ unitLabel(item.unitOfMeasure) }}</span>
+                    <span>Disponível: {{ formatDecimal(item.availableQuantity) }} {{ unitLabel(item.unitOfMeasure) }}</span>
+                    <span>{{ item.nonZeroBatchCount }} lote(s) com saldo</span>
+                  </td>
+                  <td>
+                    <strong>{{ stockStatus(item) }}</strong>
+                    @if (item.minimumQuantity !== null) {
+                      <span>Mínimo: {{ formatDecimal(item.minimumQuantity) }} {{ unitLabel(item.unitOfMeasure) }}</span>
+                    }
+                  </td>
+                  <td>
+                    <span>Próxima validade: {{ item.nearestExpiration ? formatDate(item.nearestExpiration) : 'Nenhuma' }}</span>
+                    @if (item.essenceReference) { <span>Referência da essência: {{ item.essenceReference }}</span> }
+                    @if (item.productionTypeCode) { <span>Tipo de produção: {{ item.productionTypeCode }}</span> }
+                  </td>
+                  <td class="actions">
+                    <a mat-button [routerLink]="['/inventory/items', item.inventoryItemId]" [attr.aria-label]="'Abrir estoque de ' + item.name">Abrir estoque</a>
+                    @if (item.active) {
+                      <a mat-button routerLink="/receipts" [queryParams]="{ inventoryItemId: item.inventoryItemId }" [attr.aria-label]="'Registrar entrada de ' + item.name">Registrar entrada</a>
+                      <a mat-button [routerLink]="['/inventory/items', item.inventoryItemId]" [attr.aria-label]="'Registrar saída de ' + item.name">Registrar saída</a>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <mat-paginator
+          aria-label="Páginas do estoque"
+          [length]="currentState.page.totalElements"
+          [pageIndex]="currentState.page.page"
+          [pageSize]="currentState.page.size"
+          [pageSizeOptions]="[20, 50, 100]"
+          (page)="changePage($event)"
+        />
+      }
+    }
+  }
+</section>

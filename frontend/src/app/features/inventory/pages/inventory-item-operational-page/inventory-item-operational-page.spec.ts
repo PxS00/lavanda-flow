@@ -172,6 +172,16 @@ describe('InventoryItemOperationalPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Carregando histórico de movimentações...');
   });
 
+  it('should present finished products in Portuguese and return to the stock workspace', () => {
+    overviewResponse.next({ ...overview, category: 'FINISHED_PRODUCT' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Produto finalizado');
+    const returnLink = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
+    expect(returnLink.textContent).toContain('Voltar ao estoque');
+    expect(returnLink.getAttribute('href')).toBe('/inventory');
+  });
+
   it('should render catalog references once at item identity level', () => {
     overviewResponse.next(overview);
     catalogResponse.next({
