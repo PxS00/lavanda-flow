@@ -9,6 +9,9 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** PostgreSQL projection for one inventory item's operational overview metrics. */
@@ -16,8 +19,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 class JpaInventoryItemOverviewQuery implements InventoryItemOverviewQuery {
 
-    private static final String SQL = """
+    private static final String BATCH_METRICS_SQL = """
         SELECT
+            batch.inventory_item_id,
             COALESCE(SUM(batch.current_quantity), CAST(0 AS NUMERIC(19, 6))),
             COALESCE(SUM(
                 CASE
@@ -27,11 +31,6 @@ class JpaInventoryItemOverviewQuery implements InventoryItemOverviewQuery {
                     ELSE CAST(0 AS NUMERIC(19, 6))
                 END
             ), CAST(0 AS NUMERIC(19, 6))),
-            (
-                SELECT minimum.minimum_quantity
-                FROM inventory_minimum_stock_level minimum
-                WHERE minimum.inventory_item_id = :inventoryItemId
-            ),
             COUNT(*) FILTER (WHERE batch.current_quantity > 0),
             MIN(batch.expires_at) FILTER (
                 WHERE batch.current_quantity > 0
@@ -48,7 +47,14 @@ class JpaInventoryItemOverviewQuery implements InventoryItemOverviewQuery {
                   AND batch.expires_at <= :expirationCutoff
             )
         FROM inventory_batch batch
-        WHERE batch.inventory_item_id = :inventoryItemId
+        WHERE batch.inventory_item_id IN (:inventoryItemIds)
+        GROUP BY batch.inventory_item_id
+        """;
+
+    private static final String MINIMUM_SQL = """
+        SELECT minimum.inventory_item_id, minimum.minimum_quantity
+        FROM inventory_minimum_stock_level minimum
+        WHERE minimum.inventory_item_id IN (:inventoryItemIds)
         """;
 
     private final EntityManager entityManager;
@@ -59,21 +65,49 @@ class JpaInventoryItemOverviewQuery implements InventoryItemOverviewQuery {
         LocalDate asOfDate,
         LocalDate expirationCutoff
     ) {
-        var row = (Object[]) entityManager.createNativeQuery(SQL)
-            .setParameter("inventoryItemId", inventoryItemId)
+        return findMetrics(Set.of(inventoryItemId), asOfDate, expirationCutoff).get(inventoryItemId);
+    }
+
+    @Override
+    public Map<UUID, InventoryItemOverviewMetrics> findMetrics(
+        Set<UUID> inventoryItemIds,
+        LocalDate asOfDate,
+        LocalDate expirationCutoff
+    ) {
+        if (inventoryItemIds.isEmpty()) {
+            return Map.of();
+        }
+
+        var minimums = new HashMap<UUID, BigDecimal>();
+        entityManager.createNativeQuery(MINIMUM_SQL)
+            .setParameter("inventoryItemIds", inventoryItemIds)
+            .getResultList()
+            .forEach(value -> {
+                var row = (Object[]) value;
+                minimums.put((UUID) row[0], (BigDecimal) row[1]);
+            });
+
+        var result = new HashMap<UUID, InventoryItemOverviewMetrics>();
+        inventoryItemIds.forEach(id -> result.put(id, InventoryItemOverviewMetrics.zero(minimums.get(id))));
+        entityManager.createNativeQuery(BATCH_METRICS_SQL)
+            .setParameter("inventoryItemIds", inventoryItemIds)
             .setParameter("asOfDate", asOfDate)
             .setParameter("expirationCutoff", expirationCutoff)
-            .getSingleResult();
-
-        return new InventoryItemOverviewMetrics(
-            (BigDecimal) row[0],
-            (BigDecimal) row[1],
-            (BigDecimal) row[2],
-            ((Number) row[3]).longValue(),
-            toLocalDate(row[4]),
-            ((Number) row[5]).longValue(),
-            ((Number) row[6]).longValue()
-        );
+            .getResultList()
+            .forEach(value -> {
+                var row = (Object[]) value;
+                var id = (UUID) row[0];
+                result.put(id, new InventoryItemOverviewMetrics(
+                    (BigDecimal) row[1],
+                    (BigDecimal) row[2],
+                    minimums.get(id),
+                    ((Number) row[3]).longValue(),
+                    toLocalDate(row[4]),
+                    ((Number) row[5]).longValue(),
+                    ((Number) row[6]).longValue()
+                ));
+            });
+        return Map.copyOf(result);
     }
 
     private static LocalDate toLocalDate(Object value) {

@@ -41,7 +41,7 @@
           <a
             class="nav-link"
             mat-list-item
-            routerLink="/catalog"
+            routerLink="/inventory"
             routerLinkActive="active-link"
             aria-label="Estoque"
             (click)="usesOverlayNavigation() && sidenav.close()"
@@ -110,6 +110,21 @@
       <section class="nav-group" aria-labelledby="registrations-nav-heading">
         <h2 id="registrations-nav-heading">Cadastros</h2>
         <mat-nav-list>
+          <a
+            class="nav-link"
+            mat-list-item
+            routerLink="/catalog"
+            routerLinkActive="active-link"
+            aria-label="Catálogo"
+            (click)="usesOverlayNavigation() && sidenav.close()"
+          >
+            <span class="nav-link-content">
+              <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M4 4h16v16H4V4Zm2 2v12h12V6H6Zm2 2h8v2H8V8Zm0 4h8v2H8v-2Z" />
+              </svg>
+              <span class="nav-label">Catálogo</span>
+            </span>
+          </a>
           <a
             class="nav-link"
             mat-list-item

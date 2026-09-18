@@ -39,7 +39,7 @@ describe('operational UI workflow', () => {
     });
     harness.fixture.detectChanges();
     expect(harness.routeNativeElement?.textContent).toContain('Painel');
-    findLink(harness, 'Estoque').click();
+    findLink(harness, 'Catálogo').click();
     await harness.fixture.whenStable();
     http.expectOne(`${apiUrl}/inventory-items?page=0&size=20`).flush(page([item]));
     harness.fixture.detectChanges();
