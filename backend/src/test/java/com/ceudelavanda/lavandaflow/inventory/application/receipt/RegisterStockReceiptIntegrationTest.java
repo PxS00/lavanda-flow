@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +39,7 @@ class RegisterStockReceiptIntegrationTest {
     @Autowired private BatchRepository batchRepository;
     @Autowired private StockMovementRepository stockMovementRepository;
     @Autowired private GetBatchInventory getBatchInventory;
+    @Autowired private Clock clock;
 
     @Test
     void shouldPersistBatchInitialEntryAndExposeReceiptThroughBatchQuery() {
@@ -104,7 +106,7 @@ class RegisterStockReceiptIntegrationTest {
             "supplier@example.test",
             null
         ));
-        var today = LocalDate.now();
+        var today = LocalDate.now(clock);
         var firstReceipt = registerStockReceipt.execute(new RegisterStockReceiptCommand(
             item.id(),
             supplier.id(),
