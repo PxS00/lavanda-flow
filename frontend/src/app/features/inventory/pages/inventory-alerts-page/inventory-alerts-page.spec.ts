@@ -73,7 +73,7 @@ describe('InventoryAlertsPage', () => {
     fixture.detectChanges();
   });
 
-  it('should load and render backend low-stock alerts without recomputing their quantities', () => {
+  it('should render localized quantities and exact low-stock actions without recomputing their quantities', () => {
     expect(getLowStockAlerts).toHaveBeenCalledOnce();
 
     lowStockResponse.next(lowStock);
@@ -81,13 +81,26 @@ describe('InventoryAlertsPage', () => {
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Essência de lavanda');
-    expect(text).toContain('25 MILLILITER');
-    expect(text).toContain('100 MILLILITER');
-    expect(text).toContain('75 MILLILITER');
+    expect(text).toContain('25 Mililitro');
+    expect(text).toContain('100 Mililitro');
+    expect(text).toContain('75 Mililitro');
+    expect(text).not.toContain('MILLILITER');
+    expect(link('Registrar entrada para Essência de lavanda').getAttribute('href')).toBe(
+      `/receipts?inventoryItemId=${inventoryItemId}`,
+    );
+    expect(link('Abrir estoque de Essência de lavanda').getAttribute('href')).toBe(
+      `/inventory/items/${inventoryItemId}`,
+    );
   });
 
-  it('should distinguish expired from expiring-soon backend statuses', () => {
-    expirationResponse.next(expiration);
+  it('should use backend expiration statuses for exact actions without date classification', () => {
+    expirationResponse.next({
+      ...expiration,
+      alerts: [
+        { ...expiration.alerts[0], expiresAt: '2027-09-01', daysUntilExpiration: 365 },
+        { ...expiration.alerts[1], expiresAt: '2026-01-01', daysUntilExpiration: -243 },
+      ],
+    });
     fixture.detectChanges();
 
     const statuses = Array.from(fixture.nativeElement.querySelectorAll('.status')) as HTMLElement[];
@@ -99,6 +112,12 @@ describe('InventoryAlertsPage', () => {
     expect(statuses[1].classList).toContain('status-expiring');
     expect(fixture.nativeElement.textContent).toContain('01/09/2026');
     expect(fixture.nativeElement.textContent).toContain('batch-expired');
+    expect(link('Descartar lote vencido L-001').getAttribute('href')).toBe(
+      `/inventory/items/${inventoryItemId}?batchId=batch-expired&maintenance=expired-disposal#batches`,
+    );
+    expect(link('Abrir lote L-002').getAttribute('href')).toBe(
+      `/inventory/items/${inventoryItemId}?batchId=batch-expiring#batches`,
+    );
   });
 
   it('associates the expiration-window helper without changing expiration status metadata', () => {
@@ -150,7 +169,7 @@ describe('InventoryAlertsPage', () => {
     expect((fixture.nativeElement.querySelector('.expiration-window-field input') as HTMLInputElement).getAttribute('aria-describedby')).toBeTruthy();
   });
 
-  it('should present empty alert sets as a valid state and link each alert to its item workspace', () => {
+  it('should present empty alert sets as a valid state and keep zero available quantity on the receipt path', () => {
     lowStockResponse.next({ ...lowStock, alerts: [] });
     expirationResponse.next({ ...expiration, alerts: [] });
     fixture.detectChanges();
@@ -161,11 +180,15 @@ describe('InventoryAlertsPage', () => {
     const refreshedLowStock = new Subject<LowStockAlertsDto>();
     getLowStockAlerts.mockReturnValue(refreshedLowStock);
     fixture.nativeElement.querySelector('.panel button')?.click();
-    refreshedLowStock.next(lowStock);
+    refreshedLowStock.next({
+      ...lowStock,
+      alerts: [{ ...lowStock.alerts[0], availableQuantity: '0' }],
+    });
     fixture.detectChanges();
 
-    const itemLink = fixture.nativeElement.querySelector('a[aria-label="Abrir operação do item Essência de lavanda"]') as HTMLAnchorElement;
-    expect(itemLink.getAttribute('href')).toBe(`/inventory/items/${inventoryItemId}`);
+    expect(link('Registrar entrada para Essência de lavanda').getAttribute('href')).toBe(
+      `/receipts?inventoryItemId=${inventoryItemId}`,
+    );
   });
 
   it('should show shared error presentation for backend validation and transport failures', () => {
@@ -193,4 +216,8 @@ describe('InventoryAlertsPage', () => {
     expect(text).toContain('Um parâmetro informado é inválido.');
     expect(text).not.toContain('windowDays must be positive');
   });
+
+  function link(ariaLabel: string): HTMLAnchorElement {
+    return fixture.nativeElement.querySelector(`a[aria-label="${ariaLabel}"]`) as HTMLAnchorElement;
+  }
 });

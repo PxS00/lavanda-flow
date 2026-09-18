@@ -10,6 +10,7 @@
 .expiration-window-field mat-form-field { width: 100%; }
 .operational-field-helper { margin: 0; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); line-height: 1.4; }
 .table-scroll { max-width: 100%; overflow-x: auto; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 table { width: 100%; min-width: 940px; border-collapse: collapse; }
 caption { padding-bottom: 10px; text-align: left; font: var(--mat-sys-body-small); }
 th, td { padding: 12px; border-bottom: 1px solid var(--mat-sys-outline-variant); text-align: left; vertical-align: top; }
