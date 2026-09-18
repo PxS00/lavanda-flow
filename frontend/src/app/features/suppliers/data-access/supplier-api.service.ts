@@ -8,6 +8,7 @@ import {
   SupplierDto,
   SupplierPageDto,
   SupplierSearchQuery,
+  UpdateSupplierRequest,
 } from './supplier.dto';
 
 /** Typed HTTP client for supplier management endpoints. */
@@ -38,6 +39,10 @@ export class SupplierApiService {
 
   register(request: RegisterSupplierRequest): Observable<SupplierDto> {
     return this.http.post<SupplierDto>(this.suppliersUrl, request);
+  }
+
+  update(supplierId: string, request: UpdateSupplierRequest): Observable<SupplierDto> {
+    return this.http.put<SupplierDto>(`${this.suppliersUrl}/${supplierId}`, request);
   }
 }
 

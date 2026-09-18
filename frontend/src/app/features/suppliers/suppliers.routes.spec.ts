@@ -55,4 +55,10 @@ describe('supplier routes', () => {
 
     expect(harness.routeNativeElement?.textContent).toContain('Direct supplier');
   });
+
+  it('should resolve the edit route before the detail route', async () => {
+    const harness = await RouterTestingHarness.create('/suppliers/supplier-123/edit');
+
+    expect(harness.routeNativeElement?.textContent).toContain('Editar fornecedor');
+  });
 });

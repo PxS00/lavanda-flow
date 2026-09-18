@@ -28,3 +28,12 @@ export interface RegisterSupplierRequest {
   readonly contact: string | null;
   readonly notes: string | null;
 }
+
+/** Request payload for the supported supplier-maintenance fields. */
+export interface UpdateSupplierRequest {
+  readonly name: string;
+  readonly identifier: string | null;
+  readonly contact: string | null;
+  readonly notes: string | null;
+  readonly active: boolean;
+}
