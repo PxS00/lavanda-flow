@@ -10,7 +10,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 
 @Repository
 @RequiredArgsConstructor
@@ -38,6 +40,21 @@ class JpaInventoryItemQuery implements InventoryItemQuery {
             page.getSize(),
             page.getTotalElements(),
             page.getTotalPages()
+        );
+    }
+
+    @Override
+    public InventoryItemPage findStockPage(Set<Category> categories, int page, int size) {
+        var pageable = PageRequest.of(page, size);
+        var result = categories.isEmpty()
+            ? repository.findStockPage(pageable)
+            : repository.findStockPageByCategoryIn(categories, pageable);
+        return new InventoryItemPage(
+            result.getContent().stream()
+                .map(InventoryItemMapper::toDomain)
+                .map(InventoryItemResult::from)
+                .toList(),
+            result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages()
         );
     }
 

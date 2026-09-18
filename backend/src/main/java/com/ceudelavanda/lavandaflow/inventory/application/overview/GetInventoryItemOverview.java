@@ -25,10 +25,6 @@ public class GetInventoryItemOverview {
         var asOfDate = LocalDate.now(clock);
         var expirationCutoff = asOfDate.plusDays(query.expirationWindowDays());
         var metrics = inventoryItemOverviewQuery.findMetrics(item.id(), asOfDate, expirationCutoff);
-        var outOfStock = metrics.availableQuantity().signum() == 0;
-        var lowStock = item.active()
-            && metrics.minimumQuantity() != null
-            && metrics.availableQuantity().compareTo(metrics.minimumQuantity()) < 0;
 
         return new InventoryItemOverviewResult(
             item.id(),
@@ -41,8 +37,8 @@ public class GetInventoryItemOverview {
             metrics.totalCurrentQuantity(),
             metrics.availableQuantity(),
             metrics.minimumQuantity(),
-            lowStock,
-            outOfStock,
+            metrics.lowStock(item.active()),
+            metrics.outOfStock(),
             metrics.nonZeroBatchCount(),
             metrics.nearestExpiration(),
             metrics.expiredBatchCount(),
