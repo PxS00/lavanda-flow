@@ -14,6 +14,11 @@ export const SUPPLIERS_ROUTES: Routes = [
       ),
   },
   {
+    path: ':supplierId/edit',
+    loadComponent: () =>
+      import('./pages/supplier-edit-page/supplier-edit-page').then((m) => m.SupplierEditPage),
+  },
+  {
     path: ':supplierId',
     loadComponent: () =>
       import('./pages/supplier-detail-page/supplier-detail-page').then((m) => m.SupplierDetailPage),

@@ -6,7 +6,10 @@ import com.ceudelavanda.lavandaflow.suppliers.application.RegisterSupplier;
 import com.ceudelavanda.lavandaflow.suppliers.application.RegisterSupplierCommand;
 import com.ceudelavanda.lavandaflow.suppliers.application.SearchSuppliers;
 import com.ceudelavanda.lavandaflow.suppliers.application.SupplierSearchQuery;
+import com.ceudelavanda.lavandaflow.suppliers.application.UpdateSupplier;
+import com.ceudelavanda.lavandaflow.suppliers.application.UpdateSupplierCommand;
 import com.ceudelavanda.lavandaflow.suppliers.infrastructure.web.request.RegisterSupplierRequest;
+import com.ceudelavanda.lavandaflow.suppliers.infrastructure.web.request.UpdateSupplierRequest;
 import com.ceudelavanda.lavandaflow.suppliers.infrastructure.web.response.SupplierPageResponse;
 import com.ceudelavanda.lavandaflow.suppliers.infrastructure.web.response.SupplierResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,6 +40,7 @@ import java.util.UUID;
 public class SupplierController {
 
     private final RegisterSupplier registerSupplier;
+    private final UpdateSupplier updateSupplier;
     private final GetSupplier getSupplier;
     private final SearchSuppliers searchSuppliers;
 
@@ -64,6 +69,28 @@ public class SupplierController {
     @GetMapping("/{supplierId}")
     public ResponseEntity<SupplierResponse> getById(@PathVariable UUID supplierId) {
         return ResponseEntity.ok(SupplierResponse.from(getSupplier.execute(supplierId)));
+    }
+
+    @Operation(summary = "Update supported supplier data")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Supplier updated", content = @Content(schema = @Schema(implementation = SupplierResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request body", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Supplier not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PutMapping("/{supplierId}")
+    public ResponseEntity<SupplierResponse> update(
+        @PathVariable UUID supplierId,
+        @Valid @RequestBody UpdateSupplierRequest request
+    ) {
+        var result = updateSupplier.execute(new UpdateSupplierCommand(
+            supplierId,
+            request.name(),
+            request.identifier(),
+            request.contact(),
+            request.notes(),
+            request.active()
+        ));
+        return ResponseEntity.ok(SupplierResponse.from(result));
     }
 
     @Operation(

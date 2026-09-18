@@ -3,7 +3,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { API_BASE_URL } from '../../../core/config/api-base-url.token';
-import { RegisterSupplierRequest, SupplierDto, SupplierPageDto } from './supplier.dto';
+import {
+  RegisterSupplierRequest,
+  SupplierDto,
+  SupplierPageDto,
+  UpdateSupplierRequest,
+} from './supplier.dto';
 import { SupplierApiService } from './supplier-api.service';
 
 describe('SupplierApiService', () => {
@@ -129,5 +134,28 @@ describe('SupplierApiService', () => {
     expect(request.request.body).toEqual(requestBody);
     request.flush(supplier);
     expect(result).toEqual(supplier);
+  });
+
+  it('should update a supplier with the exact request body', () => {
+    const requestBody: UpdateSupplierRequest = {
+      name: 'Lavanda Updated',
+      identifier: null,
+      contact: 'updated@example.test',
+      notes: null,
+      active: false,
+    };
+    let result: SupplierDto | undefined;
+
+    service.update(supplier.id, requestBody).subscribe((response) => {
+      result = response;
+    });
+
+    const request = httpTesting.expectOne(`${suppliersUrl}/${supplier.id}`);
+
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual(requestBody);
+    request.flush({ ...supplier, ...requestBody });
+
+    expect(result).toEqual({ ...supplier, ...requestBody });
   });
 });
