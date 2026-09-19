@@ -94,14 +94,29 @@
             mat-list-item
             routerLink="/production/formulas"
             routerLinkActive="active-link"
-            aria-label="Produção"
+            aria-label="Fórmulas"
             (click)="usesOverlayNavigation() && sidenav.close()"
           >
             <span class="nav-link-content">
               <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
                 <path d="M9.25 2v2h1v5.59L5.25 18c-.33.57.08 1.3.74 1.3h12.02c.66 0 1.07-.72.74-1.3l-5-8.41V4h1V2h-5.5Zm1.83 9.5 1.02-1.71 1.02 1.71h-2.04ZM7.72 17l2.17-3.65h4.22L16.28 17H7.72Z" />
               </svg>
-              <span class="nav-label">Produção</span>
+              <span class="nav-label">Fórmulas</span>
+            </span>
+          </a>
+          <a
+            class="nav-link"
+            mat-list-item
+            routerLink="/production/executions"
+            routerLinkActive="active-link"
+            aria-label="Histórico"
+            (click)="usesOverlayNavigation() && sidenav.close()"
+          >
+            <span class="nav-link-content">
+              <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M13 3a9 9 0 1 0 8.95 10h-2.02A7 7 0 1 1 13 5V3Zm-1 5v6l5 3 1-1.73-4-2.27V8h-2Z" />
+              </svg>
+              <span class="nav-label">Histórico</span>
             </span>
           </a>
         </mat-nav-list>

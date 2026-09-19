@@ -9,6 +9,7 @@ import { AuthSessionService } from '../../core/auth/auth-session.service';
 import { authenticatedOperatorSession } from '../../core/auth/testing/authenticated-operator-session';
 import { routes } from '../../app.routes';
 import { InventoryItemApiService } from '../catalog/data-access/inventory-item-api.service';
+import { ProductionExecutionApiService } from './data-access/production-execution-api.service';
 import { ProductionFormulaApiService } from './data-access/production-formula-api.service';
 import { ProductionGenealogyApiService } from './data-access/production-genealogy-api.service';
 
@@ -30,6 +31,30 @@ describe('production routes', () => {
               totalElements: 0,
               totalPages: 0,
             }),
+          },
+        },
+        {
+          provide: ProductionExecutionApiService,
+          useValue: {
+            search: () =>
+              of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }),
+            getById: (executionId: string) =>
+              of({
+                executionId,
+                formulaId: 'formula-1',
+                outputInventoryItemId: 'item-1',
+                outputItemName: 'Sabonete',
+                outputUnitOfMeasure: 'MILLILITER',
+                outputBatchId: 'batch-1',
+                outputQuantity: '10',
+                lotCode: 'LOT-1',
+                lotCodeMode: 'MANUAL',
+                productionDate: '2026-09-18',
+                outputReceivedAt: '2026-09-18',
+                outputExpiresAt: null,
+                completedAt: '2026-09-18T12:00:00Z',
+                consumptions: [],
+              }),
           },
         },
         {
@@ -91,6 +116,19 @@ describe('production routes', () => {
   it('should resolve the production registration route', async () => {
     const harness = await RouterTestingHarness.create('/production/executions/new');
     expect(harness.routeNativeElement?.textContent).toContain('Registrar produção interna');
+  });
+
+  it('should keep new literal before history and direct execution detail routes', async () => {
+    const harness = await RouterTestingHarness.create('/production/executions');
+    expect(harness.routeNativeElement?.textContent).toContain('Histórico de produção');
+
+    await harness.navigateByUrl('/production/executions/execution-1');
+    expect(harness.routeNativeElement?.textContent).toContain('Detalhes da produção');
+    expect(harness.routeNativeElement?.textContent).toContain('Sabonete');
+
+    await harness.navigateByUrl('/production/executions/new');
+    expect(harness.routeNativeElement?.textContent).toContain('Registrar produção interna');
+    expect(harness.routeNativeElement?.textContent).not.toContain('Detalhes da produção');
   });
 
   it('should resolve genealogy by stable batch identity', async () => {

@@ -1,0 +1,82 @@
+<section class="detail-page" aria-labelledby="detail-heading">
+  <header class="page-header">
+    <a mat-button routerLink="/production/executions">Voltar ao histórico</a>
+    <div>
+      <h1 id="detail-heading">Detalhes da produção</h1>
+      <p>Consulte os fatos persistidos da execução e os lotes de origem registrados.</p>
+    </div>
+  </header>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando detalhes da produção..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      @let execution = currentState.execution;
+      <section aria-labelledby="summary-heading">
+        <h2 id="summary-heading">Produção concluída</h2>
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <h3>{{ execution.outputItemName }}</h3>
+            <dl class="details-grid">
+              <div><dt>Quantidade produzida</dt><dd>{{ formatDecimal(execution.outputQuantity) }} {{ unitLabel(execution.outputUnitOfMeasure) }}</dd></div>
+              <div><dt>Data de produção</dt><dd>{{ formatLocalDate(execution.productionDate) }}</dd></div>
+              <div><dt>Lote de saída</dt><dd>{{ execution.lotCode }}</dd></div>
+              <div><dt>Modo do lote</dt><dd>{{ lotCodeModeLabel(execution.lotCodeMode) }}</dd></div>
+              <div><dt>Data de entrada</dt><dd>{{ formatLocalDate(execution.outputReceivedAt) }}</dd></div>
+              <div><dt>Validade</dt><dd>{{ execution.outputExpiresAt ? formatLocalDate(execution.outputExpiresAt) : 'Não informada' }}</dd></div>
+              <div><dt>Conclusão</dt><dd>{{ execution.completedAt | date: 'dd/MM/yyyy, HH:mm' }}</dd></div>
+              <div><dt>ID da execução</dt><dd>{{ execution.executionId }}</dd></div>
+              <div><dt>ID da fórmula</dt><dd>{{ execution.formulaId }}</dd></div>
+            </dl>
+          </mat-card-content>
+          <mat-card-actions>
+            <a mat-button [routerLink]="['/production/formulas', execution.formulaId]">Abrir fórmula atual</a>
+            <a
+              mat-button
+              [routerLink]="['/inventory/items', execution.outputInventoryItemId]"
+              [queryParams]="{ batchId: execution.outputBatchId }"
+              fragment="batches"
+            >Abrir estoque do lote</a>
+            <a mat-button [routerLink]="['/production/genealogy/batches', execution.outputBatchId]">Ver genealogia</a>
+          </mat-card-actions>
+        </mat-card>
+      </section>
+
+      <section aria-labelledby="sources-heading">
+        <h2 id="sources-heading">Lotes consumidos</h2>
+        <ol class="source-list">
+          @for (consumption of execution.consumptions; track consumption.sourceBatchId) {
+            <li>
+              <mat-card appearance="outlined">
+                <mat-card-content>
+                  <h3>{{ consumption.sourceItemName }}</h3>
+                  <dl class="details-grid">
+                    <div><dt>Quantidade consumida</dt><dd>{{ formatDecimal(consumption.quantity) }} {{ unitLabel(consumption.sourceUnitOfMeasure) }}</dd></div>
+                    <div><dt>Lote de origem</dt><dd>{{ consumption.sourceLotCode || 'Não informado' }}</dd></div>
+                    <div><dt>ID do lote</dt><dd>{{ consumption.sourceBatchId }}</dd></div>
+                    <div><dt>ID da movimentação</dt><dd>{{ consumption.movementId }}</dd></div>
+                  </dl>
+                </mat-card-content>
+                <mat-card-actions>
+                  <a
+                    mat-button
+                    [routerLink]="['/inventory/items', consumption.sourceInventoryItemId]"
+                    [queryParams]="{ batchId: consumption.sourceBatchId }"
+                    fragment="batches"
+                  >Abrir estoque do lote</a>
+                  <a mat-button [routerLink]="['/production/genealogy/batches', consumption.sourceBatchId]">Ver genealogia</a>
+                </mat-card-actions>
+              </mat-card>
+            </li>
+          }
+        </ol>
+      </section>
+    }
+  }
+</section>

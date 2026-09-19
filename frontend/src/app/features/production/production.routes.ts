@@ -28,6 +28,20 @@ export const PRODUCTION_ROUTES: Routes = [
       ),
   },
   {
+    path: 'executions',
+    loadComponent: () =>
+      import(
+        './pages/production-execution-history-page/production-execution-history-page'
+      ).then((m) => m.ProductionExecutionHistoryPage),
+  },
+  {
+    path: 'executions/:executionId',
+    loadComponent: () =>
+      import('./pages/production-execution-detail-page/production-execution-detail-page').then(
+        (m) => m.ProductionExecutionDetailPage,
+      ),
+  },
+  {
     path: 'genealogy/batches/:batchId',
     loadComponent: () =>
       import('./pages/production-genealogy-page/production-genealogy-page').then(
