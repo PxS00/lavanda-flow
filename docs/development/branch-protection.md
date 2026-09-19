@@ -57,7 +57,7 @@ Push triggers may continue using path filters because required merge gates are e
 - require all review conversations to be resolved before merging;
 - require zero approving reviews while the repository has a single active maintainer;
 - do not require the pull request branch to be updated with the latest `develop` before merge;
-- allow squash merge as the branch merge method;
+- allow squash merge and regular merge commits as the branch merge methods;
 - block force pushes;
 - block branch deletion;
 - do not configure normal-development bypass actors.
@@ -74,7 +74,7 @@ chore/<issue-number>/<short-description>    -> develop
 ci/<issue-number>/<short-description>       -> develop
 ```
 
-Issue pull requests are squash merged so the PR title becomes the integration commit message.
+Normal issue pull requests are squash merged so the PR title becomes the integration commit message. Regular merge commits are reserved for ancestry-preserving post-release back-sync pull requests into `develop`.
 
 ## `main` ruleset
 
@@ -115,7 +115,7 @@ Rebase merge remains disabled.
 The branch rulesets narrow the allowed method for each protected branch:
 
 ```text
-develop -> squash merge
+develop -> squash merge for normal issue PRs; regular merge commit for post-release back-sync PRs
 main    -> regular merge commit
 ```
 
