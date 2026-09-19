@@ -208,13 +208,22 @@ After start, restart, reboot, or upgrade, confirm health, open the stable LAN UR
 
 Use [PostgreSQL backup and restore](postgresql-backup-restore.md) as the authoritative recovery contract. Create a successful logical backup after every operating day with changed business data and immediately before every application/schema upgrade. Keep at least seven recent successful daily backups locally, retain the pre-upgrade backup until post-upgrade validation succeeds, and keep weekly copies outside the notebook for four weeks.
 
-On the prepared Galaxy Book, the maintainer runs the validated backup path with Git Bash:
+Install the current-user Windows scheduled task from the operational checkout. Supply the approved off-notebook or synchronized directory at installation time; no real machine path is tracked:
+
+```powershell
+$externalBackupDirectory = Read-Host 'Absolute external backup directory'
+.\scripts\operations\manage-backup-task.ps1 Install -ExternalDestination $externalBackupDirectory
+```
+
+The default daily time is `20:00` local. `-At 'HH:mm'` selects another time, `Status` reports the next/last run and result, and `Remove` removes only the task. Reinstall after moving the operational checkout. The task runs after Windows sign-in, starts missed triggers when the host becomes available, waits boundedly for Docker Desktop, prevents overlap, writes safe diagnostics under `backups/logs/`, verifies configured external copies, and retains the seven newest valid top-level routine pairs.
+
+The existing manual Git Bash path remains supported:
 
 ```bash
 scripts/operations/backup-postgres.sh
 ```
 
-Git Bash is maintenance tooling only and is never required for normal operator use. PostgreSQL dumps contain sensitive operational data; SHA-256 verifies integrity but does not encrypt a dump. Google Drive is the selected off-notebook mechanism: copy both the `.dump` and `.dump.sha256` artifacts, then verify the copied checksum after transfer. Backup operations remain maintainer procedures. The recovery document contains the destructive database-recreation warning; do not replace it with an automated restore or volume-removal shortcut.
+Git Bash is maintenance tooling only and is never required for normal operator use. PostgreSQL dumps contain sensitive operational data; SHA-256 verifies integrity but does not encrypt a dump. Google Drive is the selected off-notebook mechanism on the prepared workstation, supplied to the task as an ordinary Windows filesystem directory; the repository has no provider API, credential, or tracked destination. Backup operations remain maintainer-controlled. The recovery document contains the destructive database-recreation warning; do not replace it with an automated restore or volume-removal shortcut.
 
 For normal maintenance, verify a backup through the default disposable restore command in the recovery document.
 It accepts valid empty or sparse operational business data while checking Flyway, restored-row integrity, current
@@ -224,7 +233,7 @@ workflows exist.
 
 For an exact-tag upgrade:
 
-1. Confirm the current runtime is healthy and create/verify the pre-upgrade backup plus off-notebook checksum-verified copy.
+1. Confirm the current runtime is healthy and create the protected pre-upgrade backup from Git Bash with `scripts/operations/backup-postgres.sh --output-dir backups/pre-upgrade/vX.Y.Z`; verify it and its off-notebook copy. Routine retention does not scan this nested directory.
 2. Fetch tags, detach at the intended `vX.Y.Z` tag, and record its commit SHA.
 3. Build from that exact tag and start the existing Compose runtime.
 4. Let Flyway validate applied migrations and apply only legitimate forward migrations from the selected release.
