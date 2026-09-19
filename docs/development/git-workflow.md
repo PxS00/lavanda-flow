@@ -52,6 +52,8 @@ Rules:
 - normal issue branches start from an up-to-date `develop`;
 - issue pull requests target `develop`;
 - completed issue pull requests are merged using **squash merge**;
+- ancestry-preserving post-release back-sync pull requests target `develop` and use a **regular merge commit**;
+- `develop` therefore permits both merge methods: squash merge is required for normal issue pull requests, while regular merge commits are reserved for post-release back-syncs;
 - `develop` must remain buildable and testable;
 - unfinished or knowingly broken work must not be merged into `develop`;
 - force-push must be disabled through branch protection;
@@ -134,7 +136,7 @@ The release PR should use a regular merge commit rather than squash merging the 
 After the release reaches `main`:
 
 1. create the corresponding Git tag, such as `v0.1.0`;
-2. synchronize release changes back into `develop` when the release branch received stabilization changes not already present there;
+2. synchronize release changes back into `develop` with an ancestry-preserving post-release back-sync pull request using a regular merge commit when the release branch received stabilization changes not already present there;
 3. advance development metadata to the next planned release using the `-SNAPSHOT` suffix;
 4. delete the release branch after synchronization.
 
