@@ -5,6 +5,14 @@ import com.ceudelavanda.lavandaflow.production.application.execution.RegisterPro
 import com.ceudelavanda.lavandaflow.production.application.execution.RegisterProductionCommand;
 import com.ceudelavanda.lavandaflow.production.application.execution.RegisterProductionResult;
 import com.ceudelavanda.lavandaflow.production.application.formula.ProductionFormulaNotFoundException;
+import com.ceudelavanda.lavandaflow.production.application.history.GetProductionExecutionDetails;
+import com.ceudelavanda.lavandaflow.production.application.history.GetProductionExecutionHistory;
+import com.ceudelavanda.lavandaflow.production.application.history.GetProductionExecutionHistoryQuery;
+import com.ceudelavanda.lavandaflow.production.application.history.InvalidProductionExecutionHistoryQueryException;
+import com.ceudelavanda.lavandaflow.production.application.history.ProductionExecutionDetailsResult;
+import com.ceudelavanda.lavandaflow.production.application.history.ProductionExecutionHistoryResult;
+import com.ceudelavanda.lavandaflow.production.application.history.ProductionExecutionNotFoundException;
+import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.production.domain.ProductionLotCodeMode;
 import com.ceudelavanda.lavandaflow.shared.config.ClockConfig;
 import com.ceudelavanda.lavandaflow.shared.config.ExactDecimalJsonConfiguration;
@@ -26,6 +34,7 @@ import java.util.UUID;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -39,6 +48,96 @@ class ProductionExecutionControllerTest {
 
     @MockitoBean
     private RegisterProduction registerProduction;
+
+    @MockitoBean
+    private GetProductionExecutionHistory getProductionExecutionHistory;
+
+    @MockitoBean
+    private GetProductionExecutionDetails getProductionExecutionDetails;
+
+    @Test
+    void shouldExposeFilteredPaginatedHistoryWithExactDecimalStrings() throws Exception {
+        var executionId = UUID.randomUUID();
+        var formulaId = UUID.randomUUID();
+        var outputItemId = UUID.randomUUID();
+        var outputBatchId = UUID.randomUUID();
+        var query = new GetProductionExecutionHistoryQuery(
+            LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), 1, 50
+        );
+        when(getProductionExecutionHistory.execute(query)).thenReturn(
+            new ProductionExecutionHistoryResult(
+                List.of(new ProductionExecutionHistoryResult.Entry(
+                    executionId, formulaId, outputItemId, "Sabonete", UnitOfMeasure.MILLILITER,
+                    outputBatchId, new BigDecimal("10.123456"), "LOT-1",
+                    ProductionLotCodeMode.MANUAL, LocalDate.of(2026, 9, 3),
+                    Instant.parse("2026-09-03T12:00:00Z")
+                )),
+                1, 50, 51, 2
+            )
+        );
+
+        mockMvc.perform(get("/api/v1/production/executions")
+                .param("from", "2026-09-01")
+                .param("to", "2026-09-30")
+                .param("page", "1")
+                .param("size", "50"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].executionId").value(executionId.toString()))
+            .andExpect(jsonPath("$.content[0].outputItemName").value("Sabonete"))
+            .andExpect(jsonPath("$.content[0].outputQuantity").value("10.123456"))
+            .andExpect(jsonPath("$.page").value(1))
+            .andExpect(jsonPath("$.size").value(50))
+            .andExpect(jsonPath("$.totalElements").value(51));
+
+        verify(getProductionExecutionHistory).execute(query);
+    }
+
+    @Test
+    void shouldExposeExecutionDetailAndOrderedExactConsumptions() throws Exception {
+        var executionId = UUID.randomUUID();
+        var formulaId = UUID.randomUUID();
+        var outputItemId = UUID.randomUUID();
+        var outputBatchId = UUID.randomUUID();
+        var sourceItemId = UUID.randomUUID();
+        var sourceBatchId = UUID.randomUUID();
+        var movementId = UUID.randomUUID();
+        when(getProductionExecutionDetails.execute(executionId)).thenReturn(
+            new ProductionExecutionDetailsResult(
+                executionId, formulaId, outputItemId, "Sabonete", UnitOfMeasure.MILLILITER,
+                outputBatchId, new BigDecimal("10.123456"), "LOT-1",
+                ProductionLotCodeMode.GENERATED, LocalDate.of(2026, 9, 3),
+                LocalDate.of(2026, 9, 3), null, Instant.parse("2026-09-03T12:00:00Z"),
+                List.of(new ProductionExecutionDetailsResult.Consumption(
+                    sourceBatchId, sourceItemId, "Essência", UnitOfMeasure.MILLILITER,
+                    "SOURCE-1", movementId, new BigDecimal("1.000001")
+                ))
+            )
+        );
+
+        mockMvc.perform(get("/api/v1/production/executions/{executionId}", executionId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.executionId").value(executionId.toString()))
+            .andExpect(jsonPath("$.outputQuantity").value("10.123456"))
+            .andExpect(jsonPath("$.consumptions[0].sourceBatchId").value(sourceBatchId.toString()))
+            .andExpect(jsonPath("$.consumptions[0].quantity").value("1.000001"));
+    }
+
+    @Test
+    void shouldExposeStableHistoryValidationAndNotFoundErrors() throws Exception {
+        when(getProductionExecutionHistory.execute(org.mockito.ArgumentMatchers.any()))
+            .thenThrow(new InvalidProductionExecutionHistoryQueryException("page", "invalid"));
+        mockMvc.perform(get("/api/v1/production/executions").param("page", "-1"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("INVALID_PRODUCTION_EXECUTION_HISTORY_QUERY"));
+
+        var executionId = UUID.randomUUID();
+        when(getProductionExecutionDetails.execute(executionId))
+            .thenThrow(new ProductionExecutionNotFoundException(executionId));
+        mockMvc.perform(get("/api/v1/production/executions/{executionId}", executionId))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value("PRODUCTION_EXECUTION_NOT_FOUND"))
+            .andExpect(jsonPath("$.details.executionId").value(executionId.toString()));
+    }
 
     @Test
     void shouldRegisterCompletedProductionExecution() throws Exception {
