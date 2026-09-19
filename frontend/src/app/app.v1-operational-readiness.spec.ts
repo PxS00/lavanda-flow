@@ -81,7 +81,7 @@ describe('V1 operational readiness', () => {
     expect(text(harness)).toContain('Painel operacional');
     expect(text(harness)).toContain('Lotes próximos do vencimento');
 
-    findLink(harness, 'Produção').click();
+    findLink(harness, 'Fórmulas').click();
     await harness.fixture.whenStable();
     http.expectOne(`${apiUrl}/production/formulas`).flush([formula]);
     http.expectOne(`${apiUrl}/inventory-items/${outputItem.id}`).flush(outputItem);

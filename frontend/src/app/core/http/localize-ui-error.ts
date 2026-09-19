@@ -37,6 +37,8 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   INACTIVE_PRODUCTION_FORMULA_CATALOG_ITEM: 'Um item de estoque da fórmula está inativo.',
   INVALID_PRODUCTION_FORMULA: 'Revise os dados da fórmula.',
   INVALID_PRODUCTION_EXECUTION: 'Revise os dados da produção.',
+  INVALID_PRODUCTION_EXECUTION_HISTORY_QUERY: 'Revise os filtros do histórico de produção.',
+  PRODUCTION_EXECUTION_NOT_FOUND: 'Execução de produção não encontrada.',
   INVALID_PRODUCTION_ALLOCATION:
     'As quantidades dos lotes não correspondem aos requisitos da fórmula.',
   INVALID_MANUAL_PRODUCTION_LOT_CODE: 'Revise o código de lote manual informado.',

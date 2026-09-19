@@ -1,0 +1,83 @@
+<section class="history-page" aria-labelledby="history-heading">
+  <header class="page-header">
+    <div>
+      <h1 id="history-heading">Histórico de produção</h1>
+      <p>Consulte execuções concluídas e seus registros auditáveis de produção.</p>
+    </div>
+    <a mat-flat-button routerLink="/production/executions/new">Registrar produção</a>
+  </header>
+
+  <form class="filters" (ngSubmit)="applyFilters()">
+    <mat-form-field appearance="outline">
+      <mat-label>De</mat-label>
+      <input matInput type="date" [formControl]="filters.controls.from" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Até</mat-label>
+      <input matInput type="date" [formControl]="filters.controls.to" />
+    </mat-form-field>
+    <div class="filter-actions">
+      <button mat-flat-button type="submit">Aplicar filtros</button>
+      <button mat-button type="button" (click)="clearFilters()">Limpar</button>
+    </div>
+  </form>
+  @if (filterError(); as error) {
+    <p class="filter-error" role="alert">{{ error }}</p>
+  }
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando histórico de produção..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      @if (currentState.page.content.length === 0) {
+        <app-empty-state
+          title="Nenhuma produção encontrada"
+          message="Não há execuções concluídas para os filtros informados."
+        />
+      } @else {
+        <ul class="execution-list" aria-label="Execuções de produção">
+          @for (execution of currentState.page.content; track execution.executionId) {
+            <li>
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>{{ execution.outputItemName }}</mat-card-title>
+                  <mat-card-subtitle>
+                    {{ formatDecimal(execution.outputQuantity) }}
+                    {{ unitLabel(execution.outputUnitOfMeasure) }}
+                  </mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  <dl>
+                    <div><dt>Data de produção</dt><dd>{{ formatLocalDate(execution.productionDate) }}</dd></div>
+                    <div><dt>Lote de saída</dt><dd>{{ execution.lotCode }}</dd></div>
+                    <div><dt>ID da fórmula</dt><dd>{{ execution.formulaId }}</dd></div>
+                    <div><dt>ID da execução</dt><dd>{{ execution.executionId }}</dd></div>
+                  </dl>
+                </mat-card-content>
+                <mat-card-actions align="end">
+                  <a mat-button [routerLink]="['/production/executions', execution.executionId]">
+                    Ver execução
+                  </a>
+                </mat-card-actions>
+              </mat-card>
+            </li>
+          }
+        </ul>
+        <mat-paginator
+          aria-label="Páginas do histórico de produção"
+          [length]="currentState.page.totalElements"
+          [pageIndex]="currentState.page.page"
+          [pageSize]="currentState.page.size"
+          [pageSizeOptions]="[20, 50, 100]"
+          (page)="changePage($event)"
+        />
+      }
+    }
+  }
+</section>
