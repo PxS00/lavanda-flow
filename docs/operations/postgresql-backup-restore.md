@@ -48,7 +48,7 @@ $gitBash = Read-Host 'Absolute path to Git Bash bash.exe'
 .\scripts\operations\manage-backup-task.ps1 Install -ExternalDestination $externalBackupDirectory -GitBashPath $gitBash
 ```
 
-The task runs as the current interactive Windows user without storing a Windows password. It starts a missed trigger when the signed-in workstation next becomes available, does not wake a sleeping notebook, permits execution on battery, ignores overlapping starts, and waits up to five minutes for Docker Desktop. A failed routine run remains failed and is not automatically rerun by Task Scheduler. The PostgreSQL service readiness, dump, structural validation, credentials, local artifact creation, and checksum remain owned by `backup-postgres.sh`.
+The task runs as the current interactive Windows user without storing a Windows password. It starts a missed trigger when the signed-in workstation next becomes available, does not wake a sleeping notebook, permits execution on battery, ignores overlapping starts, and waits up to five minutes for Docker Desktop and the existing operational PostgreSQL healthcheck. A failed routine run remains failed and is not automatically rerun by Task Scheduler. The dump, structural validation, credentials, local artifact creation, and checksum remain owned by `backup-postgres.sh`.
 
 Inspect or remove only the task with:
 
@@ -59,7 +59,7 @@ Inspect or remove only the task with:
 
 Removal does not delete dumps, checksums, logs, operational configuration, or Docker data. The task action points at the script in this exact operational checkout; reinstall it after moving the checkout. Routine logs are written under the ignored `backups/logs/` directory. The runner keeps the 30 newest files matching its diagnostic log filename and leaves unrelated files untouched. Task Scheduler's last result and the local log both preserve a non-zero failure signal without recording PostgreSQL credentials or database rows.
 
-When an external destination is configured, the runner copies the dump and sidecar into a unique temporary directory there, verifies the copied dump, and only then publishes the pair. Existing files are never overwritten; an incomplete, invalid, or different same-name artifact fails the run. A failed or unavailable external copy leaves the valid local backup intact and prevents retention for that run. Verification confirms the destination filesystem copy; a cloud-sync client's remote upload remains an operational property of that client.
+When an external destination is configured, the runner copies the dump and sidecar into a unique temporary directory there, verifies the copied dump, and only then publishes the pair. Any existing final dump or sidecar with the intended name fails the run for maintainer inspection, without modification. If publication cannot complete and verify, only final artifacts created by that run are removed. A failed or unavailable external copy leaves the valid local backup intact and prevents retention for that run. Verification confirms the destination filesystem copy; a cloud-sync client's remote upload remains an operational property of that client.
 
 Routine retention examines only checksum-valid `lavanda-flow-YYYYMMDDTHHMMSSZ.dump` pairs directly under `backups/`, orders them by the UTC filename timestamp, and keeps the seven newest. Fewer than eight valid pairs causes no pruning. Partial, malformed, unmatched, checksum-invalid, nested, and externally stored files are never pruned automatically.
 

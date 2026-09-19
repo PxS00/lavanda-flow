@@ -114,22 +114,31 @@ function Convert-ToWindowsPath {
     return [System.IO.Path]::GetFullPath($result[0])
 }
 
-function Wait-ForDocker {
+function Wait-ForOperationalPostgres {
     param(
         [Parameter(Mandatory)][string]$BashPath,
         [Parameter(Mandatory)][int]$TimeoutSeconds
     )
 
+    $composeFile = Join-Path $repositoryRoot 'compose.operational.yaml'
+    $environmentFile = Join-Path $repositoryRoot '.env.operational'
+    $readinessCommand = @'
+set -e
+docker info >/dev/null 2>&1
+container_id="$(docker compose --project-name lavanda-flow-operational -f "$1" --env-file "$2" ps -q postgres)"
+[ -n "$container_id" ]
+[ "$(docker inspect --format '{{.State.Health.Status}}' "$container_id")" = healthy ]
+'@
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     do {
-        & $BashPath '--noprofile' '--norc' '-c' 'docker info >/dev/null 2>&1' 2>$null
+        & $BashPath '--noprofile' '--norc' '-c' $readinessCommand 'bash' $composeFile $environmentFile 2>$null
         if ($LASTEXITCODE -eq 0) {
             return
         }
         Start-Sleep -Seconds 5
     } while ([DateTime]::UtcNow -lt $deadline)
 
-    throw "Docker Desktop did not become ready within $TimeoutSeconds seconds."
+    throw "Docker Desktop and the operational PostgreSQL service did not become healthy within $TimeoutSeconds seconds."
 }
 
 function Get-ChecksumRecord {
@@ -246,6 +255,9 @@ function Publish-ExternalBackup {
     $stagedChecksum = Join-Path $stagingDirectory $checksumName
     $finalDump = Join-Path $destinationPath $dumpName
     $finalChecksum = Join-Path $destinationPath $checksumName
+    $publishedDump = $false
+    $publishedChecksum = $false
+    $publicationSucceeded = $false
 
     New-Item -ItemType Directory -Path $stagingDirectory | Out-Null
     try {
@@ -260,29 +272,51 @@ function Publish-ExternalBackup {
         $finalDumpExists = Test-Path -LiteralPath $finalDump
         $finalChecksumExists = Test-Path -LiteralPath $finalChecksum
         if ($finalDumpExists -or $finalChecksumExists) {
-            if (-not ($finalDumpExists -and $finalChecksumExists)) {
-                throw "An incomplete external artifact already uses the backup name: $dumpName"
-            }
-            $existingPair = Get-ValidBackupPair -DumpPath $finalDump
-            if (-not $existingPair -or $existingPair.Hash -cne $Pair.Hash) {
-                throw "A different or invalid external artifact already uses the backup name: $dumpName"
-            }
-            Write-RunLog "External backup already exists and is valid: $finalDump"
-            return
+            throw "An external artifact already uses the backup name: $dumpName"
         }
 
         Move-Item -LiteralPath $stagedDump -Destination $finalDump
+        $publishedDump = $true
         Move-Item -LiteralPath $stagedChecksum -Destination $finalChecksum
+        $publishedChecksum = $true
 
         $publishedPair = Get-ValidBackupPair -DumpPath $finalDump
         if (-not $publishedPair -or $publishedPair.Hash -cne $Pair.Hash) {
             throw 'The published external backup failed checksum verification.'
         }
+        $publicationSucceeded = $true
         Write-RunLog "External backup copied and verified: $finalDump"
     }
     finally {
-        if (Test-Path -LiteralPath $stagingDirectory) {
-            Remove-Item -LiteralPath $stagingDirectory -Recurse -Force -ErrorAction SilentlyContinue
+        $rollbackFailure = $null
+        try {
+            if (-not $publicationSucceeded) {
+                $publishedArtifacts = @()
+                if ($publishedChecksum) {
+                    $publishedArtifacts += $finalChecksum
+                }
+                if ($publishedDump) {
+                    $publishedArtifacts += $finalDump
+                }
+                foreach ($artifact in $publishedArtifacts) {
+                    if (Test-Path -LiteralPath $artifact) {
+                        try {
+                            Remove-Item -LiteralPath $artifact -Force -ErrorAction Stop
+                        }
+                        catch {
+                            $rollbackFailure = $_.Exception
+                        }
+                    }
+                }
+            }
+        }
+        finally {
+            if (Test-Path -LiteralPath $stagingDirectory) {
+                Remove-Item -LiteralPath $stagingDirectory -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        if ($rollbackFailure) {
+            throw "External publication rollback failed: $($rollbackFailure.Message)"
         }
     }
 }
@@ -333,9 +367,9 @@ try {
     $backupScript = Join-Path $repositoryRoot 'scripts\operations\backup-postgres.sh'
     $bashBackupScript = Convert-ToBashPath -CygpathPath $cygpath -WindowsPath $backupScript
 
-    Write-RunLog "Waiting up to $DockerReadyTimeoutSeconds seconds for Docker Desktop."
-    Wait-ForDocker -BashPath $resolvedBash -TimeoutSeconds $DockerReadyTimeoutSeconds
-    Write-RunLog 'Docker Desktop is ready; invoking the authoritative backup script.'
+    Write-RunLog "Waiting up to $DockerReadyTimeoutSeconds seconds for Docker Desktop and operational PostgreSQL health."
+    Wait-ForOperationalPostgres -BashPath $resolvedBash -TimeoutSeconds $DockerReadyTimeoutSeconds
+    Write-RunLog 'Docker Desktop and operational PostgreSQL are ready; invoking the authoritative backup script.'
 
     $previousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
