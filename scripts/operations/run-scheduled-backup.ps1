@@ -115,28 +115,50 @@ function Convert-ToWindowsPath {
 }
 
 function Wait-ForOperationalPostgres {
-    param(
-        [Parameter(Mandatory)][string]$BashPath,
-        [Parameter(Mandatory)][int]$TimeoutSeconds
-    )
+    param([Parameter(Mandatory)][int]$TimeoutSeconds)
 
     $composeFile = Join-Path $repositoryRoot 'compose.operational.yaml'
     $environmentFile = Join-Path $repositoryRoot '.env.operational'
-    $readinessCommand = @'
-set -e
-docker info >/dev/null 2>&1
-container_id="$(docker compose --project-name lavanda-flow-operational -f "$1" --env-file "$2" ps -q postgres)"
-[ -n "$container_id" ]
-[ "$(docker inspect --format '{{.State.Health.Status}}' "$container_id")" = healthy ]
-'@
+    $dockerCommand = Get-Command 'docker.exe' -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if (-not $dockerCommand) {
+        throw 'Docker CLI was not found on the Windows PATH.'
+    }
+    $dockerPath = $dockerCommand.Source
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
-    do {
-        & $BashPath '--noprofile' '--norc' '-c' $readinessCommand 'bash' $composeFile $environmentFile 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            return
-        }
-        Start-Sleep -Seconds 5
-    } while ([DateTime]::UtcNow -lt $deadline)
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        do {
+            & $dockerPath 'info' 1>$null 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $containerOutput = @(
+                    & $dockerPath 'compose' '--project-name' 'lavanda-flow-operational' `
+                        '-f' $composeFile '--env-file' $environmentFile `
+                        'ps' '-q' 'postgres' 2>$null
+                )
+                $containerExitCode = $LASTEXITCODE
+                $containerIds = @(
+                    $containerOutput |
+                        ForEach-Object { $_.ToString().Trim() } |
+                        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+                )
+
+                if ($containerExitCode -eq 0 -and $containerIds.Count -eq 1) {
+                    $healthOutput = @(
+                        & $dockerPath 'inspect' '--format={{.State.Health.Status}}' $containerIds[0] 2>$null
+                    )
+                    if ($LASTEXITCODE -eq 0 -and $healthOutput.Count -eq 1 -and $healthOutput[0].ToString().Trim() -ceq 'healthy') {
+                        return
+                    }
+                }
+            }
+            Start-Sleep -Seconds 5
+        } while ([DateTime]::UtcNow -lt $deadline)
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
 
     throw "Docker Desktop and the operational PostgreSQL service did not become healthy within $TimeoutSeconds seconds."
 }
@@ -368,7 +390,7 @@ try {
     $bashBackupScript = Convert-ToBashPath -CygpathPath $cygpath -WindowsPath $backupScript
 
     Write-RunLog "Waiting up to $DockerReadyTimeoutSeconds seconds for Docker Desktop and operational PostgreSQL health."
-    Wait-ForOperationalPostgres -BashPath $resolvedBash -TimeoutSeconds $DockerReadyTimeoutSeconds
+    Wait-ForOperationalPostgres -TimeoutSeconds $DockerReadyTimeoutSeconds
     Write-RunLog 'Docker Desktop and operational PostgreSQL are ready; invoking the authoritative backup script.'
 
     $previousErrorActionPreference = $ErrorActionPreference
