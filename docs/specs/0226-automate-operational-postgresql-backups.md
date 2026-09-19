@@ -99,7 +99,15 @@ The task uses the Windows host local timezone. No application Clock is involved 
 
 Configure the task so a missed trigger can run when Windows next makes the task runnable, using StartWhenAvailable or equivalent. Do not require the notebook to wake from sleep solely for backup.
 
-Run in the current operator/maintainer Windows user context without embedding a Windows password in repository files or task arguments. The supported workstation already depends on interactive Windows sign-in for Docker Desktop startup.
+The scheduled task must use the current interactive Windows user with RunOnlyIfLoggedOn semantics. Do not embed a Windows password in repository files, task arguments, or tracked configuration. The supported workstation already depends on interactive Windows sign-in for Docker Desktop startup.
+
+The task must not start a second concurrent instance while a previous run is still active. Configure the equivalent of IgnoreNew.
+
+Do not wake the notebook from sleep solely to run a backup. Preserve the workstation's existing battery/sleep policy; the task must not silently change system power configuration.
+
+Because StartWhenAvailable may trigger shortly after sign-in while Docker Desktop is still starting, the scheduled wrapper must perform a bounded readiness wait before invoking the authoritative backup script. The readiness wait should poll only safe runtime signals, use a finite timeout, and fail non-zero with a clear sanitized diagnostic if Docker/PostgreSQL does not become available. Do not change backup-postgres.sh into an unbounded retry loop.
+
+All Task Scheduler actions and PowerShell process invocations must pass executable/script paths as structured arguments rather than constructing an interpolated shell command string. Repository, Git Bash, log, and external destination paths containing spaces must work correctly. Validate this explicitly.
 
 ### Task identity and concurrency
 
@@ -107,7 +115,7 @@ Use one stable task name:
 
     Lavanda Flow - PostgreSQL Backup
 
-Do not allow overlapping task instances.
+Do not allow overlapping task instances. Use IgnoreNew or the equivalent Task Scheduler multiple-instance policy.
 
 Installation must be idempotent: reinstall/update replaces the existing task configuration rather than creating duplicates.
 
@@ -145,7 +153,16 @@ Never log:
 - database rows;
 - secrets from Docker/container environment.
 
-The existing safe output from backup-postgres.sh may be consumed to identify the created artifact paths. If path conversion between Git Bash and Windows is required, use Git for Windows tooling such as cygpath rather than introducing a second backup path contract.
+The existing safe output from backup-postgres.sh is the artifact handoff contract for this issue. Parse it strictly:
+
+- require exactly one line beginning with `Backup created: `;
+- require exactly one line beginning with `Checksum created: `;
+- reject missing, duplicate, or stale/ambiguous records;
+- require the checksum path to be exactly the parsed dump path plus `.sha256`;
+- require both parsed paths to exist after the child process succeeds;
+- convert Git Bash paths to Windows paths with Git for Windows tooling such as `cygpath` when needed.
+
+Do not independently regenerate the timestamped backup filename in PowerShell. A small additive machine-readable output option may be added to backup-postgres.sh only if strict parsing proves impractical, and it must preserve the existing human-readable/manual behavior.
 
 ### manage-backup-task.ps1
 
@@ -164,6 +181,8 @@ Installation inputs should include:
 Machine-specific paths are supplied at installation/runtime and must not be committed to tracked defaults.
 
 The task action points at the repository-owned scheduled-backup script from the operational checkout. Moving the operational checkout requires reinstalling/updating the task.
+
+Document the supported Git Bash discovery candidates used by the implementation and the explicit override mechanism. Auto-discovery failure must produce a clear maintainer error rather than falling back to an unrelated shell.
 
 ## External backup destination
 
@@ -187,46 +206,76 @@ Do not add:
 
 The real Céu de Lavanda installation may use a Google Drive-synchronized directory by supplying its Windows filesystem path during task installation.
 
-### Copy integrity
+### Copy integrity and publication
 
 For a configured external destination:
 
 1. create the local backup successfully;
 2. validate it through the existing backup script;
-3. copy the .dump;
-4. copy the matching .dump.sha256;
-5. calculate and verify the copied dump hash against the copied sidecar;
-6. fail non-zero if copy or verification fails.
+3. derive the final destination names from the parsed authoritative local artifact names;
+4. refuse to overwrite an existing final dump or sidecar when either final name already exists;
+5. copy the dump and checksum to unique temporary/staging names inside the destination directory;
+6. verify that the staged checksum sidecar names the expected dump and contains a canonical 64-character SHA-256 digest;
+7. calculate the SHA-256 of the staged dump and require it to match the staged sidecar;
+8. publish the staged pair to their final names only after verification succeeds;
+9. clean staging artifacts on failure;
+10. fail non-zero if any copy, collision check, staging verification, or publication step fails.
 
-Do not consider a copied backup successful merely because the file-copy operation returned success.
+Publication must never replace an already existing good external artifact. A collision is a failure requiring maintainer inspection, not permission to overwrite.
 
 If external copy fails, preserve the valid local backup and do not perform retention pruning for that run.
 
+Checksum verification proves integrity of the destination filesystem copy created by this workflow. It does not prove that a cloud-sync provider has already uploaded or remotely replicated the file.
+
 ## Local retention policy
 
-Issue #184 intentionally used manual retention. Issue #226 may automate only the established local baseline.
+Issue #184 intentionally used manual retention. Issue #226 may automate only the established routine-local baseline.
 
-Keep at least the seven most recent successful routine backup pairs locally:
+Routine scheduled backups use the normal directory:
+
+    backups/
+
+Protected pre-upgrade backups must use a separate subtree outside routine pruning:
+
+    backups/pre-upgrade/<release>/
+
+For example:
+
+    backups/pre-upgrade/v0.7.0/
+
+The release/runbook procedure must create its explicit pre-upgrade backup in that protected subtree. Routine retention must never descend into or prune backups/pre-upgrade/.
+
+Keep at least the seven most recent valid routine backup pairs locally:
 
     lavanda-flow-<timestamp>.dump
     lavanda-flow-<timestamp>.dump.sha256
 
-Retention rules:
+A routine backup pair is valid for retention purposes only when all of the following are true:
 
-- operate only on the known Lavanda Flow backup filename contract;
-- treat a dump and matching checksum as one backup pair;
-- never delete the newest successful backup;
-- never delete the only remaining successful backup;
-- never treat partial files as successful backups;
-- do not automatically delete unmatched/orphaned files;
-- prune only after the current backup completed successfully;
-- when external copy is configured, prune only after external checksum verification succeeds;
-- retain at least seven successful local pairs;
-- do not automate external/weekly retention in this issue.
+- the dump filename matches the exact supported generated timestamp pattern;
+- the dump is a regular file;
+- the matching sidecar exists as a regular file at exactly `<dump>.sha256`;
+- the sidecar contains one canonical 64-character SHA-256 digest for the expected dump filename;
+- the calculated SHA-256 of the dump matches the sidecar.
 
-Use the generated filename timestamp as the canonical ordering signal. Skip filenames outside the supported pattern rather than guessing.
+Retention algorithm:
 
-Pre-upgrade backups remain an explicit release/runbook gate. The scheduled daily job does not replace the required pre-upgrade backup and verified off-notebook copy.
+1. examine only files directly in the routine backup directory, never protected subdirectories;
+2. build the set of checksum-validated routine pairs;
+3. ignore malformed, unmatched, orphaned, partial, or invalid pairs rather than deleting or counting them;
+4. if fewer than eight valid routine pairs exist, delete nothing;
+5. sort valid pairs by the timestamp encoded in the supported filename;
+6. keep the newest seven valid pairs;
+7. only older valid pairs are eligible for deletion;
+8. never delete the newest valid pair or the only remaining valid pair;
+9. prune only after the current backup completed successfully;
+10. when an external destination is configured, prune only after the current external staged copy was checksum-verified and published successfully.
+
+Do not automate external/weekly retention in this issue.
+
+The filename timestamp is the canonical ordering signal only after the pair passes validity checks. Skip filenames outside the supported pattern rather than guessing.
+
+Pre-upgrade backups remain an explicit release/runbook gate and are protected from routine retention. The scheduled daily job does not replace the required pre-upgrade backup and verified off-notebook copy.
 
 ## Diagnostics
 
@@ -245,7 +294,9 @@ A run log may contain:
 - retention actions;
 - sanitized command failures.
 
-The process exit code must remain meaningful so Windows Task Scheduler can report success or failure.
+Do not persist raw child stdout/stderr wholesale. Parse the expected backup artifact records and emit only sanitized status/error summaries. Apply a simple bounded diagnostic retention policy so logs cannot grow without limit.
+
+The process exit code must remain meaningful so Windows Task Scheduler can report success or failure. The task status/inspection command should surface the most recent Task Scheduler result when practical.
 
 Do not introduce telemetry, email, WhatsApp, push notifications, or cloud monitoring.
 
@@ -264,12 +315,16 @@ Document:
 - default 20:00 local schedule and how to choose another time;
 - install/update/remove/status commands;
 - external destination configuration;
-- copied checksum verification;
-- local retention behavior;
-- local diagnostic location;
+- copied checksum verification and its filesystem-only guarantee;
+- collision-safe staged publication behavior;
+- local retention behavior and checksum-backed valid-pair definition;
+- protected backups/pre-upgrade/<release>/ storage for explicit pre-upgrade backups;
+- local diagnostic location and bounded diagnostic retention;
 - pre-upgrade backups remain explicit;
 - disposable restore verification is not run daily;
 - recovery remains a maintainer procedure;
+- RunOnlyIfLoggedOn, StartWhenAvailable, IgnoreNew, no-wake, and bounded Docker-readiness behavior;
+- supported Git Bash discovery/override behavior;
 - moving the operational checkout requires updating/reinstalling the scheduled task.
 
 Update docs/operations/windows-operator-workstation.md only when needed to record validated production-host task evidence. Never commit machine-specific external paths, usernames, or credentials.
@@ -294,15 +349,21 @@ Validate that:
 Cover or manually demonstrate in an isolated/non-production path:
 
 - backup child-process failure propagates non-zero;
-- successful local backup is recognized;
-- external copy succeeds to a temporary directory;
-- copied checksum verification succeeds;
-- tampered copied dump/checksum produces failure;
-- external-copy failure preserves the valid local backup;
-- retention keeps the seven newest successful pairs;
+- successful local backup is recognized from exactly one Backup created record and one Checksum created record;
+- missing, duplicate, mismatched-sidecar, and stale/ambiguous artifact records fail safely;
+- paths containing spaces work across PowerShell, Git Bash, cygpath, repository checkout, and external destination;
+- external copy succeeds through staging to a temporary destination;
+- copied checksum verification succeeds before publication;
+- tampered staged dump/checksum produces failure;
+- existing final-name collisions are refused without overwrite;
+- failed staging/copy leaves no published partial pair and preserves the valid local backup;
+- retention counts only checksum-valid pairs;
+- retention keeps the seven newest valid routine pairs;
 - retention does nothing when fewer than eight valid pairs exist;
-- unmatched/malformed files are not deleted;
-- diagnostics contain no credentials.
+- protected pre-upgrade subtrees are never pruned;
+- unmatched/malformed/orphaned files are not deleted;
+- Docker startup delay is tolerated only within the bounded readiness window;
+- diagnostics contain no credentials and do not persist raw child output.
 
 ### Task management
 
@@ -310,10 +371,15 @@ On Windows validate:
 
 - install creates exactly one task with the documented name;
 - reinstall/update is idempotent;
+- the task uses the interactive current user / RunOnlyIfLoggedOn semantics;
 - the trigger uses the configured time;
 - missed-run/start-when-available behavior is configured;
-- concurrent instances are prevented;
+- wake-from-sleep is not enabled by this issue;
+- concurrent instances use IgnoreNew or equivalent;
+- paths containing spaces are passed without interpolation/quoting breakage;
+- bounded Docker readiness behaves correctly after sign-in/startup delay;
 - a manual task start executes the routine path;
+- task status exposes the latest result when practical;
 - task result reflects orchestrator success/failure;
 - removal deletes only the task.
 
@@ -378,10 +444,12 @@ Implementation is complete when:
 - Task Scheduler launches the repository-owned orchestration at the documented/configured time;
 - the orchestrator reuses backup-postgres.sh;
 - every successful run produces a validated custom-format dump and SHA-256 sidecar;
-- configured external copies are checksum-verified;
+- configured external copies use collision-safe staging and are checksum-verified before publication;
 - machine/provider-specific destinations remain outside source control;
 - failures return non-zero and leave safe local diagnostics;
-- local retention keeps at least seven successful pairs and cannot remove the only known-good backup;
+- artifact handoff from backup-postgres.sh is parsed strictly and unambiguously;
+- local retention counts only checksum-valid routine pairs, keeps at least seven valid pairs, and cannot remove the newest/only known-good backup;
+- explicit pre-upgrade backups are stored under a protected backups/pre-upgrade/<release>/ subtree and are excluded from routine pruning;
 - explicit pre-upgrade backup/recovery gates remain unchanged;
 - disposable restore verification remains manual/release-oriented;
 - PostgreSQL remains private;
