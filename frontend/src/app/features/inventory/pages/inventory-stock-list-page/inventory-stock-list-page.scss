@@ -1,0 +1,14 @@
+:host { display: block; }
+.stock-page { display: grid; gap: 24px; }
+.page-header h1, .page-header p, .context { margin: 0; }
+.page-header p, .context, caption, td span { color: var(--mat-sys-on-surface-variant); }
+.group-navigation { display: flex; flex-wrap: wrap; gap: 8px; }
+.group-navigation .active-group { background: var(--mat-sys-secondary-container); }
+.table-scroll { max-width: 100%; overflow-x: auto; }
+table { width: 100%; min-width: 980px; border-collapse: collapse; }
+caption { padding-bottom: 10px; text-align: left; font: var(--mat-sys-body-small); }
+th, td { padding: 12px; border-bottom: 1px solid var(--mat-sys-outline-variant); text-align: left; vertical-align: top; }
+th { font: var(--mat-sys-label-large); }
+td span { display: block; margin-top: 4px; }
+.actions { min-width: 170px; }
+.actions a { display: block; width: fit-content; }

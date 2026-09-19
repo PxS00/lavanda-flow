@@ -1,0 +1,116 @@
+<section class="edit-page" aria-labelledby="supplier-edit-heading">
+  <header>
+    <a mat-button routerLink="/suppliers">Voltar aos fornecedores</a>
+    <h1 id="supplier-edit-heading">Editar fornecedor</h1>
+    <p>Atualize os dados permitidos sem alterar o histórico das entradas de estoque.</p>
+  </header>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando fornecedor..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      @if (globalSubmissionError(); as error) {
+        <app-error-state [error]="error" />
+      }
+
+      <mat-card appearance="outlined">
+        <mat-card-content>
+          <form [formGroup]="editForm" (submit)="submit($event)" novalidate>
+            <mat-form-field appearance="outline">
+              <mat-label>Nome</mat-label>
+              <input
+                matInput
+                autocomplete="organization"
+                formControlName="name"
+                [readonly]="isSubmitting()"
+                [attr.aria-describedby]="backendFieldError('name') ? 'supplier-name-backend-error' : null"
+              />
+              <mat-hint align="end">{{ editForm.controls.name.value.length }}/255</mat-hint>
+              @if (editForm.controls.name.touched && editForm.controls.name.invalid) {
+                <mat-error>Nome é obrigatório e deve ter no máximo 255 caracteres.</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('name'); as error) {
+              <p id="supplier-name-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+
+            <mat-form-field appearance="outline">
+              <mat-label>Identificador</mat-label>
+              <input
+                matInput
+                autocomplete="off"
+                formControlName="identifier"
+                [readonly]="isSubmitting()"
+                [attr.aria-describedby]="
+                  backendFieldError('identifier') ? 'supplier-identifier-backend-error' : null
+                "
+              />
+              <mat-hint align="end">{{ editForm.controls.identifier.value.length }}/255</mat-hint>
+              @if (editForm.controls.identifier.touched && editForm.controls.identifier.invalid) {
+                <mat-error>Identificador deve ter no máximo 255 caracteres.</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('identifier'); as error) {
+              <p id="supplier-identifier-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+
+            <mat-form-field appearance="outline">
+              <mat-label>Contato</mat-label>
+              <input
+                matInput
+                autocomplete="email"
+                formControlName="contact"
+                [readonly]="isSubmitting()"
+                [attr.aria-describedby]="
+                  backendFieldError('contact') ? 'supplier-contact-backend-error' : null
+                "
+              />
+              <mat-hint align="end">{{ editForm.controls.contact.value.length }}/255</mat-hint>
+              @if (editForm.controls.contact.touched && editForm.controls.contact.invalid) {
+                <mat-error>Contato deve ter no máximo 255 caracteres.</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('contact'); as error) {
+              <p id="supplier-contact-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+
+            <mat-form-field appearance="outline">
+              <mat-label>Observações</mat-label>
+              <textarea
+                matInput
+                rows="4"
+                formControlName="notes"
+                [readonly]="isSubmitting()"
+                [attr.aria-describedby]="backendFieldError('notes') ? 'supplier-notes-backend-error' : null"
+              ></textarea>
+              <mat-hint>Opcional</mat-hint>
+            </mat-form-field>
+            @if (backendFieldError('notes'); as error) {
+              <p id="supplier-notes-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+
+            <mat-slide-toggle formControlName="active" [disabled]="isSubmitting()">
+              Fornecedor ativo
+            </mat-slide-toggle>
+            <p class="active-hint">
+              Fornecedores inativos permanecem consultáveis, mas não podem ser usados em novas entradas.
+            </p>
+
+            <div class="form-actions">
+              <button mat-flat-button type="submit" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'Salvando...' : 'Salvar alterações' }}
+              </button>
+              <a mat-button [routerLink]="['/suppliers', currentState.supplier.id]">Cancelar</a>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</section>

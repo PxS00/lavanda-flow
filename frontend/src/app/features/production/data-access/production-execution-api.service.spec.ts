@@ -3,7 +3,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { API_BASE_URL } from '../../../core/config/api-base-url.token';
-import { ProductionExecutionDto, RegisterProductionRequest } from './production-execution.dto';
+import {
+  ProductionExecutionDetailsDto,
+  ProductionExecutionDto,
+  ProductionExecutionHistoryPageDto,
+  RegisterProductionRequest,
+} from './production-execution.dto';
 import { ProductionExecutionApiService } from './production-execution-api.service';
 
 describe('ProductionExecutionApiService', () => {
@@ -71,5 +76,54 @@ describe('ProductionExecutionApiService', () => {
     request.flush(responseBody);
 
     expect(received).toEqual(responseBody);
+  });
+
+  it('should request backend-paginated history with optional inclusive dates', () => {
+    const page: ProductionExecutionHistoryPageDto = {
+      content: [],
+      page: 2,
+      size: 50,
+      totalElements: 0,
+      totalPages: 0,
+    };
+    service.search({ from: '2026-09-01', to: '2026-09-30', page: 2, size: 50 }).subscribe();
+
+    const request = httpTesting.expectOne(
+      `${executionsUrl}?page=2&size=50&from=2026-09-01&to=2026-09-30`,
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush(page);
+
+    service.search({ page: 0, size: 20 }).subscribe();
+    const unfiltered = httpTesting.expectOne(`${executionsUrl}?page=0&size=20`);
+    expect(unfiltered.request.method).toBe('GET');
+    unfiltered.flush({ ...page, page: 0, size: 20 });
+  });
+
+  it('should fetch direct execution detail while preserving decimal strings', () => {
+    const detail: ProductionExecutionDetailsDto = {
+      executionId: 'execution/1',
+      formulaId: 'formula-1',
+      outputInventoryItemId: 'output-item',
+      outputItemName: 'Sabonete',
+      outputUnitOfMeasure: 'MILLILITER',
+      outputBatchId: 'output-batch',
+      outputQuantity: '9999999999999.123456',
+      lotCode: 'LOT-1',
+      lotCodeMode: 'MANUAL',
+      productionDate: '2026-09-04',
+      outputReceivedAt: '2026-09-04',
+      outputExpiresAt: null,
+      completedAt: '2026-09-04T18:00:00Z',
+      consumptions: [],
+    };
+    let received: ProductionExecutionDetailsDto | undefined;
+    service.getById('execution/1').subscribe((response) => (received = response));
+
+    const request = httpTesting.expectOne(`${executionsUrl}/execution%2F1`);
+    expect(request.request.method).toBe('GET');
+    request.flush(detail);
+
+    expect(received?.outputQuantity).toBe('9999999999999.123456');
   });
 });

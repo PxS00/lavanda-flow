@@ -26,6 +26,51 @@ Copy both the dump and its checksum sidecar to an existing zero-recurring-cost d
 sha256sum -c lavanda-flow-YYYYMMDDTHHMMSSZ.dump.sha256
 ```
 
+## Schedule routine backups on Windows
+
+From the operational checkout, install or update the current user's daily task in PowerShell. Supply the approved external directory at installation time; it is stored only in the local Task Scheduler action and is not committed:
+
+```powershell
+$externalBackupDirectory = Read-Host 'Absolute external backup directory'
+.\scripts\operations\manage-backup-task.ps1 Install -ExternalDestination $externalBackupDirectory
+```
+
+The default trigger is `20:00` in the Windows host's local timezone. Choose another time without editing repository files:
+
+```powershell
+.\scripts\operations\manage-backup-task.ps1 Install -At '21:30' -ExternalDestination $externalBackupDirectory
+```
+
+Git Bash is discovered in the standard system-wide and per-user Git for Windows locations. If it is installed elsewhere, reinstall the task with an absolute override:
+
+```powershell
+$gitBash = Read-Host 'Absolute path to Git Bash bash.exe'
+.\scripts\operations\manage-backup-task.ps1 Install -ExternalDestination $externalBackupDirectory -GitBashPath $gitBash
+```
+
+The task runs as the current interactive Windows user without storing a Windows password. It starts a missed trigger when the signed-in workstation next becomes available, does not wake a sleeping notebook, permits execution on battery, ignores overlapping starts, and waits up to five minutes for Docker Desktop and the existing operational PostgreSQL healthcheck. A failed routine run remains failed and is not automatically rerun by Task Scheduler. The dump, structural validation, credentials, local artifact creation, and checksum remain owned by `backup-postgres.sh`.
+
+Inspect or remove only the task with:
+
+```powershell
+.\scripts\operations\manage-backup-task.ps1 Status
+.\scripts\operations\manage-backup-task.ps1 Remove
+```
+
+Removal does not delete dumps, checksums, logs, operational configuration, or Docker data. The task action points at the script in this exact operational checkout; reinstall it after moving the checkout. Routine logs are written under the ignored `backups/logs/` directory. The runner keeps the 30 newest files matching its diagnostic log filename and leaves unrelated files untouched. Task Scheduler's last result and the local log both preserve a non-zero failure signal without recording PostgreSQL credentials or database rows.
+
+When an external destination is configured, the runner copies the dump and sidecar into a unique temporary directory there, verifies the copied dump, and only then publishes the pair. Any existing final dump or sidecar with the intended name fails the run for maintainer inspection, without modification. If publication cannot complete and verify, only final artifacts created by that run are removed. A failed or unavailable external copy leaves the valid local backup intact and prevents retention for that run. Verification confirms the destination filesystem copy; a cloud-sync client's remote upload remains an operational property of that client.
+
+Routine retention examines only checksum-valid `lavanda-flow-YYYYMMDDTHHMMSSZ.dump` pairs directly under `backups/`, orders them by the UTC filename timestamp, and keeps the seven newest. Fewer than eight valid pairs causes no pruning. Partial, malformed, unmatched, checksum-invalid, nested, and externally stored files are never pruned automatically.
+
+Pre-upgrade backups are deliberately nested outside routine retention. Before every application or schema upgrade, run the explicit release gate from Git Bash and copy/verify that pair outside the notebook:
+
+```bash
+scripts/operations/backup-postgres.sh --output-dir backups/pre-upgrade/vX.Y.Z
+```
+
+Keep that protected pair until the upgrade and post-upgrade validation succeed. The daily task does not replace this gate and does not run disposable restore verification.
+
 ## Verify a backup safely
 
 Run this default disposable verification periodically and after important changes. It is the normal maintainer
@@ -89,4 +134,4 @@ Perform the disposable verification procedure first whenever possible. Do not au
 - Keep one weekly backup for each of the previous four weeks outside the notebook failure domain.
 - After each operating-day backup, ensure at least one current verified copy exists outside the notebook's primary storage/failure domain.
 
-Retention deletion is deliberately manual: this workflow does not automatically prune successful backups.
+The scheduled workflow automatically prunes only old checksum-valid routine pairs directly under `backups/`. Protected pre-upgrade backups and external weekly retention remain manual.

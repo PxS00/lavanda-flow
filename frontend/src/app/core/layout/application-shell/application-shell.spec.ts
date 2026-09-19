@@ -77,10 +77,12 @@ describe('ApplicationShell', () => {
     expect(headings).toEqual(['Visão geral', 'Estoque', 'Produção', 'Cadastros']);
     expect(links.map((link) => [link.textContent?.trim(), link.getAttribute('href')])).toEqual([
       ['Painel', '/dashboard'],
-      ['Estoque', '/catalog'],
+      ['Estoque', '/inventory'],
       ['Entradas', '/receipts'],
       ['Alertas', '/inventory/alerts'],
-      ['Produção', '/production/formulas'],
+      ['Fórmulas', '/production/formulas'],
+      ['Histórico', '/production/executions'],
+      ['Catálogo', '/catalog'],
       ['Fornecedores', '/suppliers'],
     ]);
     expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
@@ -88,11 +90,13 @@ describe('ApplicationShell', () => {
       'Estoque',
       'Entradas',
       'Alertas',
-      'Produção',
+      'Fórmulas',
+      'Histórico',
+      'Catálogo',
       'Fornecedores',
     ]);
     expect(links.every((link) => link.querySelector('.nav-link-content .nav-glyph') !== null)).toBe(true);
-    expect(fixture.nativeElement.querySelectorAll('.nav-glyph[aria-hidden="true"]')).toHaveLength(6);
+    expect(fixture.nativeElement.querySelectorAll('.nav-glyph[aria-hidden="true"]')).toHaveLength(8);
     expect(fixture.nativeElement.textContent).not.toContain('Saídas');
     expect(links.some((link) => link.getAttribute('href') === '/outputs')).toBe(false);
   });
@@ -111,7 +115,7 @@ describe('ApplicationShell', () => {
   it('keeps labels and links structurally available for keyboard rail expansion', () => {
     const links = Array.from(fixture.nativeElement.querySelectorAll('.primary-navigation a')) as HTMLAnchorElement[];
 
-    expect(links).toHaveLength(6);
+    expect(links).toHaveLength(8);
     expect(links.every((link) => link.querySelector('.nav-label')?.textContent?.trim())).toBe(true);
     expect(links.every((link) => link.getAttribute('tabindex') !== '-1')).toBe(true);
     expect(fixture.nativeElement.querySelector('mat-sidenav').classList.contains('persistent-navigation')).toBe(true);

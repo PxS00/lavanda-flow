@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +43,7 @@ class InventoryItemOverviewIntegrationTest {
     @Autowired private GetExpirationAlerts getExpirationAlerts;
     @Autowired private BatchRepository batchRepository;
     @Autowired private MinimumStockLevelRepository minimumStockLevelRepository;
+    @Autowired private InventoryItemOverviewQuery inventoryItemOverviewQuery;
 
     @Test
     void shouldAggregateOverviewWithExistingStockAndExpirationSemantics() {
@@ -97,6 +99,28 @@ class InventoryItemOverviewIntegrationTest {
         assertThat(overview.nearestExpiration()).isNull();
         assertThat(overview.expiredBatchCount()).isZero();
         assertThat(overview.expiringSoonBatchCount()).isZero();
+    }
+
+    @Test
+    void shouldRetrieveMetricsForMultipleItemsInBulkIncludingMinimumOnlyItem() {
+        var stocked = registerInventoryItem.execute(new RegisterInventoryItemCommand(
+            "Bulk metrics stocked " + UUID.randomUUID(), null, Category.ESSENCE, UnitOfMeasure.MILLILITER
+        ));
+        var minimumOnly = registerInventoryItem.execute(new RegisterInventoryItemCommand(
+            "Bulk metrics empty " + UUID.randomUUID(), null, Category.BASE, UnitOfMeasure.LITER
+        ));
+        saveBatch(stocked.id(), "2.500000", TODAY.minusDays(3), TODAY.plusDays(2));
+        minimumStockLevelRepository.save(new MinimumStockLevel(minimumOnly.id(), new BigDecimal("4.000000")));
+
+        var result = inventoryItemOverviewQuery.findMetrics(
+            Set.of(stocked.id(), minimumOnly.id()), TODAY, TODAY.plusDays(30)
+        );
+
+        assertThat(result).containsOnlyKeys(stocked.id(), minimumOnly.id());
+        assertThat(result.get(stocked.id()).availableQuantity()).isEqualByComparingTo("2.500000");
+        assertThat(result.get(stocked.id()).nearestExpiration()).isEqualTo(TODAY.plusDays(2));
+        assertThat(result.get(minimumOnly.id()).availableQuantity()).isEqualByComparingTo("0.000000");
+        assertThat(result.get(minimumOnly.id()).minimumQuantity()).isEqualByComparingTo("4.000000");
     }
 
     private void saveBatch(UUID itemId, String quantity, LocalDate receivedAt, LocalDate expiresAt) {

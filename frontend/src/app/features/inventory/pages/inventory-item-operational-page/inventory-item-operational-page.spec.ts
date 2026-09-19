@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatPaginatorIntl } from '@angular/material/paginator';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
-import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter, Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
 
 import { InventoryItemDto } from '../../../catalog/data-access/inventory-item.dto';
@@ -81,6 +81,7 @@ describe('InventoryItemOperationalPage', () => {
 
   let fixture: ComponentFixture<InventoryItemOperationalPage>;
   let routeParams: Subject<ParamMap>;
+  let queryParams: Subject<ParamMap>;
   let overviewResponse: Subject<InventoryItemOverviewDto>;
   let catalogResponse: Subject<InventoryItemDto>;
   let batchResponse: Subject<BatchInventoryDto>;
@@ -105,9 +106,11 @@ describe('InventoryItemOperationalPage', () => {
     typeof vi.fn<(query: InventoryItemMovementHistoryQuery) => Observable<MovementHistoryPageDto>>
   >;
   let openMaintenanceDialog: ReturnType<typeof vi.fn>;
+  let navigate: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     routeParams = new Subject<ParamMap>();
+    queryParams = new Subject<ParamMap>();
     overviewResponse = new Subject<InventoryItemOverviewDto>();
     catalogResponse = new Subject<InventoryItemDto>();
     batchResponse = new Subject<BatchInventoryDto>();
@@ -131,7 +134,7 @@ describe('InventoryItemOperationalPage', () => {
       providers: [
         { provide: MatPaginatorIntl, useFactory: createPtBrPaginatorIntl },
         provideRouter([]),
-        { provide: ActivatedRoute, useValue: { paramMap: routeParams } },
+        { provide: ActivatedRoute, useValue: { paramMap: routeParams, queryParamMap: queryParams } },
         { provide: InventoryItemApiService, useValue: { getById: getCatalogItem } },
         {
           provide: InventoryItemOperationsApiService,
@@ -155,8 +158,11 @@ describe('InventoryItemOperationalPage', () => {
 
     await TestBed.compileComponents();
 
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
     fixture = TestBed.createComponent(InventoryItemOperationalPage);
     fixture.detectChanges();
+    queryParams.next(convertToParamMap({}));
     routeParams.next(convertToParamMap({ inventoryItemId }));
     fixture.detectChanges();
   });
@@ -170,6 +176,16 @@ describe('InventoryItemOperationalPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Carregando visão geral do estoque...');
     expect(fixture.nativeElement.textContent).toContain('Carregando lotes...');
     expect(fixture.nativeElement.textContent).toContain('Carregando histórico de movimentações...');
+  });
+
+  it('should present finished products in Portuguese and return to the stock workspace', () => {
+    overviewResponse.next({ ...overview, category: 'FINISHED_PRODUCT' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Produto finalizado');
+    const returnLink = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
+    expect(returnLink.textContent).toContain('Voltar ao estoque');
+    expect(returnLink.getAttribute('href')).toBe('/inventory');
   });
 
   it('should render catalog references once at item identity level', () => {
@@ -380,6 +396,140 @@ describe('InventoryItemOperationalPage', () => {
     expect(rows[0].querySelector('a')?.textContent).toContain('Rastrear genealogia');
   });
 
+  it('should highlight a batch after its authoritative response loads', () => {
+    queryParams.next(convertToParamMap({ batchId: 'batch-b' }));
+    batchResponse.next({
+      inventoryItemId,
+      asOfDate: '2026-09-01',
+      batches: [batch('batch-a', 'LOT-A', 'AVAILABLE'), batch('batch-b', 'LOT-B', 'EXPIRED')],
+    });
+    fixture.detectChanges();
+
+    const selectedRow = fixture.nativeElement.querySelector('tr.batch-targeted') as HTMLTableRowElement;
+    expect(fixture.nativeElement.querySelector('#batches')).not.toBeNull();
+    expect(selectedRow.textContent).toContain('LOT-B');
+    expect(selectedRow.textContent).toContain('Lote selecionado');
+    expect(openMaintenanceDialog).not.toHaveBeenCalled();
+  });
+
+  it('should open expired disposal only after authoritative batch loading and consume the intent', () => {
+    const selectedBatch = batch('batch-expired', 'LOT-EXPIRED', 'EXPIRED');
+    queryParams.next(
+      convertToParamMap({ batchId: selectedBatch.batchId, maintenance: 'expired-disposal' }),
+    );
+
+    expect(openMaintenanceDialog).not.toHaveBeenCalled();
+    batchResponse.next({ inventoryItemId, asOfDate: '2026-09-01', batches: [selectedBatch] });
+    fixture.detectChanges();
+
+    expect(openMaintenanceDialog).toHaveBeenCalledWith(StockMaintenanceDialog, {
+      data: { batch: selectedBatch, initialOperation: 'EXPIRED_DISPOSAL' },
+    });
+    expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({
+      queryParams: { maintenance: null },
+      queryParamsHandling: 'merge',
+      preserveFragment: true,
+      replaceUrl: true,
+    }));
+
+    maintenanceResult.next({
+      movementId: 'movement-disposal',
+      batchId: selectedBatch.batchId,
+      type: 'EXPIRED_DISPOSAL',
+      quantity: '1',
+      resultingBalance: '39',
+      reason: 'Vencido',
+      occurredAt: '2026-09-08T15:00:00Z',
+    });
+    batchResponse.next({ inventoryItemId, asOfDate: '2026-09-01', batches: [selectedBatch] });
+    fixture.detectChanges();
+
+    expect(openMaintenanceDialog).toHaveBeenCalledTimes(1);
+    expect(fixture.nativeElement.querySelector('tr.batch-targeted')?.textContent).toContain(
+      'Lote selecionado',
+    );
+  });
+
+  it('should rearm the same-batch handoff after the maintenance intent is removed', () => {
+    const selectedBatch = batch('batch-expired', 'LOT-EXPIRED', 'EXPIRED');
+    const handoff = { batchId: selectedBatch.batchId, maintenance: 'expired-disposal' };
+
+    queryParams.next(convertToParamMap(handoff));
+    batchResponse.next({ inventoryItemId, asOfDate: '2026-09-01', batches: [selectedBatch] });
+    expect(openMaintenanceDialog).toHaveBeenCalledTimes(1);
+
+    queryParams.next(convertToParamMap({ batchId: selectedBatch.batchId }));
+    queryParams.next(convertToParamMap(handoff));
+    expect(openMaintenanceDialog).toHaveBeenCalledTimes(2);
+  });
+
+  it('should keep the workspace usable when an authoritative target batch is absent', () => {
+    queryParams.next(convertToParamMap({ batchId: 'batch-missing', maintenance: 'expired-disposal' }));
+    batchResponse.next({
+      inventoryItemId,
+      asOfDate: '2026-09-01',
+      batches: [batch('batch-a', 'LOT-A', 'AVAILABLE')],
+    });
+    fixture.detectChanges();
+
+    expect(openMaintenanceDialog).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain(
+      'O lote indicado não está mais disponível neste item',
+    );
+  });
+
+  it('should clear a stale target notice before a retry that later fails', () => {
+    queryParams.next(convertToParamMap({ batchId: 'batch-missing' }));
+    batchResponse.next({
+      inventoryItemId,
+      asOfDate: '2026-09-01',
+      batches: [batch('batch-a', 'LOT-A', 'AVAILABLE')],
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(
+      'O lote indicado não está mais disponível neste item',
+    );
+
+    const retryResponse = new Subject<BatchInventoryDto>();
+    getBatches.mockReturnValue(retryResponse);
+    fixture.componentInstance['retryBatches']();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'O lote indicado não está mais disponível neste item',
+    );
+
+    retryResponse.error(apiError(500, 'INTERNAL_ERROR', 'Internal details'));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'O lote indicado não está mais disponível neste item',
+    );
+    expect(fixture.nativeElement.textContent).toContain('Tentar novamente');
+  });
+
+  it('should keep batch errors retryable without opening a stale handoff', () => {
+    queryParams.next(convertToParamMap({ batchId: 'batch-missing', maintenance: 'expired-disposal' }));
+    batchResponse.error(apiError(500, 'INTERNAL_ERROR', 'Internal details'));
+    fixture.detectChanges();
+
+    expect(openMaintenanceDialog).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'O lote indicado não está mais disponível neste item',
+    );
+    expect(fixture.nativeElement.textContent).toContain('Tentar novamente');
+  });
+
+  it('should not map unknown maintenance values to a stock operation', () => {
+    const selectedBatch = batch('batch-a', 'LOT-A', 'AVAILABLE');
+    queryParams.next(convertToParamMap({ batchId: selectedBatch.batchId, maintenance: 'loss' }));
+    batchResponse.next({ inventoryItemId, asOfDate: '2026-09-01', batches: [selectedBatch] });
+    fixture.detectChanges();
+
+    expect(openMaintenanceDialog).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('tr.batch-targeted')?.textContent).toContain(
+      'Lote selecionado',
+    );
+  });
+
   it('should open maintenance for the exact selected batch and refresh only after backend confirmation', () => {
     const selectedBatch = batch('batch-a', 'LOT-A', 'AVAILABLE');
     batchResponse.next({ inventoryItemId, asOfDate: '2026-09-01', batches: [selectedBatch] });
@@ -392,7 +542,7 @@ describe('InventoryItemOperationalPage', () => {
     fixture.detectChanges();
 
     expect(openMaintenanceDialog).toHaveBeenCalledWith(StockMaintenanceDialog, {
-      data: selectedBatch,
+      data: { batch: selectedBatch },
     });
     expect(getOverview).toHaveBeenCalledTimes(1);
     expect(getBatches).toHaveBeenCalledTimes(1);

@@ -11,6 +11,7 @@ import { mapHttpError } from '../../../../core/http/map-http-error';
 import { formatDecimalString } from '../../../../core/i18n/decimal-string';
 import { formatLocalDate } from '../../../../core/i18n/local-date';
 import { UiError } from '../../../../core/http/ui-error';
+import { inventoryItemUnitLabel } from '../../../catalog/inventory-item-display';
 import {
   ExpirationAlertEntryDto,
   ExpirationAlertsDto,
@@ -75,6 +76,7 @@ export class InventoryAlertsPage {
   protected readonly expirationState = signal<AlertState<ExpirationAlertsDto>>({ kind: 'loading' });
   protected readonly formatLocalDate = formatLocalDate;
   protected readonly formatDecimal = formatDecimalString;
+  protected readonly unitLabel = inventoryItemUnitLabel;
   protected readonly expirationStatusLabel = expirationStatusLabel;
 
   constructor() {

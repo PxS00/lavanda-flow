@@ -70,3 +70,12 @@ export interface RegisterInventoryItemRequest {
   readonly productionTypeCode: string | null;
   readonly gender: ProductGender | null;
 }
+
+/** Request payload accepted by the restricted inventory-item maintenance endpoint. */
+export interface UpdateInventoryItemRequest {
+  readonly name: string;
+  readonly description: string | null;
+  readonly active: boolean;
+  readonly essenceReference: string | null;
+  readonly productionTypeCode: string | null;
+}

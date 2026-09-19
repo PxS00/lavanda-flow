@@ -8,7 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   Observable,
   Subject,
@@ -45,10 +45,15 @@ import {
 } from '../../data-access/inventory-operations.dto';
 import { MovementHistoryApiService } from '../../data-access/movement-history-api.service';
 import { FefoWithdrawalPanel } from '../../ui/fefo-withdrawal-panel/fefo-withdrawal-panel';
-import { StockMaintenanceDialog } from '../../ui/stock-maintenance-dialog/stock-maintenance-dialog';
+import {
+  StockMaintenanceDialog,
+  StockMaintenanceDialogData,
+  StockMaintenanceOperation,
+} from '../../ui/stock-maintenance-dialog/stock-maintenance-dialog';
 
 const DEFAULT_MOVEMENT_PAGE_SIZE = 20;
 const MINIMUM_QUANTITY_PATTERN = /^\d+(?:\.\d{1,6})?$/;
+const EXPIRED_DISPOSAL_INTENT = 'expired-disposal';
 
 interface MinimumStockFormModel {
   readonly minimumQuantity: string;
@@ -89,6 +94,7 @@ type PanelState<T> =
 })
 export class InventoryItemOperationalPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly inventoryItemApi = inject(InventoryItemApiService);
   private readonly operationsApi = inject(InventoryItemOperationsApiService);
   private readonly movementHistoryApi = inject(MovementHistoryApiService);
@@ -100,8 +106,11 @@ export class InventoryItemOperationalPage {
   private readonly minimumRequests = new Subject<string>();
   private readonly movementRequests = new Subject<InventoryItemMovementHistoryQuery>();
   private readonly currentMovementQuery = signal<InventoryItemMovementHistoryQuery | null>(null);
+  private readonly maintenanceHandoffOpenedForBatchId = signal<string | null>(null);
+  private readonly maintenanceIntent = signal<string | null>(null);
 
   readonly inventoryItemId = signal<string | null>(null);
+  protected readonly targetedBatchId = signal<string | null>(null);
   protected readonly withdrawalContext = signal<WithdrawalContext | null>(null);
   readonly minimumStockModel = signal<MinimumStockFormModel>({ minimumQuantity: '' });
   protected readonly minimumStockForm = form(this.minimumStockModel, (minimum) => {
@@ -143,6 +152,7 @@ export class InventoryItemOperationalPage {
   protected readonly minimumActionError = signal<UiError | null>(null);
   protected readonly minimumNotice = signal<string | null>(null);
   protected readonly maintenanceNotice = signal<string | null>(null);
+  protected readonly batchTargetNotice = signal<string | null>(null);
   protected readonly isSavingMinimum = signal(false);
   protected readonly isRemovingMinimum = signal(false);
   protected readonly confirmingMinimumRemoval = signal(false);
@@ -167,6 +177,30 @@ export class InventoryItemOperationalPage {
     this.bindBatchRequests();
     this.bindMinimumRequests();
     this.bindMovementRequests();
+
+    this.route.queryParamMap
+      .pipe(
+        map((params) => ({
+          batchId: params.get('batchId'),
+          maintenance: params.get('maintenance'),
+        })),
+        distinctUntilChanged(
+          (previous, current) =>
+            previous.batchId === current.batchId && previous.maintenance === current.maintenance,
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(({ batchId, maintenance }) => {
+        this.targetedBatchId.set(batchId);
+        this.maintenanceIntent.set(maintenance);
+        if (maintenance !== EXPIRED_DISPOSAL_INTENT) {
+          this.maintenanceHandoffOpenedForBatchId.set(null);
+        }
+        if (batchId === null || batchId.length === 0) {
+          this.batchTargetNotice.set(null);
+        }
+        this.handleBatchHandoff();
+      });
 
     this.route.paramMap
       .pipe(
@@ -216,9 +250,16 @@ export class InventoryItemOperationalPage {
     this.retryMovements();
   }
 
-  protected openMaintenance(batch: BatchInventoryDto['batches'][number]): void {
+  protected openMaintenance(
+    batch: BatchInventoryDto['batches'][number],
+    initialOperation?: StockMaintenanceOperation,
+  ): void {
+    const data: StockMaintenanceDialogData = initialOperation === undefined
+      ? { batch }
+      : { batch, initialOperation };
+
     this.dialog
-      .open(StockMaintenanceDialog, { data: batch })
+      .open(StockMaintenanceDialog, { data })
       .afterClosed()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((movement) => {
@@ -337,6 +378,8 @@ export class InventoryItemOperationalPage {
     this.minimumActionError.set(null);
     this.minimumNotice.set(null);
     this.maintenanceNotice.set(null);
+    this.batchTargetNotice.set(null);
+    this.maintenanceHandoffOpenedForBatchId.set(null);
     this.confirmingMinimumRemoval.set(false);
 
     this.overviewRequests.next(inventoryItemId);
@@ -409,7 +452,10 @@ export class InventoryItemOperationalPage {
   private bindBatchRequests(): void {
     this.batchRequests
       .pipe(
-        tap(() => this.batchState.set({ kind: 'loading' })),
+        tap(() => {
+          this.batchState.set({ kind: 'loading' });
+          this.batchTargetNotice.set(null);
+        }),
         switchMap((inventoryItemId) =>
           this.operationsApi.getBatches(inventoryItemId).pipe(
             map((data): PanelState<BatchInventoryDto> => ({ kind: 'loaded', data })),
@@ -420,7 +466,10 @@ export class InventoryItemOperationalPage {
         ),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((state) => this.batchState.set(state));
+      .subscribe((state) => {
+        this.batchState.set(state);
+        this.handleBatchHandoff();
+      });
   }
 
   private bindMinimumRequests(): void {
@@ -494,11 +543,54 @@ export class InventoryItemOperationalPage {
       ),
     );
   }
+
+  private handleBatchHandoff(): void {
+    const batches = this.batchState();
+    const batchId = this.targetedBatchId();
+    const inventoryItemId = this.inventoryItemId();
+    if (
+      batches.kind !== 'loaded' ||
+      inventoryItemId === null ||
+      batches.data.inventoryItemId !== inventoryItemId ||
+      batchId === null ||
+      batchId.length === 0
+    ) {
+      return;
+    }
+
+    const batch = batches.data.batches.find((entry) => entry.batchId === batchId);
+    if (batch === undefined) {
+      this.batchTargetNotice.set(
+        'O lote indicado não está mais disponível neste item. Atualize os alertas para consultar o estado atual.',
+      );
+      return;
+    }
+
+    this.batchTargetNotice.set(null);
+    if (
+      this.maintenanceIntent() !== EXPIRED_DISPOSAL_INTENT ||
+      this.maintenanceHandoffOpenedForBatchId() === batch.batchId
+    ) {
+      return;
+    }
+
+    this.maintenanceHandoffOpenedForBatchId.set(batch.batchId);
+    this.maintenanceIntent.set(null);
+    this.openMaintenance(batch, 'EXPIRED_DISPOSAL');
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { maintenance: null },
+      queryParamsHandling: 'merge',
+      preserveFragment: true,
+      replaceUrl: true,
+    });
+  }
 }
 
 function formatEnumLabel(value: string): string {
   const labels: Readonly<Record<string, string>> = {
     ESSENCE: 'Essência',
+    FINISHED_PRODUCT: 'Produto finalizado',
     CHEMICAL_INPUT: 'Insumo químico',
     BASE: 'Base',
     ALCOHOL: 'Álcool',

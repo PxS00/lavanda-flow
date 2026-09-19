@@ -1,0 +1,178 @@
+<section class="edit-page" aria-labelledby="edit-heading">
+  <header>
+    <a mat-button routerLink="/catalog">Voltar ao catálogo</a>
+    <h1 id="edit-heading">Editar item de estoque</h1>
+    <p>Atualize os dados permitidos sem alterar o histórico do estoque.</p>
+  </header>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando item de estoque..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      @if (globalSubmissionError(); as error) {
+        <app-error-state [error]="error" />
+      }
+
+      <mat-card appearance="outlined">
+        <mat-card-content>
+          <dl class="context">
+            <div>
+              <dt>Categoria</dt>
+              <dd>{{ categoryLabel(currentState.item.category) }}</dd>
+            </div>
+            <div>
+              <dt>Unidade de medida</dt>
+              <dd>{{ unitLabel(currentState.item.unitOfMeasure) }}</dd>
+            </div>
+            <div>
+              <dt>Gênero</dt>
+              <dd>{{ genderLabel(currentState.item.gender) }}</dd>
+            </div>
+          </dl>
+
+          <form (submit)="submit($event)" novalidate>
+            <mat-form-field appearance="outline">
+              <mat-label>Nome</mat-label>
+              <input
+                matInput
+                [formField]="editForm.name"
+                autocomplete="off"
+                [attr.aria-describedby]="backendFieldError('name') ? 'name-backend-error' : null"
+              />
+              <mat-hint align="end">{{ editForm.name().value().length }}/255</mat-hint>
+              @if (editForm.name().touched() && editForm.name().invalid()) {
+                <mat-error>{{ editForm.name().errors()[0].message }}</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('name'); as error) {
+              <p id="name-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+
+            <mat-form-field appearance="outline">
+              <mat-label>Descrição</mat-label>
+              <textarea
+                matInput
+                rows="4"
+                [formField]="editForm.description"
+                [attr.aria-describedby]="
+                  backendFieldError('description') ? 'description-backend-error' : null
+                "
+              ></textarea>
+              <mat-hint>Opcional</mat-hint>
+            </mat-form-field>
+            @if (backendFieldError('description'); as error) {
+              <p id="description-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+
+            <mat-slide-toggle [formField]="editForm.active">Item ativo</mat-slide-toggle>
+
+            @if (
+              currentState.item.essenceReference !== null || canAssignEssenceReference(currentState.item)
+            ) {
+              <mat-form-field appearance="outline">
+                <mat-label>Referência da essência</mat-label>
+                @if (currentState.item.essenceReference === null) {
+                  <input
+                    matInput
+                    [formField]="editForm.essenceReference"
+                    autocomplete="off"
+                    [attr.aria-describedby]="
+                      backendFieldError('essenceReference') ? 'essence-reference-backend-error' : null
+                    "
+                  />
+                } @else {
+                  <input
+                    matInput
+                    [value]="currentState.item.essenceReference"
+                    readonly
+                    aria-readonly="true"
+                    [attr.aria-describedby]="
+                      backendFieldError('essenceReference')
+                        ? 'essence-reference-backend-error'
+                        : null
+                    "
+                  />
+                }
+                <mat-hint>
+                  {{
+                    currentState.item.essenceReference === null
+                      ? 'Opcional · atribuição única · 001 a 999'
+                      : 'Referência estável e somente leitura'
+                  }}
+                </mat-hint>
+                @if (
+                  editForm.essenceReference().touched() && editForm.essenceReference().invalid()
+                ) {
+                  <mat-error>{{ editForm.essenceReference().errors()[0].message }}</mat-error>
+                }
+              </mat-form-field>
+              @if (backendFieldError('essenceReference'); as error) {
+                <p id="essence-reference-backend-error" class="field-error" role="alert">
+                  {{ error }}
+                </p>
+              }
+            }
+
+            <mat-form-field appearance="outline">
+              <mat-label>Código do tipo de produção</mat-label>
+              @if (currentState.item.productionTypeCode === null) {
+                <input
+                  matInput
+                  [formField]="editForm.productionTypeCode"
+                  autocomplete="off"
+                  [attr.aria-describedby]="
+                    backendFieldError('productionTypeCode')
+                      ? 'production-type-code-backend-error'
+                      : null
+                  "
+                />
+              } @else {
+                <input
+                  matInput
+                  [value]="currentState.item.productionTypeCode"
+                  readonly
+                  aria-readonly="true"
+                  [attr.aria-describedby]="
+                    backendFieldError('productionTypeCode')
+                      ? 'production-type-code-backend-error'
+                      : null
+                  "
+                />
+              }
+              <mat-hint>
+                {{
+                  currentState.item.productionTypeCode === null
+                    ? 'Opcional · atribuição única · 3 letras maiúsculas'
+                    : 'Código estável e somente leitura'
+                }}
+              </mat-hint>
+              @if (
+                editForm.productionTypeCode().touched() && editForm.productionTypeCode().invalid()
+              ) {
+                <mat-error>{{ editForm.productionTypeCode().errors()[0].message }}</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('productionTypeCode'); as error) {
+              <p id="production-type-code-backend-error" class="field-error" role="alert">
+                {{ error }}
+              </p>
+            }
+
+            <div class="form-actions">
+              <button mat-flat-button type="submit" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'Salvando...' : 'Salvar alterações' }}
+              </button>
+              <a mat-button [routerLink]="['/catalog', currentState.item.id]">Cancelar</a>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</section>

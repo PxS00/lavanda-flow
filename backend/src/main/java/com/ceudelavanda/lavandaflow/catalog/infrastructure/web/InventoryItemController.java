@@ -6,8 +6,11 @@ import com.ceudelavanda.lavandaflow.catalog.application.InventoryItemSearchQuery
 import com.ceudelavanda.lavandaflow.catalog.application.RegisterInventoryItem;
 import com.ceudelavanda.lavandaflow.catalog.application.RegisterInventoryItemCommand;
 import com.ceudelavanda.lavandaflow.catalog.application.SearchInventoryItems;
+import com.ceudelavanda.lavandaflow.catalog.application.UpdateInventoryItem;
+import com.ceudelavanda.lavandaflow.catalog.application.UpdateInventoryItemCommand;
 import com.ceudelavanda.lavandaflow.catalog.domain.Category;
 import com.ceudelavanda.lavandaflow.catalog.infrastructure.web.request.RegisterInventoryItemRequest;
+import com.ceudelavanda.lavandaflow.catalog.infrastructure.web.request.UpdateInventoryItemRequest;
 import com.ceudelavanda.lavandaflow.catalog.infrastructure.web.response.InventoryItemPageResponse;
 import com.ceudelavanda.lavandaflow.catalog.infrastructure.web.response.InventoryItemResponse;
 import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
@@ -24,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -40,6 +44,7 @@ public class InventoryItemController {
     private final RegisterInventoryItem registerInventoryItem;
     private final GetInventoryItem getInventoryItem;
     private final SearchInventoryItems searchInventoryItems;
+    private final UpdateInventoryItem updateInventoryItem;
 
     @Operation(summary = "Register an inventory catalog item")
     @ApiResponses({
@@ -72,6 +77,30 @@ public class InventoryItemController {
     @GetMapping("/{inventoryItemId}")
     public ResponseEntity<InventoryItemResponse> getById(@PathVariable UUID inventoryItemId) {
         return ResponseEntity.ok(InventoryItemResponse.from(getInventoryItem.execute(inventoryItemId)));
+    }
+
+    @Operation(summary = "Update supported inventory catalog item metadata")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Inventory item updated", content = @Content(schema = @Schema(implementation = InventoryItemResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request body", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Inventory item not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "409", description = "Canonical essence reference is already assigned", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "422", description = "Stable metadata cannot be changed", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    @PutMapping("/{inventoryItemId}")
+    public ResponseEntity<InventoryItemResponse> update(
+        @PathVariable UUID inventoryItemId,
+        @Valid @RequestBody UpdateInventoryItemRequest request
+    ) {
+        var result = updateInventoryItem.execute(new UpdateInventoryItemCommand(
+            inventoryItemId,
+            request.name(),
+            request.description(),
+            request.active(),
+            request.essenceReference(),
+            request.productionTypeCode()
+        ));
+        return ResponseEntity.ok(InventoryItemResponse.from(result));
     }
 
     @Operation(

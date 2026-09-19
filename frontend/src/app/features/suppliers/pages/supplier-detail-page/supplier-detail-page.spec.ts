@@ -55,6 +55,11 @@ describe('SupplierDetailPage', () => {
     expect(fixture.nativeElement.textContent).toContain('Lavanda Supplies');
     expect(fixture.nativeElement.textContent).toContain('12.345.678/0001-90');
     expect(fixture.nativeElement.textContent).toContain('Preferred supplier');
+    const editLink = Array.from(fixture.nativeElement.querySelectorAll('a')).find(
+      (link) => (link as HTMLAnchorElement).textContent?.trim() === 'Editar fornecedor',
+    ) as HTMLAnchorElement | undefined;
+
+    expect(editLink?.getAttribute('href')).toBe(`/suppliers/${supplierId}/edit`);
   });
 
   it('should render the mapped not-found state', () => {

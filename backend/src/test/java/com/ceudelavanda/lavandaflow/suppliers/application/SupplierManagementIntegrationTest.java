@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SupplierManagementIntegrationTest {
 
     @Autowired private RegisterSupplier registerSupplier;
+    @Autowired private UpdateSupplier updateSupplier;
     @Autowired private GetSupplier getSupplier;
     @Autowired private SearchSuppliers searchSuppliers;
     @Autowired private SupplierLookup supplierLookup;
@@ -39,6 +40,44 @@ class SupplierManagementIntegrationTest {
         assertThat(snapshot.id()).isEqualTo(registered.id());
         assertThat(snapshot.name()).isEqualTo("Issue94 Registered Supplier");
         assertThat(snapshot.active()).isTrue();
+    }
+
+    @Test
+    void shouldUpdatePersistedSupplierAndExposeTheSameIdentityThroughLookup() {
+        var registered = registerSupplier.execute(new RegisterSupplierCommand(
+            "Issue223 Supplier", "OLD-ID", "old@example.test", "Old notes"
+        ));
+
+        var updated = updateSupplier.execute(new UpdateSupplierCommand(
+            registered.id(),
+            "  Issue223 Updated Supplier  ",
+            "  NEW-ID  ",
+            "  updated@example.test  ",
+            "  Updated notes  ",
+            false
+        ));
+
+        var persisted = supplierRepository.findById(registered.id()).orElseThrow();
+        var snapshot = supplierLookup.findById(registered.id()).orElseThrow();
+        var inactive = searchSuppliers.execute(new SupplierSearchQuery("Issue223 Updated", false, 0, 20));
+
+        assertThat(updated.id()).isEqualTo(registered.id());
+        assertThat(persisted.getId()).isEqualTo(registered.id());
+        assertThat(persisted.getName()).isEqualTo("Issue223 Updated Supplier");
+        assertThat(persisted.getIdentifier()).isEqualTo("NEW-ID");
+        assertThat(persisted.getContact()).isEqualTo("updated@example.test");
+        assertThat(persisted.getNotes()).isEqualTo("Updated notes");
+        assertThat(persisted.isActive()).isFalse();
+        assertThat(snapshot.id()).isEqualTo(registered.id());
+        assertThat(snapshot.name()).isEqualTo("Issue223 Updated Supplier");
+        assertThat(snapshot.active()).isFalse();
+        assertThat(inactive.content()).extracting(SupplierResult::id).containsExactly(registered.id());
+
+        updateSupplier.execute(new UpdateSupplierCommand(
+            registered.id(), updated.name(), updated.identifier(), updated.contact(), updated.notes(), true
+        ));
+
+        assertThat(supplierLookup.findById(registered.id()).orElseThrow().active()).isTrue();
     }
 
     @Test

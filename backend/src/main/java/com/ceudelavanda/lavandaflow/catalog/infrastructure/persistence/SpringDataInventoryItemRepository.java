@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 interface SpringDataInventoryItemRepository extends JpaRepository<InventoryItemJpaEntity, UUID> {
@@ -44,6 +45,15 @@ interface SpringDataInventoryItemRepository extends JpaRepository<InventoryItemJ
         @Param("namePattern") String namePattern,
         @Param("category") Category category,
         @Param("active") Boolean active,
+        Pageable pageable
+    );
+
+    @Query("select item from InventoryItemJpaEntity item order by lower(item.name), item.id")
+    Page<InventoryItemJpaEntity> findStockPage(Pageable pageable);
+
+    @Query("select item from InventoryItemJpaEntity item where item.category in :categories order by lower(item.name), item.id")
+    Page<InventoryItemJpaEntity> findStockPageByCategoryIn(
+        @Param("categories") Set<Category> categories,
         Pageable pageable
     );
 }

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 
@@ -10,15 +11,27 @@ import { InventoryItemApiService } from '../catalog/data-access/inventory-item-a
 import { InventoryItemOperationsApiService } from './data-access/inventory-item-operations-api.service';
 import { FefoWithdrawalApiService } from './data-access/fefo-withdrawal-api.service';
 import { InventoryAlertApiService } from './data-access/inventory-alert-api.service';
+import { InventoryStockListApiService } from './data-access/inventory-stock-list-api.service';
 import { MovementHistoryApiService } from './data-access/movement-history-api.service';
+import { StockMaintenanceDialog } from './ui/stock-maintenance-dialog/stock-maintenance-dialog';
 
 describe('inventory routes', () => {
   const inventoryItemId = 'bd194732-51cf-4f73-bc5d-3a9f9337adcc';
+  let stockSearch: ReturnType<typeof vi.fn>;
+  let getBatches: ReturnType<typeof vi.fn>;
+  let openMaintenanceDialog: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    stockSearch = vi.fn(() => of({
+      content: [], page: 0, size: 20, totalElements: 0, totalPages: 0,
+      asOfDate: '2026-09-18', expirationWindowDays: 30,
+    }));
+    getBatches = vi.fn(() => of({ inventoryItemId, asOfDate: '2026-09-01', batches: [] }));
+    openMaintenanceDialog = vi.fn(() => ({ afterClosed: () => of(undefined) }));
     TestBed.configureTestingModule({
       providers: [
         provideRouter(routes),
+        { provide: MatDialog, useValue: { open: openMaintenanceDialog } },
         { provide: AuthSessionService, useValue: authenticatedOperatorSession() },
         {
           provide: InventoryItemApiService,
@@ -59,7 +72,7 @@ describe('inventory routes', () => {
                 expiredBatchCount: 0,
                 expiringSoonBatchCount: 0,
               }),
-            getBatches: () => of({ inventoryItemId, asOfDate: '2026-09-01', batches: [] }),
+            getBatches,
             getMinimumStockLevel: () => of({ inventoryItemId, minimumQuantity: '5' }),
           },
         },
@@ -77,6 +90,10 @@ describe('inventory routes', () => {
             getLowStockAlerts: () => of({ asOfDate: '2026-09-01', alerts: [] }),
             getExpirationAlerts: () => of({ asOfDate: '2026-09-01', windowDays: 30, alerts: [] }),
           },
+        },
+        {
+          provide: InventoryStockListApiService,
+          useValue: { search: stockSearch },
         },
       ],
     });
@@ -96,9 +113,69 @@ describe('inventory routes', () => {
     expect(harness.routeNativeElement?.textContent).toContain('Lavender Essence');
   });
 
+  it('should reconstruct expired disposal from a direct full URL', async () => {
+    getBatches.mockReturnValue(of({
+      inventoryItemId,
+      asOfDate: '2026-09-01',
+      batches: [{
+        batchId: 'batch-expired',
+        inventoryItemId,
+        supplierId: null,
+        lotCode: 'LOT-EXPIRED',
+        initialQuantity: '10',
+        currentQuantity: '10',
+        receivedAt: '2026-08-01',
+        expiresAt: '2026-08-31',
+        status: 'EXPIRED',
+      }],
+    }));
+
+    const harness = await RouterTestingHarness.create(
+      `/inventory/items/${inventoryItemId}?batchId=batch-expired&maintenance=expired-disposal#batches`,
+    );
+    await harness.fixture.whenStable();
+
+    expect(openMaintenanceDialog).toHaveBeenCalledWith(StockMaintenanceDialog, {
+      data: expect.objectContaining({
+        initialOperation: 'EXPIRED_DISPOSAL',
+        batch: expect.objectContaining({ batchId: 'batch-expired' }),
+      }),
+    });
+    expect(harness.routeNativeElement?.querySelector('tr.batch-targeted')?.textContent).toContain(
+      'Lote selecionado',
+    );
+    expect(TestBed.inject(Router).url).toBe(
+      `/inventory/items/${inventoryItemId}?batchId=batch-expired#batches`,
+    );
+  });
+
   it('should resolve the operational alerts route', async () => {
     const harness = await RouterTestingHarness.create('/inventory/alerts');
 
     expect(harness.routeNativeElement?.textContent).toContain('Alertas operacionais');
+  });
+
+  it('should redirect inventory root to all stock', async () => {
+    const harness = await RouterTestingHarness.create('/inventory');
+
+    expect(harness.routeNativeElement?.textContent).toContain('Estoque');
+    expect(TestBed.inject(Router).url).toBe('/inventory/all');
+  });
+
+  it.each([
+    ['/inventory/all', 'Estoque', []],
+    ['/inventory/finished-products', 'Produtos finalizados', ['FINISHED_PRODUCT']],
+    ['/inventory/essences', 'Essências', ['ESSENCE']],
+    ['/inventory/inputs', 'Insumos', ['BASE', 'ALCOHOL', 'CHEMICAL_INPUT', 'COLORANT', 'FIXATIVE']],
+    ['/inventory/packaging', 'Embalagens e componentes', ['BOTTLE', 'VALVE', 'CAP', 'LABEL', 'PACKAGING']],
+  ])('should resolve %s and request its approved categories', async (path, title, categories) => {
+    const harness = await RouterTestingHarness.create(path as string);
+
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain(title);
+    expect(stockSearch).toHaveBeenCalledWith({ categories, page: 0, size: 20 });
+    const currentLink = harness.routeNativeElement?.querySelector(
+      `.group-navigation a[href="${path}"]`,
+    );
+    expect(currentLink?.getAttribute('aria-current')).toBe('page');
   });
 });

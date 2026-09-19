@@ -10,6 +10,11 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   ACCESS_DENIED: 'Você não tem acesso a esta operação.',
   CSRF_VALIDATION_FAILED: 'Não foi possível confirmar a segurança da operação. Tente novamente.',
   INVENTORY_ITEM_NOT_FOUND: 'Item de estoque não encontrado.',
+  INVENTORY_ITEM_STABLE_METADATA_IMMUTABLE:
+    'As referências estáveis já atribuídas não podem ser alteradas ou removidas.',
+  INVENTORY_ITEM_CANONICAL_ESSENCE_REFERENCE_CONFLICT:
+    'A referência informada já está atribuída a uma essência.',
+  INVALID_INVENTORY_ITEM_METADATA: 'A referência informada não é válida para este item.',
   SUPPLIER_NOT_FOUND: 'Fornecedor não encontrado.',
   INACTIVE_INVENTORY_ITEM: 'Este item de estoque está inativo.',
   INACTIVE_SUPPLIER: 'Este fornecedor está inativo.',
@@ -32,6 +37,8 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   INACTIVE_PRODUCTION_FORMULA_CATALOG_ITEM: 'Um item de estoque da fórmula está inativo.',
   INVALID_PRODUCTION_FORMULA: 'Revise os dados da fórmula.',
   INVALID_PRODUCTION_EXECUTION: 'Revise os dados da produção.',
+  INVALID_PRODUCTION_EXECUTION_HISTORY_QUERY: 'Revise os filtros do histórico de produção.',
+  PRODUCTION_EXECUTION_NOT_FOUND: 'Execução de produção não encontrada.',
   INVALID_PRODUCTION_ALLOCATION:
     'As quantidades dos lotes não correspondem aos requisitos da fórmula.',
   INVALID_MANUAL_PRODUCTION_LOT_CODE: 'Revise o código de lote manual informado.',
@@ -62,7 +69,13 @@ export function localizeUiError(error: UiError): UiErrorPresentation {
 }
 
 export function localizeFieldError(error: UiError | null, field: string): string | undefined {
-  return error?.details?.[field] === undefined ? undefined : 'Verifique o valor informado.';
+  if (error?.details?.[field] === undefined) {
+    return undefined;
+  }
+
+  return error.code === 'INVENTORY_ITEM_STABLE_METADATA_IMMUTABLE'
+    ? localizeUiError(error).message
+    : 'Verifique o valor informado.';
 }
 
 export function hasUnhandledDetails(

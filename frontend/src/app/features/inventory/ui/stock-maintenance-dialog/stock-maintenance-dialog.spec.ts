@@ -9,7 +9,10 @@ import {
   StockMaintenanceMovementDto,
   StockMaintenanceRequest,
 } from '../../data-access/stock-maintenance.dto';
-import { StockMaintenanceDialog } from './stock-maintenance-dialog';
+import {
+  StockMaintenanceDialog,
+  StockMaintenanceDialogData,
+} from './stock-maintenance-dialog';
 
 describe('StockMaintenanceDialog', () => {
   const batch: BatchInventoryEntryDto = {
@@ -53,6 +56,7 @@ describe('StockMaintenanceDialog', () => {
     >
   >;
   let close: ReturnType<typeof vi.fn<(result?: StockMaintenanceMovementDto) => void>>;
+  let dialogData: StockMaintenanceDialogData;
 
   beforeEach(async () => {
     adjustmentResponse = new Subject<StockMaintenanceMovementDto>();
@@ -62,11 +66,12 @@ describe('StockMaintenanceDialog', () => {
     registerLoss = vi.fn(() => lossResponse);
     registerExpiredDisposal = vi.fn(() => disposalResponse);
     close = vi.fn();
+    dialogData = { batch };
 
     await TestBed.configureTestingModule({
       imports: [StockMaintenanceDialog],
       providers: [
-        { provide: MAT_DIALOG_DATA, useValue: batch },
+        { provide: MAT_DIALOG_DATA, useFactory: () => dialogData },
         { provide: MatDialogRef, useValue: { close } },
         {
           provide: StockMaintenanceApiService,
@@ -93,6 +98,36 @@ describe('StockMaintenanceDialog', () => {
         ) as NodeListOf<HTMLInputElement>,
       ).map((input) => input.value),
     ).toEqual(['ADJUSTMENT', 'LOSS', 'EXPIRED_DISPOSAL']);
+    expect(fixture.componentInstance.maintenanceForm.value).toMatchObject({
+      operation: 'ADJUSTMENT',
+      quantity: '',
+    });
+  });
+
+  it('should honor an expired-disposal initial operation without pre-filling quantity', async () => {
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [StockMaintenanceDialog],
+      providers: [
+        { provide: MAT_DIALOG_DATA, useValue: { batch, initialOperation: 'EXPIRED_DISPOSAL' } },
+        { provide: MatDialogRef, useValue: { close } },
+        {
+          provide: StockMaintenanceApiService,
+          useValue: { adjust, registerLoss, registerExpiredDisposal },
+        },
+      ],
+    }).compileComponents();
+
+    const hintedFixture = TestBed.createComponent(StockMaintenanceDialog);
+    hintedFixture.detectChanges();
+
+    expect(hintedFixture.componentInstance.maintenanceForm.value).toMatchObject({
+      operation: 'EXPIRED_DISPOSAL',
+      quantity: '',
+    });
+    expect(hintedFixture.nativeElement.textContent).toContain(
+      'O sistema confirma se o lote está elegível para esta operação',
+    );
   });
 
   it.each([

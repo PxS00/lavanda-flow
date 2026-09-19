@@ -45,10 +45,28 @@
                 @for (alert of lowStock.data.alerts; track alert.inventoryItemId) {
                   <tr>
                     <td><strong>{{ alert.name }}</strong><span class="identifier">ID: {{ alert.inventoryItemId }}</span></td>
-                    <td>{{ formatDecimal(alert.availableQuantity) }} {{ alert.unitOfMeasure }}</td>
-                    <td>{{ formatDecimal(alert.minimumQuantity) }} {{ alert.unitOfMeasure }}</td>
-                    <td>{{ formatDecimal(alert.deficitQuantity) }} {{ alert.unitOfMeasure }}</td>
-                    <td><a mat-button [routerLink]="['/inventory/items', alert.inventoryItemId]" [attr.aria-label]="'Abrir operação do item ' + alert.name">Abrir item</a></td>
+                    <td>{{ formatDecimal(alert.availableQuantity) }} {{ unitLabel(alert.unitOfMeasure) }}</td>
+                    <td>{{ formatDecimal(alert.minimumQuantity) }} {{ unitLabel(alert.unitOfMeasure) }}</td>
+                    <td>{{ formatDecimal(alert.deficitQuantity) }} {{ unitLabel(alert.unitOfMeasure) }}</td>
+                    <td>
+                      <div class="row-actions">
+                        <a
+                          mat-flat-button
+                          routerLink="/receipts"
+                          [queryParams]="{ inventoryItemId: alert.inventoryItemId }"
+                          [attr.aria-label]="'Registrar entrada para ' + alert.name"
+                        >
+                          Registrar entrada
+                        </a>
+                        <a
+                          mat-button
+                          [routerLink]="['/inventory/items', alert.inventoryItemId]"
+                          [attr.aria-label]="'Abrir estoque de ' + alert.name"
+                        >
+                          Abrir estoque
+                        </a>
+                      </div>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -129,7 +147,29 @@
                     <td>{{ formatDecimal(alert.currentQuantity) }}</td>
                     <td>{{ alert.lotCode || '—' }}<span class="identifier">ID: {{ alert.batchId }}</span></td>
                     <td><span class="identifier">ID: {{ alert.inventoryItemId }}</span></td>
-                    <td><a mat-button [routerLink]="['/inventory/items', alert.inventoryItemId]" [attr.aria-label]="'Abrir operação do item ' + alert.inventoryItemId">Abrir item</a></td>
+                    <td>
+                      @if (alert.status === 'EXPIRED') {
+                        <a
+                          mat-flat-button
+                          [routerLink]="['/inventory/items', alert.inventoryItemId]"
+                          [queryParams]="{ batchId: alert.batchId, maintenance: 'expired-disposal' }"
+                          fragment="batches"
+                          [attr.aria-label]="'Descartar lote vencido ' + (alert.lotCode || alert.batchId)"
+                        >
+                          Descartar vencido
+                        </a>
+                      } @else {
+                        <a
+                          mat-button
+                          [routerLink]="['/inventory/items', alert.inventoryItemId]"
+                          [queryParams]="{ batchId: alert.batchId }"
+                          fragment="batches"
+                          [attr.aria-label]="'Abrir lote ' + (alert.lotCode || alert.batchId)"
+                        >
+                          Abrir lote
+                        </a>
+                      }
+                    </td>
                   </tr>
                 }
               </tbody>

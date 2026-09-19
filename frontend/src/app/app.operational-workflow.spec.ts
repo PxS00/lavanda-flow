@@ -1,13 +1,16 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { of } from 'rxjs';
 
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/config/api-base-url.token';
 import { AuthSessionService } from './core/auth/auth-session.service';
 import { authenticatedOperatorSession } from './core/auth/testing/authenticated-operator-session';
+import { StockMaintenanceDialog } from './features/inventory/ui/stock-maintenance-dialog/stock-maintenance-dialog';
 
 describe('operational UI workflow', () => {
   const apiUrl = 'https://api.example.test/api/v1';
@@ -17,13 +20,16 @@ describe('operational UI workflow', () => {
     unitOfMeasure: 'MILLILITER', active: true, essenceReference: '027', productionTypeCode: 'BDS',
   };
   let http: HttpTestingController;
+  let openMaintenanceDialog: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    openMaintenanceDialog = vi.fn(() => ({ afterClosed: () => of(undefined) }));
     TestBed.configureTestingModule({
       providers: [
         provideRouter(routes), provideHttpClient(), provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: apiUrl },
         { provide: AuthSessionService, useValue: authenticatedOperatorSession() },
+        { provide: MatDialog, useValue: { open: openMaintenanceDialog } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -39,7 +45,7 @@ describe('operational UI workflow', () => {
     });
     harness.fixture.detectChanges();
     expect(harness.routeNativeElement?.textContent).toContain('Painel');
-    findLink(harness, 'Estoque').click();
+    findLink(harness, 'Catálogo').click();
     await harness.fixture.whenStable();
     http.expectOne(`${apiUrl}/inventory-items?page=0&size=20`).flush(page([item]));
     harness.fixture.detectChanges();
@@ -111,10 +117,13 @@ describe('operational UI workflow', () => {
       asOfDate: '2026-09-01', windowDays: 30, alerts: [],
     });
     harness.fixture.detectChanges();
-    findLink(harness, 'Abrir item').click();
+    findLink(harness, 'Registrar entrada').click();
     await harness.fixture.whenStable();
-    flushWorkspace(http, 10);
-    expect(TestBed.inject(Router).url).toBe(`/inventory/items/${itemId}`);
+    expect(TestBed.inject(Router).url).toBe(`/receipts?inventoryItemId=${itemId}`);
+    http.expectOne(`${apiUrl}/inventory-items/${itemId}`).flush(item);
+    harness.fixture.detectChanges();
+    expect(harness.routeNativeElement?.textContent).toContain('Selecionado:');
+    expect(harness.routeNativeElement?.textContent).toContain('Essência de lavanda');
   });
 
   it('exposes a failed receipt write through the shared error UI without stale success', async () => {
@@ -131,6 +140,43 @@ describe('operational UI workflow', () => {
     expect(harness.routeNativeElement?.textContent).toContain('Os dados do lote são inválidos.');
     expect(harness.routeNativeElement?.textContent).not.toContain('Entrada cadastrada');
   });
+
+  it('composes an expired alert with authoritative batch loading before opening maintenance', async () => {
+    const harness = await RouterTestingHarness.create('/inventory/alerts');
+    http.expectOne(`${apiUrl}/inventory/alerts/low-stock`).flush({ asOfDate: '2026-09-01', alerts: [] });
+    http.expectOne(`${apiUrl}/inventory/alerts/expiration`).flush({
+      asOfDate: '2026-09-01',
+      windowDays: 30,
+      alerts: [{
+        inventoryItemId: itemId,
+        batchId: 'batch-expired',
+        lotCode: 'LOTE-VENCIDO',
+        currentQuantity: '10',
+        expiresAt: '2026-08-31',
+        daysUntilExpiration: -1,
+        status: 'EXPIRED',
+      }],
+    });
+    harness.fixture.detectChanges();
+
+    findLink(harness, 'Descartar vencido').click();
+    await harness.fixture.whenStable();
+    flushWorkspace(http, 10, true, {
+      batchId: 'batch-expired',
+      lotCode: 'LOTE-VENCIDO',
+      expiresAt: '2026-08-31',
+      status: 'EXPIRED',
+    });
+    await harness.fixture.whenStable();
+
+    expect(openMaintenanceDialog).toHaveBeenCalledWith(StockMaintenanceDialog, {
+      data: expect.objectContaining({
+        initialOperation: 'EXPIRED_DISPOSAL',
+        batch: expect.objectContaining({ batchId: 'batch-expired' }),
+      }),
+    });
+    expect(TestBed.inject(Router).url).toBe(`/inventory/items/${itemId}?batchId=batch-expired#batches`);
+  });
 });
 
 function page(content: readonly unknown[]) {
@@ -141,6 +187,12 @@ function flushWorkspace(
   http: HttpTestingController,
   availableQuantity: number,
   includeMinimum = true,
+  batch = {
+    batchId: 'batch-initial',
+    lotCode: 'LOTE-INICIAL',
+    expiresAt: '2026-09-15',
+    status: 'AVAILABLE',
+  },
 ): void {
   if (includeMinimum) {
     http.expectOne('https://api.example.test/api/v1/inventory-items/item-1').flush({
@@ -155,9 +207,9 @@ function flushWorkspace(
     outOfStock: false, nonZeroBatchCount: 2, nearestExpiration: '2026-09-15', expiredBatchCount: 0,
     expiringSoonBatchCount: 1 });
   http.expectOne('https://api.example.test/api/v1/inventory/items/item-1/batches').flush({ inventoryItemId: 'item-1',
-    asOfDate: '2026-09-01', batches: [{ batchId: 'batch-initial', inventoryItemId: 'item-1', supplierId: null,
-      lotCode: 'LOTE-INICIAL', initialQuantity: '80', currentQuantity: String(availableQuantity), receivedAt: '2026-08-01',
-      expiresAt: '2026-09-15', status: 'AVAILABLE' }] });
+    asOfDate: '2026-09-01', batches: [{ batchId: batch.batchId, inventoryItemId: 'item-1', supplierId: null,
+      lotCode: batch.lotCode, initialQuantity: '80', currentQuantity: String(availableQuantity), receivedAt: '2026-08-01',
+      expiresAt: batch.expiresAt, status: batch.status }] });
   if (includeMinimum) {
     http.expectOne('https://api.example.test/api/v1/inventory/items/item-1/minimum-stock-level').flush({ inventoryItemId: 'item-1', minimumQuantity: '50' });
   }

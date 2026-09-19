@@ -16,6 +16,13 @@ export const CATALOG_ROUTES: Routes = [
       ),
   },
   {
+    path: ':inventoryItemId/edit',
+    loadComponent: () =>
+      import('./pages/inventory-item-edit-page/inventory-item-edit-page').then(
+        (m) => m.InventoryItemEditPage,
+      ),
+  },
+  {
     path: ':inventoryItemId',
     loadComponent: () =>
       import('./pages/inventory-item-detail-page/inventory-item-detail-page').then(

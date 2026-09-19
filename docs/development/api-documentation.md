@@ -54,3 +54,23 @@ Inventory and production quantities use `BigDecimal` / PostgreSQL `NUMERIC(19,6)
 ```
 
 The Angular client sends canonical quoted decimal values and consumes quoted decimal responses without JavaScript `number` conversion. The backend continues to accept representative legacy numeric request values where Jackson already supports them. Quantity responses intentionally changed from v0.4.0 JSON numbers to strings: the former representation could silently mutate values in browser clients. This is a corrective wire-contract change, not byte-compatible v0.4 response payload behavior.
+
+## Production execution history
+
+Authenticated operators can read completed production history through:
+
+```text
+GET /api/v1/production/executions
+GET /api/v1/production/executions/{executionId}
+```
+
+The list accepts optional inclusive `from` and `to` `LocalDate` filters plus zero-based `page` and `size` pagination. The default page size is 20 and the maximum is 100. Ordering is fixed as `productionDate DESC, completedAt DESC, executionId DESC`.
+
+The detail identifies one immutable execution and returns its persisted source consumptions in production order. Quantities use the canonical decimal-string contract described above. Execution, formula, item, batch, and movement UUIDs remain the historical identities. Item names and units are current catalog display metadata; the API does not present the current editable formula definition as a historical snapshot.
+
+Clients reuse existing operational routes for related records:
+
+```text
+/inventory/items/{inventoryItemId}?batchId={batchId}#batches
+/production/genealogy/batches/{batchId}
+```
