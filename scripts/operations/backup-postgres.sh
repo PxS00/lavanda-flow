@@ -5,10 +5,9 @@ set -euo pipefail
 repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 environment_file="${LAVANDA_OPERATIONAL_ENV_FILE:-$repository_root/.env.operational}"
 output_directory="${LAVANDA_BACKUP_OUTPUT_DIR:-$repository_root/backups}"
-project_name="${LAVANDA_OPERATIONAL_PROJECT_NAME:-lavanda-flow-operational}"
 
 usage() {
-  echo "Usage: $0 [--env-file PATH] [--output-dir PATH] [--project-name NAME]" >&2
+  echo "Usage: $0 [--env-file PATH] [--output-dir PATH]" >&2
 }
 
 while (($#)); do
@@ -19,10 +18,6 @@ while (($#)); do
       ;;
     --output-dir)
       output_directory="${2:?--output-dir requires a path}"
-      shift 2
-      ;;
-    --project-name)
-      project_name="${2:?--project-name requires a name}"
       shift 2
       ;;
     *)
@@ -56,17 +51,7 @@ fi
 umask 077
 mkdir -p "$output_directory"
 
-compose=(docker compose --project-name "$project_name" -f "$repository_root/compose.operational.yaml" --env-file "$environment_file")
-
-if [[ -z "$("${compose[@]}" ps --status running -q postgres)" ]]; then
-  echo "Operational PostgreSQL service is not running for project $project_name." >&2
-  exit 1
-fi
-
-if ! "${compose[@]}" exec -T postgres sh -ceu 'exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null; then
-  echo "Operational PostgreSQL service is not reachable." >&2
-  exit 1
-fi
+compose=(docker compose -f "$repository_root/compose.backup.yaml" --env-file "$environment_file")
 
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 backup_name="lavanda-flow-$timestamp.dump"
@@ -79,25 +64,14 @@ if [[ -e "$backup_file" || -e "$checksum_file" ]]; then
 fi
 
 partial_file="$(mktemp "$output_directory/.lavanda-flow-$timestamp.XXXXXX.partial")"
-container_check_file="/tmp/lavanda-flow-backup-check.dump"
 cleanup_partial() {
   rm -f "$partial_file"
-  "${compose[@]}" exec -T postgres rm -f "$container_check_file" >/dev/null 2>&1 || true
 }
 trap cleanup_partial EXIT
 
-"${compose[@]}" exec -T postgres sh -ceu '
-  exec env PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
-    --format=custom \
-    --no-owner \
-    --no-privileges \
-    --username="$POSTGRES_USER" \
-    --dbname="$POSTGRES_DB"
-' > "$partial_file"
+"${compose[@]}" run --rm -T --no-deps postgres-tooling > "$partial_file"
 
-"${compose[@]}" cp "$partial_file" "postgres:$container_check_file"
-"${compose[@]}" exec -T postgres sh -ceu "exec pg_restore --list $container_check_file" >/dev/null
-"${compose[@]}" exec -T postgres rm -f "$container_check_file"
+docker run --rm -i postgres:17-alpine pg_restore --list - < "$partial_file" >/dev/null
 
 mv "$partial_file" "$backup_file"
 trap - EXIT

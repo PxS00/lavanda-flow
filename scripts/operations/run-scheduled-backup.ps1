@@ -114,11 +114,11 @@ function Convert-ToWindowsPath {
     return [System.IO.Path]::GetFullPath($result[0])
 }
 
-function Wait-ForOperationalPostgres {
+function Wait-ForManagedPostgres {
     param([Parameter(Mandatory)][int]$TimeoutSeconds)
 
-    $composeFile = Join-Path $repositoryRoot 'compose.operational.yaml'
     $environmentFile = Join-Path $repositoryRoot '.env.operational'
+    $backupComposeFile = Join-Path $repositoryRoot 'compose.backup.yaml'
     $dockerCommand = Get-Command 'docker.exe' -CommandType Application -ErrorAction SilentlyContinue |
         Select-Object -First 1
     if (-not $dockerCommand) {
@@ -132,25 +132,12 @@ function Wait-ForOperationalPostgres {
         do {
             & $dockerPath 'info' 1>$null 2>$null
             if ($LASTEXITCODE -eq 0) {
-                $containerOutput = @(
-                    & $dockerPath 'compose' '--project-name' 'lavanda-flow-operational' `
-                        '-f' $composeFile '--env-file' $environmentFile `
-                        'ps' '-q' 'postgres' 2>$null
-                )
-                $containerExitCode = $LASTEXITCODE
-                $containerIds = @(
-                    $containerOutput |
-                        ForEach-Object { $_.ToString().Trim() } |
-                        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-                )
-
-                if ($containerExitCode -eq 0 -and $containerIds.Count -eq 1) {
-                    $healthOutput = @(
-                        & $dockerPath 'inspect' '--format={{.State.Health.Status}}' $containerIds[0] 2>$null
-                    )
-                    if ($LASTEXITCODE -eq 0 -and $healthOutput.Count -eq 1 -and $healthOutput[0].ToString().Trim() -ceq 'healthy') {
-                        return
-                    }
+                & $dockerPath 'compose' '-f' $backupComposeFile '--env-file' $environmentFile `
+                    'run' '--rm' '-T' '--no-deps' 'postgres-tooling' `
+                    'database_url="${SPRING_DATASOURCE_URL#jdbc:}"; exec psql --dbname="$database_url" --command="SELECT 1"' `
+                    1>$null 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                    return
                 }
             }
             Start-Sleep -Seconds 5
@@ -160,7 +147,7 @@ function Wait-ForOperationalPostgres {
         $ErrorActionPreference = $previousErrorActionPreference
     }
 
-    throw "Docker Desktop and the operational PostgreSQL service did not become healthy within $TimeoutSeconds seconds."
+    throw "Docker Desktop and managed PostgreSQL did not become reachable within $TimeoutSeconds seconds."
 }
 
 function Get-ChecksumRecord {
@@ -389,9 +376,9 @@ try {
     $backupScript = Join-Path $repositoryRoot 'scripts\operations\backup-postgres.sh'
     $bashBackupScript = Convert-ToBashPath -CygpathPath $cygpath -WindowsPath $backupScript
 
-    Write-RunLog "Waiting up to $DockerReadyTimeoutSeconds seconds for Docker Desktop and operational PostgreSQL health."
-    Wait-ForOperationalPostgres -TimeoutSeconds $DockerReadyTimeoutSeconds
-    Write-RunLog 'Docker Desktop and operational PostgreSQL are ready; invoking the authoritative backup script.'
+    Write-RunLog "Waiting up to $DockerReadyTimeoutSeconds seconds for Docker Desktop and managed PostgreSQL reachability."
+    Wait-ForManagedPostgres -TimeoutSeconds $DockerReadyTimeoutSeconds
+    Write-RunLog 'Docker Desktop and managed PostgreSQL are reachable; invoking the authoritative backup script.'
 
     $previousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
