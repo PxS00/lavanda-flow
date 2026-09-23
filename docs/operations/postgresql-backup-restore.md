@@ -2,25 +2,25 @@
 
 ## Purpose and limits
 
-PostgreSQL is Lavanda Flow's operational source of truth. This procedure uses a PostgreSQL 17 custom-format logical dump and the PostgreSQL tools already inside the operational `postgres` container; no host PostgreSQL client installation is required.
+PostgreSQL is Lavanda Flow's operational source of truth. This procedure uses a PostgreSQL 17 custom-format logical dump from the managed PostgreSQL target. A short-lived `postgres:17-alpine` tooling container supplies `pg_dump`, `pg_restore`, and `pg_isready`; it is never a production service.
 
-Logical dumps contain sensitive business data and operator-account password hashes. Their SHA-256 sidecar detects corruption, but does not encrypt the dump. Protect the notebook and any copy using the OS and storage access controls selected operationally.
+Logical dumps contain sensitive business data and operator-account password hashes. Their SHA-256 sidecar detects corruption, but does not encrypt the dump. Protect the workstation and any copy using the OS and storage access controls selected operationally.
 
-This is not replication, continuous backup, or point-in-time recovery. Recovery requires downtime, and data entered after the most recent successful backup might need manual reconstruction. A backup that has not been copied outside the notebook does not protect against notebook or disk loss. An untested backup is not sufficient recovery evidence. Restore verification proves recoverability at the tested application revision, not permanent compatibility with arbitrary future schema versions.
+This is not replication, continuous backup, or point-in-time recovery. Recovery requires downtime, and data entered after the most recent successful backup might need manual reconstruction. A backup that has not been copied outside the Supabase/provider failure domain does not protect against provider or account loss. An untested backup is not sufficient recovery evidence. Restore verification proves recoverability at the tested application revision, not permanent compatibility with arbitrary future schema versions.
 
 ## Create a backup
 
-From an exact application release checkout with the operational PostgreSQL service running:
+From an exact application release checkout with Docker available and `.env.operational` configured for the managed target:
 
 ```bash
 scripts/operations/backup-postgres.sh
 ```
 
-The script reads the ignored `.env.operational`, writes a restricted `backups/lavanda-flow-YYYYMMDDTHHMMSSZ.dump` custom-format dump, validates it with `pg_restore --list`, and writes a matching `.sha256` sidecar. It uses the database container's existing credentials without printing them. The script does not delete older backups.
+The script reads the ignored `.env.operational`, connects with the configured TLS-verified JDBC target, writes a restricted `backups/lavanda-flow-YYYYMMDDTHHMMSSZ.dump` custom-format dump, validates it with `pg_restore --list`, and writes a matching `.sha256` sidecar. It uses the managed database credentials without printing them. The script does not delete older backups.
 
-The optional `--env-file`, `--output-dir`, and `--project-name` arguments are for a maintainer's isolated validation environment. The normal operational command above must keep using the default project and environment file.
+The optional `--env-file` and `--output-dir` arguments are for a maintainer's isolated validation environment. The normal operational command above must keep using the default environment file. Compose parses `.env.operational` for both the application and the short-lived PostgreSQL tooling container; the backup script does not pass it to `docker run`. The configured `SPRING_DATASOURCE_URL` must use `sslmode=verify-full`, and `LAVANDA_DB_CA_CERTIFICATE_PATH` must point to the downloaded Supabase PostgreSQL CA certificate. On Windows, use an absolute Windows host path such as `C:/certs/ca.crt`; Compose alone resolves and mounts it at `/run/secrets/lavanda-postgres-ca.crt`. Single-quote any env-file value with `$` or `#` so Compose passes it literally.
 
-Copy both the dump and its checksum sidecar to an existing zero-recurring-cost destination outside the notebook's primary failure domain, such as separate removable media, a trusted device, or an existing cloud-drive folder. After transfer, verify the copied artifact:
+Copy both the dump and its checksum sidecar to an existing zero-recurring-cost destination outside the Supabase/provider failure domain, such as separate removable media, a trusted device, or an existing cloud-drive folder. After transfer, verify the copied artifact:
 
 ```bash
 sha256sum -c lavanda-flow-YYYYMMDDTHHMMSSZ.dump.sha256
@@ -48,7 +48,7 @@ $gitBash = Read-Host 'Absolute path to Git Bash bash.exe'
 .\scripts\operations\manage-backup-task.ps1 Install -ExternalDestination $externalBackupDirectory -GitBashPath $gitBash
 ```
 
-The task runs as the current interactive Windows user without storing a Windows password. It starts a missed trigger when the signed-in workstation next becomes available, does not wake a sleeping notebook, permits execution on battery, ignores overlapping starts, and waits up to five minutes for Docker Desktop and the existing operational PostgreSQL healthcheck. A failed routine run remains failed and is not automatically rerun by Task Scheduler. The dump, structural validation, credentials, local artifact creation, and checksum remain owned by `backup-postgres.sh`.
+The task runs as the current interactive Windows user without storing a Windows password. It starts a missed trigger when the signed-in workstation next becomes available, does not wake a sleeping notebook, permits execution on battery, ignores overlapping starts, and waits up to five minutes for Docker Desktop and managed PostgreSQL reachability. A failed routine run remains failed and is not automatically rerun by Task Scheduler. The dump, structural validation, credentials, local artifact creation, and checksum remain owned by `backup-postgres.sh`.
 
 Inspect or remove only the task with:
 
@@ -81,7 +81,7 @@ scripts/operations/verify-postgres-restore.sh backups/lavanda-flow-YYYYMMDDTHHMM
 ```
 
 The harness verifies the checksum when present, inspects the custom-format dump, restores only into a uniquely
-named `lavanda-flow-restore-*` PostgreSQL 17 Compose project and volume, validates the Flyway history, checks
+named `lavanda-flow-restore-*` PostgreSQL 17 maintenance Compose project and volume, validates the Flyway history, checks
 every restored inventory/production/genealogy relationship for broken references, then starts the current
 operational application against the restored database and waits for `/actuator/health`. It uses no PostgreSQL
 host port. Its trap runs `down -v` only after a project-name guard confirms this is the disposable restore
@@ -113,14 +113,14 @@ and cleanup checks as the generic path. In addition, it requires positive counts
 and relationship. It intentionally fails for a valid operational backup that has not yet used one of those
 workflows; use the default command for ordinary maintenance verification.
 
-## Destructive operational recovery
+## Managed-database recovery
 
-> **Warning:** production recovery changes or recreates the operational database. It is a maintainer procedure, not a one-command script. Do not use `docker compose down -v` as a recovery shortcut; preserve any recoverable failed volume/data until a verified backup restore succeeds where practical.
+> **Warning:** production recovery changes the managed operational database. It is a maintainer procedure, not a one-command script. Do not use `docker compose down -v` as a recovery shortcut; preserve the old local volume and all recoverable data until a verified recovery succeeds.
 
 1. Identify the intended dump, verify its SHA-256 checksum, and record the application release/revision associated with the recovery when known.
-2. Stop only `lavanda-flow-app` using the existing operational Compose command. Keep PostgreSQL available for the explicit recreation and restore steps.
-3. Using the existing operational credentials without printing them, explicitly drop/recreate an empty target operational database. Never restore over a populated live database.
-4. Run PostgreSQL `pg_restore --exit-on-error --no-owner --no-privileges` from the existing PostgreSQL 17 container into that empty database.
+2. Stop `lavanda-flow-app` before changing the managed database state. Do not run recovery against a live writer.
+3. Confirm the intended managed project and target database, then follow a separately reviewed recovery procedure to restore into an empty database. Never restore over a populated live database.
+4. Run PostgreSQL `pg_restore --exit-on-error --no-owner --no-privileges` through a PostgreSQL 17 tooling container with TLS verification.
 5. Start the application from the intended exact release revision. Flyway must validate the restored history and may apply only legitimate forward migrations present in that release; Hibernate remains validation-only and must not install the schema.
 6. Confirm `/actuator/health` and representative catalog, batch, movement, formula, execution, consumption, and genealogy records before returning to normal operation.
 
