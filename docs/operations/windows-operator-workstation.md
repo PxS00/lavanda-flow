@@ -4,6 +4,8 @@
 
 This document records the physical workstation and trusted-LAN validation for the initial Lavanda Flow host. It is maintainer evidence for #185 and #187, not the final operator go-live runbook.
 
+The physical validation recorded below was performed against the old local PostgreSQL topology. Issue #254 changes the planned database host to Supabase; that managed topology still requires validation on the real workstation before cutover. Retain the old local volume as rollback evidence until cutover acceptance.
+
 ## Supported workstation profile
 
 The validated host is a Samsung Galaxy Book with Windows 11 Home, a 12th Gen Intel Core i5-1235U, x64 architecture, and 8 GB RAM. It uses Docker Desktop 4.90.0, Docker Engine 29.7.2, Docker Compose v5.5.1, and the WSL 2 backend (WSL 2.7.13.0).
@@ -14,12 +16,12 @@ Validation used revision `929634efb881b771c0c8376eac389e587d589502`.
 
 ## Runtime topology
 
-The existing `lavanda-flow-operational` Compose project remains unchanged. It has exactly two long-running services:
+Under the planned #254 topology, the `lavanda-flow-operational` Compose project hosts the operator application only. It has one long-running service:
 
 - `lavanda-flow-app`, published on TCP port 8080;
-- `postgres`, using the named `postgres-data` volume on the private Compose network.
+- PostgreSQL is the managed Supabase database, reached by the application over TLS.
 
-PostgreSQL has no published host port. Docker inspection reported `{"5432/tcp":null}`, and `Test-NetConnection` to both `127.0.0.1:5432` and `192.168.15.12:5432` failed as expected. Never expose PostgreSQL through a Windows Firewall or router rule.
+The operational Compose project publishes no PostgreSQL port. Never expose the managed database through a Windows Firewall or router rule.
 
 ## Operational checkout and secrets
 
@@ -31,7 +33,7 @@ Do not copy credentials, bootstrap values, or `.env.operational` contents into s
 
 Docker Desktop starts automatically when the Windows user signs in. Docker Desktop may run in the background; closing its window is harmless, but quitting Docker Desktop is not normal operator use.
 
-A full Windows reboot was tested. After normal sign-in, Docker Desktop and the existing runtime recovered without maintainer or developer intervention. Tablet access and operator login returned, and the PostgreSQL named volume plus the persisted operator account survived the reboot.
+A full Windows reboot was tested against local PostgreSQL. After normal sign-in, Docker Desktop and the application recovered without maintainer or developer intervention. Tablet access and operator login returned, and the local PostgreSQL volume and operator account persisted. Managed PostgreSQL availability remains an untested network/provider health gate.
 
 ## Operator shortcut
 
@@ -41,7 +43,7 @@ The Windows desktop shortcut is named `Lavanda Flow` and opens:
 http://192.168.15.12:8080
 ```
 
-It requires no terminal, repository navigation, Docker Desktop UI, Maven, pnpm, or IDE. Browser closure does not stop either operational service; reopening the shortcut returns to the application normally.
+It requires no terminal, repository navigation, Docker Desktop UI, Maven, pnpm, or IDE. In the tested local PostgreSQL setup, browser closure did not stop either operational service; reopening the shortcut returned to the application normally.
 
 ## Trusted LAN endpoint
 
@@ -80,11 +82,11 @@ Connected-to-power closed-lid operation was tested successfully from the tablet.
 
 Notebook and tablet access succeeded through the stable trusted-LAN URL. Operator authentication succeeded on both devices, with the existing session and CSRF/XSRF behavior working unchanged and without CORS or JWT changes.
 
-Browser closure, application recreation/restart, and full Windows reboot preserved the PostgreSQL named volume and persisted operator account.
+With local PostgreSQL, browser closure, application recreation/restart, and full Windows reboot preserved the database volume and operator account. The same lifecycle has not yet been physically validated with managed PostgreSQL.
 
 ## Backup and off-notebook validation
 
-`scripts/operations/backup-postgres.sh` ran successfully on the Galaxy Book and created a custom-format dump plus SHA-256 sidecar. Local checksum verification returned OK.
+The local PostgreSQL version of `scripts/operations/backup-postgres.sh` ran successfully on the Galaxy Book and created a custom-format dump plus SHA-256 sidecar. Local checksum verification returned OK. The managed PostgreSQL backup path has not yet been physically validated there.
 
 Google Drive is the selected zero-recurring-cost off-notebook mechanism. Both the dump and its checksum were uploaded, downloaded again to a temporary local folder, and verified successfully after the round trip. Account identifiers and credentials are intentionally not recorded. Temporary downloaded verification copies may be removed afterward.
 
@@ -112,7 +114,7 @@ The operator must not need PowerShell, Git Bash, Docker Desktop UI, repository n
 
 ## Validation evidence
 
-Physical validation confirmed notebook and same-Wi-Fi tablet access, stable DHCP-reserved addressing, Private-profile local-subnet firewall scope, no PostgreSQL LAN exposure, no router public exposure, operator authentication, browser-independent service lifecycle, reboot recovery, powered closed-lid availability, named-volume and operator-account persistence, local backup creation, and Google Drive checksum-verified off-notebook transfer.
+Physical validation of the old local PostgreSQL topology confirmed notebook and same-Wi-Fi tablet access, stable DHCP-reserved addressing, Private-profile local-subnet firewall scope, no local PostgreSQL LAN exposure, no router public exposure, operator authentication, browser-independent service lifecycle, reboot recovery, powered closed-lid availability, named-volume and operator-account persistence, local backup creation, and Google Drive checksum-verified off-notebook transfer. These checks do not establish managed PostgreSQL cutover readiness.
 
 ## Known non-blocking observation
 

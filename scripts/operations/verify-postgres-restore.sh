@@ -80,7 +80,7 @@ restore_password="$(openssl rand -hex 32)"
   printf '%s\n' 'LAVANDA_SECURITY_BOOTSTRAP_ENABLED=false'
 } > "$temporary_env"
 
-compose=(docker compose --project-name "$disposable_project" -f "$repository_root/compose.operational.yaml" --env-file "$temporary_env")
+compose=(docker compose --project-name "$disposable_project" -f "$repository_root/compose.restore.yaml" --env-file "$temporary_env")
 disposable_volume="${disposable_project}_postgres-data"
 
 docker info >/dev/null

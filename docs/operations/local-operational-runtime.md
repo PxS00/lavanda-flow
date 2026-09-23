@@ -4,10 +4,10 @@ This reference defines the repository-owned runtime used by later workstation an
 
 ## Runtime boundary
 
-The supported local runtime requires Docker with Docker Compose support. It runs exactly two long-lived services under the stable `lavanda-flow-operational` Compose project:
+The supported operator-hosted runtime requires Docker with Docker Compose support. It runs one long-lived service under the stable `lavanda-flow-operational` Compose project:
 
 - `lavanda-flow-app` serves the Angular production application, `/api/v1`, and minimal `/actuator/health` from one HTTP origin;
-- `postgres` stores operational data in the private `postgres-data` named volume and has no host-published port.
+- PostgreSQL is the managed Supabase database configured through external datasource variables; no operational database volume is created by this project.
 
 The application port is published to the trusted LAN. Stable LAN addressing, firewall rules, Docker engine host startup, and shortcuts belong to #186. Do not expose this HTTP profile to the public internet.
 
@@ -21,7 +21,9 @@ Check out the exact released `vX.Y.Z` revision. Copy the tracked template to the
 cp operational.env.example .env.operational
 ```
 
-Set nonblank values for `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD`. The operational Compose configuration fails clearly when any is absent. Keep `.env.operational` outside version control and do not pass secrets as Docker build arguments.
+Set the managed JDBC URL, username, password, CA certificate path, and deliberately chosen Hikari maximum pool size. Use either the direct IPv6 endpoint or Supavisor session mode on port 5432; never use transaction mode for the persistent JPA runtime. Keep `.env.operational` outside version control and do not pass secrets as Docker build arguments.
+
+Before cutover, test the real operator host and record the evidence: select the direct endpoint when IPv6 works; otherwise select the Supavisor shared session endpoint. The selected pool size must be recorded from the current project limits/usage, leaving headroom for provider-managed connections. This repository pass does not choose a production endpoint or pool value.
 
 The existing operator bootstrap is available through the `LAVANDA_SECURITY_BOOTSTRAP_*` variables. It is disabled by default. When initial provisioning explicitly enables it, supply the username and password externally, then disable bootstrap and remove the plaintext bootstrap password from workstation configuration after the account exists where practical. #185 and #186 own the complete provisioning procedure.
 
@@ -43,7 +45,7 @@ Start the runtime once:
 docker compose -f compose.operational.yaml --env-file .env.operational up -d
 ```
 
-Closing the browser does not stop either service. With the Docker engine running, `restart: unless-stopped` recovers both containers independently of browser sessions. Actual automatic host startup is configured and tested in #186.
+Closing the browser does not stop the application. With the Docker engine running, `restart: unless-stopped` recovers it independently of browser sessions. Actual automatic host startup is configured and tested in #186.
 
 ## Status and lifecycle
 
@@ -55,22 +57,22 @@ docker compose -f compose.operational.yaml --env-file .env.operational ps
 
 Check the default local health endpoint at `http://localhost:8080/actuator/health`. It exposes aggregate status only. The configured trusted-LAN address uses the same port unless `LAVANDA_HTTP_PORT` changes it.
 
-Restart only the application while keeping PostgreSQL running:
+Restart the application without changing the managed database:
 
 ```bash
 docker compose -f compose.operational.yaml --env-file .env.operational restart lavanda-flow-app
 ```
 
-Normal stop and later restart preserve the named database volume:
+Normal stop and later restart do not modify the managed database:
 
 ```bash
 docker compose -f compose.operational.yaml --env-file .env.operational down
 docker compose -f compose.operational.yaml --env-file .env.operational up -d
 ```
 
-The `lavanda-flow-operational_postgres-data` volume survives browser closure, container/runtime restart, normal `down`/`up`, image rebuild, and notebook reboot when Docker storage is preserved.
+The operational Compose project has no PostgreSQL volume. The previous local volume, if present, remains untouched and must be retained during the rollback observation window.
 
-Do not use `docker compose ... down -v` as a normal command. The `-v` option deletes the PostgreSQL volume and its database data. Backup and restore are implemented by #184 and must be completed before go-live or schema upgrades.
+Do not use `docker compose ... down -v` against the previous operational runtime during migration. The old local volume is rollback evidence and must not be deleted. Backup and restore are implemented by the managed-target workflow in [PostgreSQL backup and restore](postgresql-backup-restore.md).
 
 ## Backup and recovery
 

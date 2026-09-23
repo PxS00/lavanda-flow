@@ -108,6 +108,7 @@ run_success() {
     fail "$scenario should succeed"
   fi
   assert_contains "$log" 'pg_restore --list'
+  assert_contains "$log" 'compose.restore.yaml'
   assert_contains "$log" 'down -v --remove-orphans'
   if grep -Fq -- '--project-name lavanda-flow-operational' "$log"; then
     fail "$scenario targeted the operational project"

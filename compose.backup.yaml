@@ -1,0 +1,27 @@
+name: lavanda-flow-backup
+
+services:
+  postgres-tooling:
+    image: postgres:17-alpine
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?SPRING_DATASOURCE_URL is required}
+      PGUSER: ${SPRING_DATASOURCE_USERNAME:?SPRING_DATASOURCE_USERNAME is required}
+      PGPASSWORD: ${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD is required}
+      PGSSLROOTCERT: /run/secrets/lavanda-postgres-ca.crt
+    volumes:
+      - type: bind
+        source: ${LAVANDA_DB_CA_CERTIFICATE_PATH:?LAVANDA_DB_CA_CERTIFICATE_PATH is required}
+        target: /run/secrets/lavanda-postgres-ca.crt
+        read_only: true
+    entrypoint: ["sh", "-ceu"]
+    command:
+      - |
+        database_url="$${SPRING_DATASOURCE_URL#jdbc:}"
+        case "$$database_url" in
+          postgresql://*sslmode=verify-full*) ;;
+          *) echo 'SPRING_DATASOURCE_URL must enable sslmode=verify-full.' >&2; exit 1 ;;
+        esac
+        case "$$database_url" in
+          *@*) echo 'SPRING_DATASOURCE_URL must be credential-free.' >&2; exit 1 ;;
+        esac
+        exec pg_dump --format=custom --no-owner --no-privileges --dbname="$$database_url"
