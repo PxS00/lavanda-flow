@@ -14,7 +14,7 @@ cleanup() {
 trap cleanup EXIT
 
 cat > "$fake_bin/docker" <<'EOF'
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
 printf '%s\n' "$*" >> "$FAKE_DOCKER_LOG"
@@ -30,7 +30,27 @@ if [[ "$1" == "volume" ]]; then
 fi
 
 arguments="$*"
-if [[ "$arguments" == *"pg_isready"* || "$arguments" == *"pg_restore"* ]]; then
+if [[ "$arguments" == *"pg_isready"* ]]; then
+  printf 'READY\n' >> "$FAKE_DOCKER_LOG"
+  exit 0
+fi
+if [[ "$arguments" == *"DROP SCHEMA public CASCADE;"* ]]; then
+  [[ "$arguments" == *"--project-name lavanda-flow-restore-"* && "$arguments" == *"psql"* \
+    && "$arguments" == *"--set=ON_ERROR_STOP=1"* ]] || exit 1
+  grep -Fxq 'READY' "$FAKE_DOCKER_LOG" || exit 1
+  printf 'SCHEMA_DROP\n' >> "$FAKE_DOCKER_LOG"
+  [[ "$TEST_SCENARIO" != "schema-drop-failure" ]]
+  exit
+fi
+if [[ "$arguments" == *"pg_restore"* ]]; then
+  grep -Fxq 'SCHEMA_DROP' "$FAKE_DOCKER_LOG" || exit 1
+  if [[ "$arguments" == *"pg_restore --list"* ]]; then
+    printf 'ARCHIVE_LIST\n' >> "$FAKE_DOCKER_LOG"
+  else
+    [[ "$arguments" == *"--exit-on-error"* && "$arguments" == *"--no-owner"* \
+      && "$arguments" == *"--no-privileges"* ]] || exit 1
+    printf 'STRICT_RESTORE\n' >> "$FAKE_DOCKER_LOG"
+  fi
   exit 0
 fi
 if [[ "$arguments" != *"psql"* ]]; then
@@ -66,7 +86,7 @@ printf '0\n'
 EOF
 
 cat > "$fake_bin/curl" <<'EOF'
-#!/usr/bin/env bash
+#!/bin/bash
 
 if [[ "${TEST_SCENARIO}" == "health-failure" ]]; then
   exit 1
@@ -75,7 +95,7 @@ printf '%s\n' '{"status":"UP"}'
 EOF
 
 cat > "$fake_bin/sleep" <<'EOF'
-#!/usr/bin/env bash
+#!/bin/bash
 exit 0
 EOF
 chmod +x "$fake_bin/docker" "$fake_bin/curl" "$fake_bin/sleep"
@@ -94,6 +114,17 @@ assert_contains() {
   grep -Fq -- "$expected" "$file" || fail "expected $expected"
 }
 
+assert_event_order() {
+  local log="$1"
+  local first="$2"
+  local second="$3"
+  local first_line second_line
+  first_line="$(grep -nFx "$first" "$log" | head -n 1 | cut -d: -f1)"
+  second_line="$(grep -nFx "$second" "$log" | head -n 1 | cut -d: -f1)"
+  [[ -n "$first_line" && -n "$second_line" && "$first_line" -lt "$second_line" ]] \
+    || fail "expected $first before $second"
+}
+
 run_success() {
   local scenario="$1"
   shift
@@ -103,11 +134,15 @@ run_success() {
   : > "$log"
   if ! PATH="$fake_bin:$PATH" FAKE_DOCKER_LOG="$log" TEST_SCENARIO="$scenario" \
     LAVANDA_RESTORE_PROJECT_NAME="lavanda-flow-restore-test-$scenario-$$" \
-    bash "$verifier" "$@" > "$output" 2>&1; then
+    "$BASH" "$verifier" "$@" > "$output" 2>&1; then
     cat "$output" >&2
     fail "$scenario should succeed"
   fi
   assert_contains "$log" 'pg_restore --list'
+  assert_event_order "$log" READY SCHEMA_DROP
+  assert_event_order "$log" SCHEMA_DROP ARCHIVE_LIST
+  assert_event_order "$log" ARCHIVE_LIST STRICT_RESTORE
+  assert_contains "$log" 'compose.restore.yaml'
   assert_contains "$log" 'down -v --remove-orphans'
   if grep -Fq -- '--project-name lavanda-flow-operational' "$log"; then
     fail "$scenario targeted the operational project"
@@ -124,10 +159,13 @@ run_failure() {
   : > "$log"
   if PATH="$fake_bin:$PATH" FAKE_DOCKER_LOG="$log" TEST_SCENARIO="$scenario" \
     LAVANDA_RESTORE_PROJECT_NAME="lavanda-flow-restore-test-$scenario-$$" \
-    bash "$verifier" "$@" > "$output" 2>&1; then
+    "$BASH" "$verifier" "$@" > "$output" 2>&1; then
     fail "$scenario should fail"
   fi
-  assert_contains "$output" "$expected"
+  if [[ -n "$expected" ]]; then
+    assert_contains "$output" "$expected"
+  fi
+  assert_contains "$log" 'down -v --remove-orphans'
 }
 
 run_usage_failure() {
@@ -136,7 +174,7 @@ run_usage_failure() {
 
   : > "$log"
   if PATH="$fake_bin:$PATH" FAKE_DOCKER_LOG="$log" TEST_SCENARIO=empty \
-    bash "$verifier" "$@" > "$output" 2>&1; then
+    "$BASH" "$verifier" "$@" > "$output" 2>&1; then
     fail "usage should reject $*"
   fi
   assert_contains "$output" 'Usage:'
@@ -147,6 +185,11 @@ run_usage_failure() {
 
 run_success empty "$backup_file"
 run_success sparse "$backup_file"
+run_failure schema-drop-failure '' "$backup_file"
+assert_contains "$test_directory/schema-drop-failure.log" 'SCHEMA_DROP'
+if grep -Fq 'pg_restore' "$test_directory/schema-drop-failure.log"; then
+  fail 'restore ran after disposable schema preparation failed'
+fi
 run_failure broken-relationship 'Restore verification failed: batches without catalog items.' "$backup_file"
 run_success representative --strict-representative "$backup_file"
 run_failure empty 'Restore verification failed: inventory items.' --strict-representative "$backup_file"
@@ -161,7 +204,7 @@ guard_log="$test_directory/guard.log"
 : > "$guard_log"
 if PATH="$fake_bin:$PATH" FAKE_DOCKER_LOG="$guard_log" TEST_SCENARIO=empty \
   LAVANDA_RESTORE_PROJECT_NAME=lavanda-flow-operational \
-  bash "$verifier" "$backup_file" > "$guard_output" 2>&1; then
+  "$BASH" "$verifier" "$backup_file" > "$guard_output" 2>&1; then
   fail 'operational project name should be rejected'
 fi
 assert_contains "$guard_output" 'cannot be lavanda-flow-operational'

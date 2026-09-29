@@ -80,7 +80,7 @@ restore_password="$(openssl rand -hex 32)"
   printf '%s\n' 'LAVANDA_SECURITY_BOOTSTRAP_ENABLED=false'
 } > "$temporary_env"
 
-compose=(docker compose --project-name "$disposable_project" -f "$repository_root/compose.operational.yaml" --env-file "$temporary_env")
+compose=(docker compose --project-name "$disposable_project" -f "$repository_root/compose.restore.yaml" --env-file "$temporary_env")
 disposable_volume="${disposable_project}_postgres-data"
 
 docker info >/dev/null
@@ -106,6 +106,15 @@ if ! "${compose[@]}" exec -T postgres sh -ceu 'exec pg_isready -U "$POSTGRES_USE
   echo "Disposable PostgreSQL service did not become reachable." >&2
   exit 1
 fi
+
+"${compose[@]}" exec -T postgres sh -ceu '
+  exec env PGPASSWORD="$POSTGRES_PASSWORD" psql \
+    --quiet \
+    --set=ON_ERROR_STOP=1 \
+    --username="$POSTGRES_USER" \
+    --dbname="$POSTGRES_DB" \
+    --command="DROP SCHEMA public CASCADE;"
+'
 
 "${compose[@]}" cp "$backup_file" postgres:/tmp/lavanda-flow-restore.dump
 "${compose[@]}" exec -T postgres sh -ceu 'exec pg_restore --list /tmp/lavanda-flow-restore.dump' >/dev/null

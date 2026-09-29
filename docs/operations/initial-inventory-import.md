@@ -68,10 +68,10 @@ LAVANDA_SECURITY_BOOTSTRAP_ENABLED=false
 "@ | Set-Content -Encoding ascii -NoNewline -LiteralPath $validationEnv
 
 try {
-    docker compose -p $validationProject -f compose.operational.yaml --env-file $validationEnv build lavanda-flow-app
-    docker compose -p $validationProject -f compose.operational.yaml --env-file $validationEnv up -d --wait postgres
+    docker compose -p $validationProject -f compose.restore.yaml --env-file $validationEnv build lavanda-flow-app
+    docker compose -p $validationProject -f compose.restore.yaml --env-file $validationEnv up -d --wait postgres
 
-    docker compose -p $validationProject -f compose.operational.yaml --env-file $validationEnv run --rm --no-deps `
+    docker compose -p $validationProject -f compose.restore.yaml --env-file $validationEnv run --rm --no-deps `
       --volume "${csv}:/import/inventory.csv:ro" `
       lavanda-flow-app `
       --spring.main.web-application-type=none `
@@ -82,7 +82,7 @@ try {
 
     # Continue only after rejected=0 and operator review of normalized
     # gender/reference/type/lot/quantity/expiration results.
-    docker compose -p $validationProject -f compose.operational.yaml --env-file $validationEnv run --rm --no-deps `
+    docker compose -p $validationProject -f compose.restore.yaml --env-file $validationEnv run --rm --no-deps `
       --volume "${csv}:/import/inventory.csv:ro" `
       lavanda-flow-app `
       --spring.main.web-application-type=none `
@@ -94,7 +94,7 @@ try {
     if ($validationProject -notlike 'lavanda-flow-import-validation-*') {
         throw 'Refusing cleanup outside the disposable import-validation project.'
     }
-    docker compose -p $validationProject -f compose.operational.yaml --env-file $validationEnv down -v --remove-orphans
+    docker compose -p $validationProject -f compose.restore.yaml --env-file $validationEnv down -v --remove-orphans
     Remove-Item -Force -LiteralPath $validationEnv -ErrorAction SilentlyContinue
 }
 ```
