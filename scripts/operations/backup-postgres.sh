@@ -71,7 +71,7 @@ trap cleanup_partial EXIT
 
 "${compose[@]}" run --rm -T --no-deps postgres-tooling > "$partial_file"
 
-docker run --rm -i postgres:17-alpine pg_restore --list - < "$partial_file" >/dev/null
+docker run --rm -i postgres:17-alpine pg_restore --list < "$partial_file" >/dev/null
 
 mv "$partial_file" "$backup_file"
 trap - EXIT

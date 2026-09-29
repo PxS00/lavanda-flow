@@ -18,6 +18,8 @@ scripts/operations/backup-postgres.sh
 
 The script reads the ignored `.env.operational`, connects with the configured TLS-verified JDBC target, writes a restricted `backups/lavanda-flow-YYYYMMDDTHHMMSSZ.dump` custom-format dump, validates it with `pg_restore --list`, and writes a matching `.sha256` sidecar. It uses the managed database credentials without printing them. The script does not delete older backups.
 
+The dump contains the Lavanda Flow/Flyway-owned `public` schema and its data. Supabase hosts PostgreSQL, but its platform schemas and extensions are provider infrastructure and are deliberately excluded from this repository-owned recovery artifact. Restore verification uses vanilla PostgreSQL 17 to check that the application backup remains portable.
+
 The optional `--env-file` and `--output-dir` arguments are for a maintainer's isolated validation environment. The normal operational command above must keep using the default environment file. Compose parses `.env.operational` for both the application and the short-lived PostgreSQL tooling container; the backup script does not pass it to `docker run`. The configured `SPRING_DATASOURCE_URL` must use `sslmode=verify-full`, and `LAVANDA_DB_CA_CERTIFICATE_PATH` must point to the downloaded Supabase PostgreSQL CA certificate. On Windows, use an absolute Windows host path such as `C:/certs/ca.crt`; Compose alone resolves and mounts it at `/run/secrets/lavanda-postgres-ca.crt`. Single-quote any env-file value with `$` or `#` so Compose passes it literally.
 
 Copy both the dump and its checksum sidecar to an existing zero-recurring-cost destination outside the Supabase/provider failure domain, such as separate removable media, a trusted device, or an existing cloud-drive folder. After transfer, verify the copied artifact:
@@ -86,6 +88,10 @@ every restored inventory/production/genealogy relationship for broken references
 operational application against the restored database and waits for `/actuator/health`. It uses no PostgreSQL
 host port. Its trap runs `down -v` only after a project-name guard confirms this is the disposable restore
 project; it never targets `lavanda-flow-operational` or its volume.
+
+Before restoring the archive, the harness drops the disposable vanilla PostgreSQL database's default `public`
+schema. The archive then recreates `public` and its application objects. This preparation applies only to the
+guarded disposable restore project; it is not a managed-database recovery step.
 
 This generic operational path accepts a valid empty or sparse business database: catalog-only data, inventory
 without production, and unused production tables are normal before or during early operation. Zero rows are not

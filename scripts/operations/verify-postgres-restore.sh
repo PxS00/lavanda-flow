@@ -107,6 +107,15 @@ if ! "${compose[@]}" exec -T postgres sh -ceu 'exec pg_isready -U "$POSTGRES_USE
   exit 1
 fi
 
+"${compose[@]}" exec -T postgres sh -ceu '
+  exec env PGPASSWORD="$POSTGRES_PASSWORD" psql \
+    --quiet \
+    --set=ON_ERROR_STOP=1 \
+    --username="$POSTGRES_USER" \
+    --dbname="$POSTGRES_DB" \
+    --command="DROP SCHEMA public CASCADE;"
+'
+
 "${compose[@]}" cp "$backup_file" postgres:/tmp/lavanda-flow-restore.dump
 "${compose[@]}" exec -T postgres sh -ceu 'exec pg_restore --list /tmp/lavanda-flow-restore.dump' >/dev/null
 "${compose[@]}" exec -T postgres sh -ceu '
