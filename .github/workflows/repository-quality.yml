@@ -105,7 +105,10 @@ jobs:
             Dockerfile \
             .dockerignore \
             compose.operational.yaml \
+            compose.backup.yaml \
+            compose.restore.yaml \
             operational.env.example \
+            scripts/operations \
             backend \
             frontend \
             .tool-versions \
@@ -121,6 +124,11 @@ jobs:
         if: github.event_name != 'pull_request' || steps.changes.outputs.required != 'true'
         run: echo "Operational runtime validation is not required for this event."
 
+      - name: Test backup contract
+        if: github.event_name == 'pull_request' && steps.changes.outputs.required == 'true'
+        shell: bash
+        run: bash scripts/operations/test-backup-postgres.sh
+
       - name: Validate operational runtime
         if: github.event_name == 'pull_request' && steps.changes.outputs.required == 'true'
         shell: bash
@@ -131,6 +139,8 @@ jobs:
             "Dockerfile"
             ".dockerignore"
             "compose.operational.yaml"
+            "compose.backup.yaml"
+            "compose.restore.yaml"
             "operational.env.example"
             "backend/src/main/resources/application-operational.yml"
           )
@@ -142,49 +152,104 @@ jobs:
             }
           done
 
-          if env -u POSTGRES_DB -u POSTGRES_USER -u POSTGRES_PASSWORD \
-            docker compose -f compose.operational.yaml config --quiet; then
-            echo "Operational Compose accepted missing required database configuration."
+          if env -u SPRING_DATASOURCE_URL -u SPRING_DATASOURCE_USERNAME \
+            -u SPRING_DATASOURCE_PASSWORD -u LAVANDA_DB_CA_CERTIFICATE_PATH \
+            -u SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE \
+            docker compose -f compose.operational.yaml --env-file /dev/null config --quiet 2>/dev/null; then
+            echo "Operational Compose accepted missing required managed datasource configuration."
             exit 1
           fi
 
           umask 077
           runtime_env="$(mktemp "$RUNNER_TEMP/operational-runtime.XXXXXX.env")"
           runtime_config="$(mktemp "$RUNNER_TEMP/operational-runtime.XXXXXX.json")"
-          trap 'rm -f "$runtime_env" "$runtime_config"' EXIT
+          backup_config="$(mktemp "$RUNNER_TEMP/backup-runtime.XXXXXX.json")"
+          restore_env="$(mktemp "$RUNNER_TEMP/restore-runtime.XXXXXX.env")"
+          restore_config="$(mktemp "$RUNNER_TEMP/restore-runtime.XXXXXX.json")"
+          runtime_ca="$(mktemp "$RUNNER_TEMP/operational-ca.XXXXXX.crt")"
+          trap 'rm -f "$runtime_env" "$runtime_config" "$backup_config" "$restore_env" "$restore_config" "$runtime_ca"' EXIT
 
-          runtime_password="$(openssl rand -hex 32)"
+          printf '%s\n' 'synthetic CA fixture' > "$runtime_ca"
+          runtime_password='a$b#c=!value'
           {
-            printf '%s\n' "POSTGRES_DB=lavanda_flow_ci"
-            printf '%s\n' "POSTGRES_USER=lavanda_ci"
-            printf '%s\n' "POSTGRES_PASSWORD=$runtime_password"
+            printf '%s\n' 'SPRING_DATASOURCE_URL=jdbc:postgresql://db.example.test:5432/lavanda_flow_ci?sslmode=verify-full&sslrootcert=/run/secrets/lavanda-postgres-ca.crt'
+            printf '%s\n' 'SPRING_DATASOURCE_USERNAME=lavanda_ci'
+            printf '%s\n' "SPRING_DATASOURCE_PASSWORD='$runtime_password'"
+            printf '%s\n' "LAVANDA_DB_CA_CERTIFICATE_PATH=$runtime_ca"
+            printf '%s\n' 'SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=2'
             printf '%s\n' "LAVANDA_HTTP_PORT=18080"
             printf '%s\n' "LAVANDA_SECURITY_BOOTSTRAP_ENABLED=false"
           } > "$runtime_env"
+          {
+            printf '%s\n' 'POSTGRES_DB=lavanda_flow_restore_ci'
+            printf '%s\n' 'POSTGRES_USER=lavanda_restore_ci'
+            printf '%s\n' 'POSTGRES_PASSWORD=synthetic-restore-only'
+            printf '%s\n' 'LAVANDA_HTTP_PORT=18081'
+          } > "$restore_env"
 
           docker compose -f compose.operational.yaml --env-file "$runtime_env" config --quiet
+          docker compose -f compose.backup.yaml --env-file "$runtime_env" config --quiet
+          docker compose -f compose.restore.yaml --env-file "$restore_env" config --quiet
           docker compose -f compose.operational.yaml --env-file "$runtime_env" config --format json > "$runtime_config"
+          docker compose -f compose.backup.yaml --env-file "$runtime_env" config --format json > "$backup_config"
+          docker compose -f compose.restore.yaml --env-file "$restore_env" config --format json > "$restore_config"
 
-          python3 - "$runtime_config" <<'PY'
+          python3 - "$runtime_config" "$backup_config" "$restore_config" "$runtime_ca" <<'PY'
           import json
           import sys
 
           with open(sys.argv[1]) as file:
-              configuration = json.load(file)
+              operational = json.load(file)
+          with open(sys.argv[2]) as file:
+              backup = json.load(file)
+          with open(sys.argv[3]) as file:
+              restore = json.load(file)
 
-          services = configuration.get("services", {})
-          expected_services = {"postgres", "lavanda-flow-app"}
-          if set(services) != expected_services:
-              raise SystemExit("Operational Compose must define exactly postgres and lavanda-flow-app.")
+          if set(operational.get("services", {})) != {"lavanda-flow-app"}:
+              raise SystemExit("Operational Compose must define only lavanda-flow-app.")
+          if operational.get("volumes"):
+              raise SystemExit("Operational Compose must not define a persistent database volume.")
 
-          if services["postgres"].get("ports"):
-              raise SystemExit("Operational PostgreSQL must not publish a host port.")
-
-          if not services["lavanda-flow-app"].get("ports"):
+          app = operational["services"]["lavanda-flow-app"]
+          if not any(port.get("target") == 8080 for port in app.get("ports", [])):
               raise SystemExit("Operational application must publish its HTTP port.")
+          expected_url = "jdbc:postgresql://db.example.test:5432/lavanda_flow_ci?sslmode=verify-full&sslrootcert=/run/secrets/lavanda-postgres-ca.crt"
+          app_env = app["environment"]
+          if (app_env.get("SPRING_DATASOURCE_URL") != expected_url
+                  or app_env.get("SPRING_DATASOURCE_USERNAME") != "lavanda_ci"
+                  or not app_env.get("SPRING_DATASOURCE_PASSWORD")
+                  or app_env.get("SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE") != "2"):
+              raise SystemExit("Operational datasource fixture did not resolve.")
 
-          if "postgres-data" not in configuration.get("volumes", {}):
-              raise SystemExit("Operational PostgreSQL volume is missing.")
+          ca_target = "/run/secrets/lavanda-postgres-ca.crt"
+          def has_ca_mount(service):
+              return any(volume.get("type") == "bind"
+                         and volume.get("source") == sys.argv[4]
+                         and volume.get("target") == ca_target
+                         and volume.get("read_only") is True
+                         for volume in service.get("volumes", []))
+
+          if not has_ca_mount(app):
+              raise SystemExit("Operational application CA mount is missing or writable.")
+
+          if set(backup.get("services", {})) != {"postgres-tooling"} or backup.get("volumes"):
+              raise SystemExit("Backup Compose must define only ephemeral PostgreSQL tooling.")
+          tooling = backup["services"]["postgres-tooling"]
+          tooling_env = tooling["environment"]
+          if (tooling.get("image") != "postgres:17-alpine" or tooling.get("ports")
+                  or tooling.get("restart") not in (None, "no") or not has_ca_mount(tooling)
+                  or tooling_env.get("SPRING_DATASOURCE_URL") != expected_url
+                  or tooling_env.get("PGUSER") != app_env["SPRING_DATASOURCE_USERNAME"]
+                  or tooling_env.get("PGPASSWORD") != app_env["SPRING_DATASOURCE_PASSWORD"]
+                  or tooling_env.get("PGSSLROOTCERT") != ca_target):
+              raise SystemExit("Backup tooling contract did not resolve.")
+
+          if (restore.get("name") == operational.get("name")
+                  or set(restore.get("services", {})) != {"postgres", "lavanda-flow-app"}
+                  or restore["services"]["postgres"].get("image") != "postgres:17-alpine"
+                  or restore["services"]["postgres"].get("ports")
+                  or "postgres-data" not in restore.get("volumes", {})):
+              raise SystemExit("Disposable restore topology is invalid or publishes PostgreSQL.")
           PY
 
           docker compose -f compose.operational.yaml --env-file "$runtime_env" build --no-cache lavanda-flow-app

@@ -10,12 +10,12 @@ Normal operators do not use this document to run commands.
 
 The supported host is the prepared Samsung Galaxy Book running Windows 11 Home, Docker Desktop with the WSL 2 backend, and Docker Compose. WSL 2 is Docker Desktop infrastructure; no operator-facing Ubuntu or other general-purpose WSL distribution is required.
 
-The unchanged `lavanda-flow-operational` project has exactly two long-running services:
+The `lavanda-flow-operational` project has one long-running service:
 
 - `lavanda-flow-app`, the only published HTTP entry point;
-- `postgres`, using the private named `postgres-data` volume.
+- PostgreSQL is the managed Supabase database; the project does not create a production database volume.
 
-PostgreSQL port 5432 remains unpublished. The trusted-LAN endpoint is:
+The database is not exposed to the LAN. The trusted-LAN application endpoint is:
 
 ```text
 http://192.168.15.12:8080
@@ -70,9 +70,11 @@ Set every template input outside source control:
 
 | Input | Purpose |
 | --- | --- |
-| `POSTGRES_DB` | Required PostgreSQL database name. |
-| `POSTGRES_USER` | Required PostgreSQL runtime user. |
-| `POSTGRES_PASSWORD` | Required PostgreSQL runtime password. |
+| `SPRING_DATASOURCE_URL` | TLS-verified JDBC URL for the direct or Supavisor session-mode target on port 5432. |
+| `SPRING_DATASOURCE_USERNAME` | Managed PostgreSQL application/migration role. |
+| `SPRING_DATASOURCE_PASSWORD` | Managed PostgreSQL password. |
+| `LAVANDA_DB_CA_CERTIFICATE_PATH` | Absolute path to the downloaded provider CA certificate, mounted read-only into the app/tooling containers. |
+| `SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE` | Deliberately chosen pool size after checking current project limits and connection usage. |
 | `LAVANDA_HTTP_PORT` | Published application port; defaults to `8080`. |
 | `LAVANDA_SESSION_COOKIE_SECURE` | Keep `false` only for the approved trusted-LAN HTTP profile. |
 | `EXPIRATION_ALERT_WINDOW_DAYS` | Externally configurable expiration-alert window. |
@@ -81,6 +83,7 @@ Set every template input outside source control:
 | `LAVANDA_SECURITY_BOOTSTRAP_PASSWORD` | Temporary bootstrap password only. |
 
 Never commit `.env.operational`, passwords, or screenshots/logs containing them. Do not pass secrets in Docker build arguments or place them in image layers.
+On Windows, set `LAVANDA_DB_CA_CERTIFICATE_PATH` to an absolute Windows host file path, such as `C:/certs/ca.crt`. Docker Compose mounts that file read-only at `/run/secrets/lavanda-postgres-ca.crt` in both the application and backup-tooling containers; PowerShell and Git Bash do not parse or convert its value. Single-quote any `.env.operational` value containing `$` or `#` (for example `SPRING_DATASOURCE_PASSWORD='a$b#c=!value'`); Compose removes the quotes and passes the literal value to both containers.
 
 ## First installation and Flyway
 
@@ -92,13 +95,13 @@ docker compose -f compose.operational.yaml --env-file .env.operational up -d
 docker compose -f compose.operational.yaml --env-file .env.operational ps
 ```
 
-Confirm that only `lavanda-flow-app` and `postgres` are running and that PostgreSQL is not host-published. On the validated host, use this local health check unless the configured port differs:
+Confirm that only `lavanda-flow-app` is running. The managed database is not host-published by this Compose project. On the validated host, use this local health check unless the configured port differs:
 
 ```powershell
 Invoke-WebRequest http://127.0.0.1:8080/actuator/health
 ```
 
-On a fresh PostgreSQL volume, Flyway creates and applies the tracked schema migrations. PostgreSQL is the data source of truth; Hibernate validates the schema and must not install or evolve it. A Flyway failure is a blocker: do not bypass Flyway, edit historical migrations, or use manual SQL as an installation substitute.
+On the empty managed `public` schema, Flyway creates and applies the tracked schema migrations. PostgreSQL is the data source of truth; Hibernate validates the schema and must not install or evolve it. A Flyway failure is a blocker: do not bypass Flyway, edit historical migrations, or use manual SQL as an installation substitute.
 
 ## One-time operator provisioning
 
@@ -140,8 +143,8 @@ The established import documentation uses a one-off non-web Compose container fr
 operational image, with the external CSV mounted read-only. It requires no host Java, Maven, or separately
 built JAR. For v0.6.1 repository validation, follow the explicitly [isolated disposable-project validation
 path](initial-inventory-import.md#isolated-validation); it must not use `.env.operational`,
-`lavanda-flow-operational`, or its volume. For the corrected operational cutover, use the documented
-`DRY_RUN` then accepted `APPLY` path there, against the existing healthy private PostgreSQL service only.
+`lavanda-flow-operational`, or its retained old local volume. For the corrected operational cutover, use the
+documented `DRY_RUN` then accepted `APPLY` path there, against the intended managed PostgreSQL target only.
 
 ## Automatic startup, availability, and shortcut
 
@@ -155,7 +158,7 @@ Windows sign-in
 → operator opens Lavanda Flow
 ```
 
-Closing Docker Desktop's window is harmless; do not quit Docker Desktop during normal operation. Browser closure leaves the runtime available. The PostgreSQL named volume and persisted operator account survived recreation, restart, and full Windows reboot.
+Closing Docker Desktop's window is harmless; do not quit Docker Desktop during normal operation. Browser closure leaves the application available. The managed database remains independent of the notebook's container lifecycle.
 
 Availability is intentionally limited by the host: sleep, shutdown, or Wi-Fi disconnection makes tablet access unavailable. Closing the lid on battery sleeps the host. While plugged in, closing the lid does nothing, keeping the host awake for validated tablet access.
 
@@ -189,7 +192,7 @@ docker compose -f compose.operational.yaml --env-file .env.operational restart l
 
 For a full non-destructive restart, use the documented `down` command followed by `up -d`.
 
-> Never add `-v` to an operational `docker compose down` command. It deletes the PostgreSQL named volume and its database data.
+> Never run `docker compose down -v` against the previous operational runtime during migration. It can delete the retained local PostgreSQL volume needed for rollback.
 
 ## Health, logs, and smoke checks
 
@@ -198,11 +201,10 @@ Use only safe diagnostics; do not print `.env.operational` or business rows:
 ```powershell
 docker compose -f compose.operational.yaml --env-file .env.operational ps
 docker compose -f compose.operational.yaml --env-file .env.operational logs --tail=200 lavanda-flow-app
-docker compose -f compose.operational.yaml --env-file .env.operational logs --tail=200 postgres
 Invoke-WebRequest http://127.0.0.1:8080/actuator/health
 ```
 
-After start, restart, reboot, or upgrade, confirm health, open the stable LAN URL from notebook and tablet, authenticate, navigate non-destructively, and confirm PostgreSQL remains unreachable on TCP 5432. On this host, `localhost:8080` was unreliable; use `127.0.0.1` for host-local health and the stable LAN URL for operator access.
+After start, restart, reboot, or upgrade, confirm health, open the stable LAN URL from notebook and tablet, authenticate, navigate non-destructively, and confirm the database is not exposed on the trusted LAN. On this host, `localhost:8080` was unreliable; use `127.0.0.1` for host-local health and the stable LAN URL for operator access.
 
 ## Backup, recovery, and upgrade
 
@@ -215,7 +217,7 @@ $externalBackupDirectory = Read-Host 'Absolute external backup directory'
 .\scripts\operations\manage-backup-task.ps1 Install -ExternalDestination $externalBackupDirectory
 ```
 
-The default daily time is `20:00` local. `-At 'HH:mm'` selects another time, `Status` reports the next/last run and result, and `Remove` removes only the task. Reinstall after moving the operational checkout. The task runs after Windows sign-in, starts missed triggers when the host becomes available, waits boundedly for Docker Desktop, prevents overlap, writes safe diagnostics under `backups/logs/`, verifies configured external copies, and retains the seven newest valid top-level routine pairs.
+The default daily time is `20:00` local. `-At 'HH:mm'` selects another time, `Status` reports the next/last run and result, and `Remove` removes only the task. Reinstall after moving the operational checkout. The task runs after Windows sign-in, starts missed triggers when the host becomes available, waits boundedly for Docker Desktop and managed PostgreSQL, prevents overlap, writes safe diagnostics under `backups/logs/`, verifies configured external copies, and retains the seven newest valid top-level routine pairs.
 
 The existing manual Git Bash path remains supported:
 
@@ -223,7 +225,7 @@ The existing manual Git Bash path remains supported:
 scripts/operations/backup-postgres.sh
 ```
 
-Git Bash is maintenance tooling only and is never required for normal operator use. PostgreSQL dumps contain sensitive operational data; SHA-256 verifies integrity but does not encrypt a dump. Google Drive is the selected off-notebook mechanism on the prepared workstation, supplied to the task as an ordinary Windows filesystem directory; the repository has no provider API, credential, or tracked destination. Backup operations remain maintainer-controlled. The recovery document contains the destructive database-recreation warning; do not replace it with an automated restore or volume-removal shortcut.
+Git Bash is maintenance tooling only and is never required for normal operator use. PostgreSQL dumps contain sensitive operational data; SHA-256 verifies integrity but does not encrypt a dump. Google Drive is the selected off-provider mechanism on the prepared workstation, supplied to the task as an ordinary Windows filesystem directory; the repository has no provider API, credential, or tracked destination. Backup operations remain maintainer-controlled. The recovery document contains the managed-database recovery warning; do not replace it with an automated restore or volume-removal shortcut.
 
 For normal maintenance, verify a backup through the default disposable restore command in the recovery document.
 It accepts valid empty or sparse operational business data while checking Flyway, restored-row integrity, current
@@ -260,7 +262,7 @@ Do not use the CSV as a second operational system or recurring import input.
 - [ ] The operator understands that closed-lid tablet access is available only while the notebook is plugged in.
 - [ ] A current local backup exists and its checksum is verified.
 - [ ] A current Google Drive off-notebook copy exists and its checksum is verified.
-- [ ] PostgreSQL remains private and TCP 5432 is not published.
+- [ ] PostgreSQL is reachable only through the configured managed target and is not exposed to the trusted LAN.
 - [ ] The initial inventory migration is complete if it was genuinely required.
 - [ ] Representative non-destructive smoke checks are accepted.
 - [ ] The maintainer can identify the [PostgreSQL backup and restore](postgresql-backup-restore.md) recovery contract.
