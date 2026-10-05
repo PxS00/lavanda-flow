@@ -101,6 +101,10 @@ inventory/
 
 The names above are structural references. Do not create classes merely to fill the tree. Every artifact must exist because there is a use case or a concrete technical need.
 
+## Approved v0.8.0 modules
+
+The tree above describes the existing implementation. The approved commercial extension adds `customers/` and `sales/`, each using the same feature-owned `domain/`, `application/`, and `infrastructure/` structure when its implementation slice is built. `customers` owns contacts. `sales` owns the combined draft-order/confirmed-sale lifecycle, line snapshots, totals, and allocation records. Sales may call only public customer, catalog, and inventory contracts; inventory receives opaque sale references and must not depend on sales. The accepted graph and transaction boundary are in [ADR 0012](decisions/0012-define-v0.8-commercial-boundaries.md). Do not create the packages or modules before their implementation issues.
+
 ## `domain`
 
 Owns business rules and concepts.

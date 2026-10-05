@@ -8,6 +8,8 @@ structures.
 
 PostgreSQL is the source of truth, and Flyway controls every schema change.
 
+The sections below describe implemented V1 storage. The approved v0.8.0 commercial storage is a future additive extension specified below and in [ADR 0012](decisions/0012-define-v0.8-commercial-boundaries.md); this document change does not claim that its tables or columns already exist.
+
 ## Inventory model
 
 ```text
@@ -186,3 +188,17 @@ V15 preserves the V10 assignment/immutability and deletion triggers and adds a t
 reclassification of canonical essences with assigned references. Existing rows are not rewritten.
 The public `InventoryItemRegistration.registerFinishedProduct(FinishedProductRegistration)` contract
 joins the caller transaction and delegates to catalog registration policy; inventory owns batch creation.
+
+## Planned v0.8.0 commercial model
+
+The later commercial slices add compact relational storage owned by `customers` and `sales`:
+
+- a customer row contains UUID, bounded name (`VARCHAR(160)`), optional normalized phone (`VARCHAR(16)`, leading `+` plus 7–15 digits), optional validated email (`VARCHAR(254)`), active state, and audit timestamps;
+- one order/sale row contains customer UUID, lifecycle state, creation/confirmation timestamps, immutable customer snapshot values on confirmation, and the backend total;
+- order lines have stable UUID, one unique catalog item UUID per order, exact `NUMERIC(19,6)` quantity, exact `NUMERIC(19,4)` BRL unit price, and confirmation-time item name snapshot (`VARCHAR(255)` to match catalog storage), unit snapshot, and `NUMERIC(19,2)` line amount;
+- sale allocations associate a confirmed line with each concrete inventory batch, exact allocated quantity, and the immutable movement UUID returned by inventory;
+- `stock_movement` receives nullable opaque source type/ID/line-ID fields for sale audit references. Existing movements remain valid and existing response contracts do not change.
+
+Use foreign keys for customer-to-order, order-to-line, line-to-allocation, and sales-owned relationships. Keep catalog/batch references as stable UUID values at module boundaries; do not add cross-module JPA relationships. Since inventory movements are inventory-owned and sales is not an inventory dependency, movement references are opaque values without a polymorphic database FK. Add positive quantity, nonnegative price, valid state, uniqueness, and bounded-field constraints where appropriate. Index customer `(active, name, id)` for active listing and deterministic pagination; the expected small-business volume uses case-insensitive substring contact search without a specialized text-index extension. Index order customer/state/confirmation date and allocation line/batch lookups. Paginate list/history APIs with existing 20 default/100 maximum conventions. Do not add file/blob columns or storage providers.
+
+All migrations are new forward-only versions after current V16. Keep additions nullable or new-table-only while old application versions may still run; do not edit applied migrations, backfill unrelated operational data, or perform destructive contraction implicitly. Application rollback may leave additive tables/columns in place. Recovery of committed business data uses verified PostgreSQL backup procedures.

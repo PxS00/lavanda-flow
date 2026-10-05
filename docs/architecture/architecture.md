@@ -59,6 +59,12 @@ ADR [0009](decisions/0009-define-v1-production-module-boundaries.md) establishes
 
 The package-by-feature convention, internal `domain`/`application`/`infrastructure` responsibilities, and current dependency rules remain defined in `backend-structure.md`.
 
+## Approved v0.8.0 commercial extension
+
+The implemented V1 module list above remains the deployed v0.7.x baseline. The approved v0.8.0 extension plans two additional modules: `customers` owns minimal contact records, and `sales` owns draft orders, confirmation, sale history, line snapshots, and sale-to-batch allocations. This is a new versioned scope, not a change to historical V1. [ADR 0012](decisions/0012-define-v0.8-commercial-boundaries.md) records the dependency graph and transaction decision; [the v0.8.0 product scope](../product/scope-v0.8.0.md) records its limits.
+
+The planned graph is `sales -> customers, catalog, inventory, shared`; `customers -> shared` only where needed. Existing modules do not depend on `sales` or `customers`. Sales calls catalog/customer public lookups and one public inventory FEFO withdrawal contract inside its PostgreSQL transaction. Inventory remains authoritative for product eligibility at stock use, batches, FEFO, expiration, locking, movements, and balances. Drafts do not reserve stock. Order IDs make confirmation retries idempotent; sale state, line snapshots, batch allocations, and movement references commit or roll back with the stock effects.
+
 ## V1 production implementation
 
 The implemented V1 architecture uses one inventory and batch model for raw materials (`matéria-prima`), intermediate products (`produto intermediário`), and finalized products (`produto finalizado`). An inventory batch may be externally supplied or produced internally; external manufacturer or supplier lot codes are preserved.
@@ -99,7 +105,7 @@ Concurrent operations must not produce negative balances, lost updates, duplicat
 
 Frontend/backend communication uses REST over JSON, initially versioned under `/api/v1`. HTTP boundaries use specific DTOs and input validation, return consistent errors, and never expose JPA entities directly. V1 includes inventory, formula-management, production-registration, and recursive-genealogy contracts. The v0.6.0 baseline uses same-origin Spring Security stateful operator sessions: `POST /api/v1/auth/login` and `GET /api/v1/auth/session` are the public bootstrap contracts, `POST /api/v1/auth/logout` requires authentication, and other operational `/api/v1/**` routes require authentication unless a later explicit contract states otherwise.
 
-The production UI supports backend-confirmed generated allocation and explicit manual lot entry for the existing production path. It cannot reserve or authoritatively calculate a generated sequence. For packaged outputs, Angular likewise cannot reserve or definitively calculate `SSS`; the backend assigns the definitive `SSS-MM-YYYY` only when the packaged production transaction succeeds under the #232 implementation.
+The production UI supports backend-confirmed generated allocation and explicit manual lot entry for the existing production path. It cannot reserve or authoritatively calculate a generated sequence. For packaged outputs, Angular likewise cannot reserve or definitively calculate `SSS`; the backend assigns the definitive `SSS-MM-YYYY` only when the packaged production transaction succeeds under the #232 implementation. The planned v0.8.0 sales UI follows the same authority rule for stock and totals: it may preview a draft total, while the server calculates the confirmed total and returns persisted FEFO allocations.
 
 ## Persistence and consistency
 

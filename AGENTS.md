@@ -8,7 +8,7 @@ The current GitHub issue is the implementation specification. Before changing an
 
 Authoritative documentation:
 
-- Product scope: `docs/product/scope-v1.md`
+- Product scope: `docs/product/scope-v1.md` for historical V1 and `docs/product/scope-v0.8.0.md` for the approved commercial extension;
 - Domain model: `docs/domain/domain-model.md`
 - Architecture and data model: `docs/architecture/architecture.md`, `docs/architecture/data-model.md`
 - Approved dependencies: `docs/architecture/dependencies.md`
@@ -22,6 +22,7 @@ More-specific instructions apply in `backend/AGENTS.md` and `frontend/AGENTS.md`
 
 - Build a modular monolith, organized by feature/domain rather than global technical layers.
 - Respect Spring Modulith module boundaries and communicate with other modules only through their public APIs; never import another module's internal infrastructure.
+- Keep the V1 boundary historically accurate: customer, order, and sales behavior belongs to the explicit v0.8.0 scope and does not retroactively expand V1.
 - Keep business rules out of controllers and frontend components.
 - Do not add speculative modules, abstractions, events, dependencies, or architecture.
 - Preserve existing contracts and implement the smallest complete solution within the issue scope.
