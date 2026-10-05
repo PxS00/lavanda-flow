@@ -1,0 +1,111 @@
+<section class="edit-page" aria-labelledby="customer-form-heading">
+  <header>
+    <a mat-button routerLink="/customers">Voltar aos clientes</a>
+    <h1 id="customer-form-heading">
+      {{ state().kind === 'loaded' && stateCustomer() ? 'Editar cliente' : 'Cadastrar cliente' }}
+    </h1>
+    <p>Informe o nome e, se desejar, telefone e e-mail.</p>
+  </header>
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando cliente..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      @if (submissionError(); as error) {
+        <app-error-state [error]="error" />
+      }
+      <mat-card appearance="outlined">
+        <mat-card-content>
+          <form
+            #contactForm
+            [formGroup]="editForm"
+            (submit)="submit($event)"
+            novalidate
+            [attr.aria-busy]="isSubmitting()"
+          >
+            <mat-form-field appearance="outline">
+              <mat-label>Nome</mat-label>
+              <input
+                matInput
+                formControlName="name"
+                autocomplete="name"
+                required
+                [readonly]="isSubmitting()"
+                [attr.aria-describedby]="
+                  backendFieldError('name') ? 'customer-name-backend-error' : null
+                "
+              />
+              <mat-hint align="end">{{ editForm.controls.name.value.trim().length }}/160</mat-hint>
+              @if (editForm.controls.name.touched && editForm.controls.name.invalid) {
+                <mat-error>Nome é obrigatório e deve ter no máximo 160 caracteres.</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('name'); as error) {
+              <p id="customer-name-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+            <mat-form-field appearance="outline">
+              <mat-label>Telefone</mat-label>
+              <input
+                matInput
+                type="tel"
+                formControlName="phone"
+                autocomplete="tel"
+                [readonly]="isSubmitting()"
+                [attr.aria-describedby]="
+                  backendFieldError('phone') ? 'customer-phone-backend-error' : null
+                "
+              />
+              <mat-hint
+                >Opcional. De 7 a 15 dígitos; aceita +, espaços, parênteses, pontos e
+                hífens.</mat-hint
+              >
+              @if (editForm.controls.phone.touched && editForm.controls.phone.invalid) {
+                <mat-error>Informe de 7 a 15 dígitos, com + opcional no início.</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('phone'); as error) {
+              <p id="customer-phone-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+            <mat-form-field appearance="outline">
+              <mat-label>E-mail</mat-label>
+              <input
+                matInput
+                type="email"
+                formControlName="email"
+                autocomplete="email"
+                [readonly]="isSubmitting()"
+                [attr.aria-describedby]="
+                  backendFieldError('email') ? 'customer-email-backend-error' : null
+                "
+              />
+              <mat-hint>Opcional. Até 254 caracteres.</mat-hint>
+              @if (editForm.controls.email.touched && editForm.controls.email.invalid) {
+                <mat-error>Informe um e-mail válido com até 254 caracteres.</mat-error>
+              }
+            </mat-form-field>
+            @if (backendFieldError('email'); as error) {
+              <p id="customer-email-backend-error" class="field-error" role="alert">{{ error }}</p>
+            }
+            <div class="form-actions">
+              <button mat-flat-button type="submit" [disabled]="isSubmitting()">
+                {{ isSubmitting() ? 'Salvando...' : 'Salvar cliente' }}
+              </button>
+              <a
+                mat-button
+                [routerLink]="
+                  currentState.customer ? ['/customers', currentState.customer.id] : ['/customers']
+                "
+                >Cancelar</a
+              >
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</section>

@@ -60,6 +60,71 @@ describe('application routes', () => {
     expect(TestBed.inject(Router).url).toBe('/login');
   });
 
+  it.each([
+    '/customers',
+    '/customers/new',
+    '/customers/customer-id',
+    '/customers/customer-id/edit',
+  ])('protects customer route %s on direct reload', async (url) => {
+    const harness = await RouterTestingHarness.create();
+    const navigation = harness.navigateByUrl(url);
+    await vi.waitFor(() =>
+      http.expectOne('/api/v1/auth/session').flush({ authenticated: false, username: null }),
+    );
+    await navigation;
+    expect(TestBed.inject(Router).url).toBe('/login');
+  });
+
+  it('loads the authenticated customer list with active defaults', async () => {
+    const harness = await RouterTestingHarness.create();
+    const navigation = harness.navigateByUrl('/customers');
+    await vi.waitFor(() =>
+      http.expectOne('/api/v1/auth/session').flush({ authenticated: true, username: 'Operator' }),
+    );
+    await navigation;
+    http
+      .expectOne('/api/v1/customers?page=0&size=20&active=true')
+      .flush({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 });
+    harness.fixture.detectChanges();
+    expect(harness.routeNativeElement?.textContent).toContain('Nenhum cliente encontrado');
+  });
+
+  it.each(['/customers/new', '/customers/customer-id', '/customers/customer-id/edit'])(
+    'loads authenticated customer workflow %s',
+    async (url) => {
+      const harness = await RouterTestingHarness.create();
+      const navigation = harness.navigateByUrl(url);
+      await vi.waitFor(() =>
+        http.expectOne('/api/v1/auth/session').flush({ authenticated: true, username: 'Operator' }),
+      );
+      await navigation;
+      if (url !== '/customers/new') {
+        http.expectOne('/api/v1/customers/customer-id').flush({
+          id: 'customer-id',
+          name: 'Ana',
+          phone: null,
+          email: null,
+          active: false,
+          createdAt: '2026-10-05T12:00:00Z',
+          updatedAt: '2026-10-05T12:00:00Z',
+        });
+      }
+      harness.fixture.detectChanges();
+      expect(TestBed.inject(Router).url).toBe(url);
+      if (url.endsWith('/edit')) {
+        expect(
+          harness.routeNativeElement?.querySelector<HTMLInputElement>(
+            'input[formControlName="name"]',
+          )?.value,
+        ).toBe('Ana');
+      } else {
+        expect(harness.routeNativeElement?.textContent).toContain(
+          url === '/customers/new' ? 'Cadastrar cliente' : 'Ana',
+        );
+      }
+    },
+  );
+
   it('should redirect a valid backend session away from login', async () => {
     const harness = await RouterTestingHarness.create();
     const navigation = harness.navigateByUrl('/login');

@@ -6,6 +6,12 @@ Extend Lavanda Flow's operational inventory system with minimal customer contact
 
 This is a versioned extension after v0.7.1. The historical [V1 scope](scope-v1.md) remains accurate: sales and fiscal capabilities are outside V1 and are not retroactively added to it.
 
+## Implementation status
+
+Issue #260 implements authenticated customer contact maintenance/search and its public lookup.
+See the [delivered customer contract](../specs/0260-manage-customer-contacts.md) and
+[operator workflow](customer-contacts.md). Orders, sales and inventory integration below remain planned.
+
 ## Included capabilities
 
 ### Customers
