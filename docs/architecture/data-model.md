@@ -8,7 +8,7 @@ structures.
 
 PostgreSQL is the source of truth, and Flyway controls every schema change.
 
-The sections below describe implemented V1 storage. The approved v0.8.0 commercial storage is a future additive extension specified below and in [ADR 0012](decisions/0012-define-v0.8-commercial-boundaries.md); this document change does not claim that its tables or columns already exist.
+The sections below describe implemented V1 storage and the additive customer contact table delivered by #260. Sales storage remains planned under [ADR 0012](decisions/0012-define-v0.8-commercial-boundaries.md).
 
 ## Inventory model
 
@@ -189,11 +189,34 @@ reclassification of canonical essences with assigned references. Existing rows a
 The public `InventoryItemRegistration.registerFinishedProduct(FinishedProductRegistration)` contract
 joins the caller transaction and delegates to catalog registration policy; inventory owns batch creation.
 
+## Customer contacts (V17, issue #260)
+
+`customer` is owned by `customers` and contains UUID `id`, required `name VARCHAR(160)`, nullable
+`phone VARCHAR(16)` and `email VARCHAR(254)`, required `active` (default true), and required
+`created_at`/`updated_at TIMESTAMPTZ`. Application writes use the injected `Clock`; PostgreSQL defaults
+also support well-formed direct inserts in disposable persistence tests.
+
+Name is trimmed and nonblank. Optional blank values become NULL. Phone removes spaces, parentheses,
+periods and hyphens, then must contain an optional leading `+` followed by 7–15 ASCII digits. Email is
+trimmed and validated using standard Jakarta `@Email`. SQL CHECK constraints defend nonblank trimmed
+names/emails and normalized phone syntax; bounded columns enforce lengths. Contacts are not unique.
+`idx_customer_active_name_id` indexes `(active, name, id)`. Lists use deterministic database name/ID
+ordering, optional active filtering and escaped substring matching; name/email matching uses `lower()`.
+There is no specialized search extension.
+
+Contact edits and activation changes lock the same customer row. Creation time and UUID are retained;
+`updated_at` changes only on a successful write, and a repeated state action is idempotent. Deactivation
+keeps the row. No delete contract or sales table exists in this slice. Future sales must retain customer
+references and their own confirmation snapshots.
+
+V17 adds only a new table and its index after the verified V16 baseline. Upgrade tests retain existing
+supplier data and exercise old/new writers after migration and a no-op migration retry. Application
+rollback retains the additive table; no data rewrite, down migration or destructive contraction occurs.
+
 ## Planned v0.8.0 commercial model
 
-The later commercial slices add compact relational storage owned by `customers` and `sales`:
+The later sales slices add compact relational storage; customer storage above is already implemented:
 
-- a customer row contains UUID, bounded name (`VARCHAR(160)`), optional normalized phone (`VARCHAR(16)`, leading `+` plus 7–15 digits), optional validated email (`VARCHAR(254)`), active state, and audit timestamps;
 - one order/sale row contains customer UUID, lifecycle state, creation/confirmation timestamps, immutable customer snapshot values on confirmation, and the backend total;
 - order lines have stable UUID, one unique catalog item UUID per order, exact `NUMERIC(19,6)` quantity, exact `NUMERIC(19,4)` BRL unit price, and confirmation-time item name snapshot (`VARCHAR(255)` to match catalog storage), unit snapshot, and `NUMERIC(19,2)` line amount;
 - sale allocations associate a confirmed line with each concrete inventory batch, exact allocated quantity, and the immutable movement UUID returned by inventory;
@@ -201,4 +224,4 @@ The later commercial slices add compact relational storage owned by `customers` 
 
 Use foreign keys for customer-to-order, order-to-line, line-to-allocation, and sales-owned relationships. Keep catalog/batch references as stable UUID values at module boundaries; do not add cross-module JPA relationships. Since inventory movements are inventory-owned and sales is not an inventory dependency, movement references are opaque values without a polymorphic database FK. Add positive quantity, nonnegative price, valid state, uniqueness, and bounded-field constraints where appropriate. Index customer `(active, name, id)` for active listing and deterministic pagination; the expected small-business volume uses case-insensitive substring contact search without a specialized text-index extension. Index order customer/state/confirmation date and allocation line/batch lookups. Paginate list/history APIs with existing 20 default/100 maximum conventions. Do not add file/blob columns or storage providers.
 
-All migrations are new forward-only versions after current V16. Keep additions nullable or new-table-only while old application versions may still run; do not edit applied migrations, backfill unrelated operational data, or perform destructive contraction implicitly. Application rollback may leave additive tables/columns in place. Recovery of committed business data uses verified PostgreSQL backup procedures.
+Customer contacts use V17; future migrations must follow the actual latest version at implementation time. Keep additions nullable or new-table-only while old application versions may still run; do not edit applied migrations, backfill unrelated operational data, or perform destructive contraction implicitly. Application rollback may leave additive tables/columns in place. Recovery of committed business data uses verified PostgreSQL backup procedures.

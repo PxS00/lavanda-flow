@@ -199,7 +199,7 @@ Business rules belong in the domain or application layer. Controllers and fronte
 
 ### Customer
 
-Represents a contact used for a sale and stores only a required name, optional phone, optional email, active state, and audit timestamps. It is not a CRM profile. Deactivation preserves the stable customer identity and historical sales.
+Represents a contact used for a sale and stores only a required name, optional phone, optional email, active state, and audit timestamps. It is not a CRM profile. Issue #260 implements this contact register in `customers`. Deactivation preserves the stable customer identity and retained row; explicit reactivation is supported. `CustomerLookup` exposes immutable current name/phone/email/active values without persistence types. Historical sales and confirmation snapshots remain planned for the sales slices.
 
 ### Draft order and confirmed sale
 
