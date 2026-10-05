@@ -6,6 +6,7 @@ Before contributing, read:
 
 - `AGENTS.md`
 - `docs/product/scope-v1.md`
+- `docs/product/scope-v0.8.0.md` when working on the approved commercial extension
 - `docs/development/git-workflow.md`
 - `docs/development/commit-conventions.md`
 - `docs/architecture/architecture.md`

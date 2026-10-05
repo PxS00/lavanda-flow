@@ -8,6 +8,8 @@ Raw materials (`matéria-prima`), intermediate products (`produto intermediário
 
 The concept names below describe domain responsibilities. They do not freeze class, package, API, or persistence names for implementation.
 
+V1 concepts remain historical. The approved v0.8.0 commercial extension adds the customer and sale concepts below without changing V1 inventory or production ownership; see [the v0.8.0 product scope](../product/scope-v0.8.0.md) and [ADR 0012](../architecture/decisions/0012-define-v0.8-commercial-boundaries.md).
+
 ## Core concepts
 
 ### Inventory item
@@ -192,3 +194,17 @@ Packaged expiration derivation remains deliberately unspecified. Filling does no
 - navigate batch genealogy recursively upstream and downstream.
 
 Business rules belong in the domain or application layer. Controllers and frontend components only validate their boundaries, invoke use cases, and present results.
+
+## v0.8.0 commercial concepts
+
+### Customer
+
+Represents a contact used for a sale and stores only a required name, optional phone, optional email, active state, and audit timestamps. It is not a CRM profile. Deactivation preserves the stable customer identity and historical sales.
+
+### Draft order and confirmed sale
+
+One sales-owned record represents a draft order and, after confirmation, its sale history. A draft has editable lines and no stock reservation. Successful confirmation records immutable customer and product snapshots, exact line quantities and BRL values, concrete inventory batch allocations, and stock movement references. Cancellation is available only before confirmation.
+
+Only active `FINISHED_PRODUCT` catalog identities using `MILLILITER` (bulk finished product) or `UNIT` (a separately stocked packaged presentation) are eligible. Each line uses the catalog item's unit without conversion. The backend calculates exact-decimal values and owns the confirmed total. Inventory owns the FEFO allocation and each stock movement. A physical return is a separate inspected and eligible inventory correction against the original allocated batch; it does not rewrite or cancel the sale.
+
+Customer name/contact and product display/unit snapshots preserve what the operator confirmed even if the current customer or catalog metadata later changes. Stable UUID references, batch allocations, and movement IDs provide identity and auditability; display names and lot strings do not.
