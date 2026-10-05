@@ -15,6 +15,8 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   INVENTORY_ITEM_CANONICAL_ESSENCE_REFERENCE_CONFLICT:
     'A referência informada já está atribuída a uma essência.',
   INVALID_INVENTORY_ITEM_METADATA: 'A referência informada não é válida para este item.',
+  CUSTOMER_NOT_FOUND: 'Cliente não encontrado.',
+  INVALID_CUSTOMER_SEARCH_QUERY: 'Revise os filtros de clientes.',
   SUPPLIER_NOT_FOUND: 'Fornecedor não encontrado.',
   INACTIVE_INVENTORY_ITEM: 'Este item de estoque está inativo.',
   INACTIVE_SUPPLIER: 'Este fornecedor está inativo.',
