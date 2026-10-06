@@ -8,6 +8,11 @@ export interface OrderLineDto {
   readonly quantity: string;
   readonly unitPrice: string;
   readonly amount: string;
+  readonly allocations?: readonly {
+    readonly batchId: string;
+    readonly movementId: string;
+    readonly quantity: string;
+  }[];
 }
 export interface OrderDto {
   readonly id: string;
@@ -19,6 +24,9 @@ export interface OrderDto {
   readonly total: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly confirmedAt?: string | null;
+  readonly customerPhone?: string | null;
+  readonly customerEmail?: string | null;
 }
 export interface OrderPageDto {
   readonly content: readonly OrderDto[];
