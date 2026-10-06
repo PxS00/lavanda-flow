@@ -122,6 +122,27 @@
         </mat-nav-list>
       </section>
 
+      <section class="nav-group" aria-labelledby="sales-nav-heading">
+        <h2 id="sales-nav-heading">Comercial</h2>
+        <mat-nav-list>
+          <a
+            class="nav-link"
+            mat-list-item
+            routerLink="/sales"
+            routerLinkActive="active-link"
+            aria-label="Pedidos"
+            (click)="usesOverlayNavigation() && sidenav.close()"
+          >
+            <span class="nav-link-content">
+              <svg class="nav-glyph" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                <path d="M4 3h16v18H4V3Zm2 2v14h12V5H6Zm2 3h8v2H8V8Zm0 4h8v2H8v-2Z" />
+              </svg>
+              <span class="nav-label">Pedidos</span>
+            </span>
+          </a>
+        </mat-nav-list>
+      </section>
+
       <section class="nav-group" aria-labelledby="registrations-nav-heading">
         <h2 id="registrations-nav-heading">Cadastros</h2>
         <mat-nav-list>

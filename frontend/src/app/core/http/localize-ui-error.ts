@@ -30,6 +30,15 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   MINIMUM_STOCK_LEVEL_NOT_FOUND: 'Estoque mínimo não configurado.',
   INVALID_MINIMUM_STOCK_QUANTITY: 'Informe uma quantidade mínima válida.',
   INVALID_BATCH_DATA: 'Os dados do lote são inválidos.',
+  ORDER_NOT_FOUND: 'Pedido não encontrado.',
+  ORDER_NOT_EDITABLE: 'Este pedido não pode mais ser editado.',
+  ORDER_CUSTOMER_NOT_FOUND:
+    'O cliente associado não foi encontrado. Selecione outro cliente ou deixe sem associação.',
+  ORDER_CUSTOMER_INACTIVE:
+    'O cliente associado está inativo. Selecione um cliente ativo ou deixe sem associação.',
+  ORDER_ITEM_NOT_FOUND: 'Um produto do pedido não foi encontrado. Revise as linhas.',
+  ORDER_ITEM_INELIGIBLE: 'Um produto está inativo ou não é elegível para venda. Revise as linhas.',
+  INVALID_ORDER_SEARCH_QUERY: 'Revise os filtros e a paginação dos pedidos.',
   VALIDATION_ERROR: 'Revise os dados informados.',
   INVALID_REQUEST_PARAMETER: 'Um parâmetro informado é inválido.',
   MALFORMED_REQUEST_BODY: 'Não foi possível processar os dados enviados.',

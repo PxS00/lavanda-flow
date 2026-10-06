@@ -1,0 +1,136 @@
+<section aria-labelledby="draft-heading">
+  <a mat-button routerLink="/sales">Voltar aos pedidos</a>
+  @let current = state();
+  <h1 id="draft-heading">
+    {{ current.kind === 'loaded' && current.order ? 'Editar pedido' : 'Criar pedido' }}
+  </h1>
+  <p>O rascunho não reserva estoque nem garante disponibilidade. Preços em BRL.</p>
+  @switch (current.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando pedido..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="current.error" />
+      <button mat-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      @if (failure(); as error) {
+        <app-error-state [error]="error" />
+        <p role="alert">
+          Os dados foram preservados. Revise o cliente, os produtos e os valores antes de tentar
+          novamente.
+        </p>
+      }
+      <form
+        #draftForm
+        [formGroup]="form"
+        (submit)="submit($event)"
+        novalidate
+        [attr.aria-busy]="pending()"
+      >
+        <mat-card appearance="outlined"
+          ><mat-card-content>
+            <h2>Cliente (opcional)</h2>
+            <p>{{ customerName() ?? 'Sem cliente associado' }}</p>
+            <button mat-button type="button" [disabled]="pending()" (click)="clearCustomer()">
+              Deixar sem cliente
+            </button>
+            <app-customer-picker
+              [disabled]="pending()"
+              (selected)="chooseCustomer($event)"
+            /> </mat-card-content
+        ></mat-card>
+        <mat-card appearance="outlined"
+          ><mat-card-content>
+            <h2>Produtos</h2>
+            <p>
+              Selecione a apresentação estocada ou o produto a granel. As quantidades usam a unidade
+              do cadastro, sem conversão.
+            </p>
+            <app-product-picker [disabled]="pending()" (selected)="addItem($event)" />
+            @if (lineError(); as error) {
+              <p role="alert">{{ error }}</p>
+            }
+            <div formArrayName="lines">
+              @for (line of form.controls.lines.controls; track line; let i = $index) {
+                <fieldset [formGroupName]="i">
+                  <legend>
+                    {{ labels()[line.controls.itemId.value]?.name }} ·
+                    {{ labels()[line.controls.itemId.value]?.unit }}
+                  </legend>
+                  <mat-form-field appearance="outline"
+                    ><mat-label
+                      >Quantidade ({{ labels()[line.controls.itemId.value]?.unit }})</mat-label
+                    >
+                    <input
+                      matInput
+                      type="text"
+                      inputmode="decimal"
+                      formControlName="quantity"
+                      required
+                      [readonly]="pending()"
+                    />
+                    <mat-hint>Positiva; até 13 dígitos inteiros e 6 decimais.</mat-hint>
+                    @if (line.controls.quantity.touched && line.controls.quantity.invalid) {
+                      <mat-error
+                        >Informe uma quantidade positiva com até 6 casas decimais.</mat-error
+                      >
+                    }
+                  </mat-form-field>
+                  <mat-form-field appearance="outline"
+                    ><mat-label>Preço unitário (R$)</mat-label>
+                    <input
+                      matInput
+                      type="text"
+                      inputmode="decimal"
+                      formControlName="unitPrice"
+                      required
+                      [readonly]="pending()"
+                    />
+                    <mat-hint>Zero ou positivo; até 15 dígitos inteiros e 4 decimais.</mat-hint>
+                    @if (line.controls.unitPrice.touched && line.controls.unitPrice.invalid) {
+                      <mat-error>Informe um preço não negativo com até 4 casas decimais.</mat-error>
+                    }
+                  </mat-form-field>
+                  @for (field of ['quantity', 'unitPrice', 'amount', 'itemId', 'id']; track field) {
+                    @if (backendFieldError('lines[' + i + '].' + field); as error) {
+                      <p role="alert">
+                        {{
+                          field === 'quantity'
+                            ? 'Quantidade'
+                            : field === 'unitPrice'
+                              ? 'Preço unitário'
+                              : 'Linha do pedido'
+                        }}: {{ error }}
+                      </p>
+                    }
+                  }
+                  <button
+                    mat-button
+                    type="button"
+                    [attr.aria-label]="'Remover ' + labels()[line.controls.itemId.value]?.name"
+                    [disabled]="pending()"
+                    (click)="removeLine(i)"
+                  >
+                    Remover produto
+                  </button>
+                </fieldset>
+              }
+            </div>
+          </mat-card-content></mat-card
+        >
+        <p aria-live="polite">
+          Total provisório:
+          {{ preview() === null ? 'Revise os valores' : 'R$ ' + formatDecimal(preview()!) }}. O
+          total calculado pelo servidor ao salvar é o valor oficial.
+        </p>
+        @if (backendFieldError('total')) {
+          <p role="alert">O total excede o limite permitido. Reduza as quantidades ou os preços.</p>
+        }
+        <button mat-flat-button type="submit" [disabled]="pending()">
+          {{ pending() ? 'Salvando...' : 'Salvar rascunho' }}
+        </button>
+      </form>
+    }
+  }
+</section>
