@@ -137,6 +137,7 @@ class SecurityConfiguration {
                     "/actuator/info",
                     "/actuator/prometheus"
                 ).permitAll()
+                .requestMatchers("/api/v1/sales", "/api/v1/sales/**").hasAuthority("OPERATOR")
                 .requestMatchers("/api/v1/**").authenticated()
                 .requestMatchers("/actuator/**").denyAll()
                 .anyRequest().permitAll()
