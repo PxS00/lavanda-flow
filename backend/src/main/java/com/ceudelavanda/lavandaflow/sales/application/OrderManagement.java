@@ -1,8 +1,10 @@
 package com.ceudelavanda.lavandaflow.sales.application;
 
 import com.ceudelavanda.lavandaflow.catalog.InventoryItemDetailsLookup;
+import com.ceudelavanda.lavandaflow.catalog.InventoryItemDetails;
 import com.ceudelavanda.lavandaflow.catalog.UnitOfMeasure;
 import com.ceudelavanda.lavandaflow.customers.CustomerLookup;
+import com.ceudelavanda.lavandaflow.customers.CustomerSnapshot;
 import com.ceudelavanda.lavandaflow.sales.domain.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -65,7 +67,15 @@ public class OrderManagement {
     @Transactional(readOnly = true)
     public Page search(OrderSearchQuery search) {
         var page = query.search(search);
-        return new Page(page.content().stream().map(this::result).toList(), page.page(), page.size(), page.totalElements(), page.totalPages());
+        var orders = page.content();
+        var itemIds = orders.stream().flatMap(order -> order.lines().stream()).map(OrderLine::itemId).distinct().toList();
+        var itemsById = itemIds.isEmpty() ? Map.<UUID, InventoryItemDetails>of() : catalog.findByIds(itemIds).stream()
+            .collect(java.util.stream.Collectors.toMap(InventoryItemDetails::id, item -> item));
+        var customerIds = orders.stream().map(Order::customerId).filter(Objects::nonNull).distinct().toList();
+        var customersById = customerIds.isEmpty() ? Map.<UUID, CustomerSnapshot>of() : customers.findByIds(customerIds).stream()
+            .collect(java.util.stream.Collectors.toMap(CustomerSnapshot::id, customer -> customer));
+        return new Page(orders.stream().map(order -> result(order, customersById, itemsById)).toList(),
+            page.page(), page.size(), page.totalElements(), page.totalPages());
     }
 
     public record Page(List<OrderResult> content, int page, int size, long totalElements, int totalPages) {}
@@ -123,14 +133,21 @@ public class OrderManagement {
     }
 
     private OrderResult result(Order order) {
-        var name = order.customerId() == null ? null : customers.findById(order.customerId()).map(c -> c.name()).orElse(null);
+        var customer = order.customerId() == null ? null : customers.findById(order.customerId()).orElse(null);
         var details = catalog.findByIds(order.lines().stream().map(OrderLine::itemId).toList()).stream()
-            .collect(java.util.stream.Collectors.toMap(item -> item.id(), item -> item));
+            .collect(java.util.stream.Collectors.toMap(InventoryItemDetails::id, item -> item));
+        return result(order, customer == null ? Map.of() : Map.of(customer.id(), customer), details);
+    }
+
+    private OrderResult result(Order order, Map<UUID, CustomerSnapshot> customersById,
+                               Map<UUID, InventoryItemDetails> details) {
+        var customer = order.customerId() == null ? null : customersById.get(order.customerId());
         var lines = order.lines().stream().map(line -> {
             var item = Optional.ofNullable(details.get(line.itemId()));
             return new OrderResult.Line(line.id(), line.itemId(), item.map(i -> i.name()).orElse(null),
                 item.map(i -> i.unitOfMeasure()).orElse(null), line.quantity(), line.unitPrice(), line.amount());
         }).toList();
-        return new OrderResult(order.id(), order.customerId(), name, order.status(), "BRL", lines, order.total(), order.createdAt(), order.updatedAt());
+        return new OrderResult(order.id(), order.customerId(), customer == null ? null : customer.name(),
+            order.status(), "BRL", lines, order.total(), order.createdAt(), order.updatedAt());
     }
 }

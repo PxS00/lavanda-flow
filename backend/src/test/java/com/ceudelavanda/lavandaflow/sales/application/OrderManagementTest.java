@@ -18,13 +18,15 @@ class OrderManagementTest {
     private static final Instant NOW = Instant.parse("2026-10-06T12:00:00Z");
     private final UUID item = UUID.randomUUID();
     private OrderRepository repository;
+    private OrderQuery query;
     private CustomerLookup customers;
     private InventoryItemDetailsLookup catalog;
     private OrderManagement orders;
 
     @BeforeEach void setUp() {
         repository = mock(OrderRepository.class); customers = mock(CustomerLookup.class); catalog = mock(InventoryItemDetailsLookup.class);
-        orders = new OrderManagement(repository, mock(OrderQuery.class), customers, catalog, Clock.fixed(NOW, ZoneOffset.UTC));
+        query = mock(OrderQuery.class);
+        orders = new OrderManagement(repository, query, customers, catalog, Clock.fixed(NOW, ZoneOffset.UTC));
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(catalog.findByIds(any())).thenAnswer(invocation -> {
             java.util.Collection<UUID> ids = invocation.getArgument(0);
@@ -36,6 +38,32 @@ class OrderManagementTest {
         return new SaveDraftCommand.Line(null, itemId, quantity == null ? null : new BigDecimal(quantity), price == null ? null : new BigDecimal(price));
     }
     private OrderResult save(String quantity, String price) { return orders.register(new SaveDraftCommand(null, List.of(line(item, quantity, price)))); }
+
+    @Test void searchResolvesAllPageLabelsInSingleBulkLookupCalls() {
+        var secondItem = UUID.randomUUID();
+        var firstCustomer = UUID.randomUUID();
+        var secondCustomer = UUID.randomUUID();
+        var first = new Order(UUID.randomUUID(), firstCustomer, OrderStatus.DRAFT,
+            List.of(new OrderLine(UUID.randomUUID(), item, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE)),
+            BigDecimal.ONE, NOW, NOW);
+        var second = new Order(UUID.randomUUID(), secondCustomer, OrderStatus.DRAFT,
+            List.of(new OrderLine(UUID.randomUUID(), secondItem, BigDecimal.ONE, BigDecimal.TEN, BigDecimal.TEN)),
+            BigDecimal.TEN, NOW, NOW);
+        when(query.search(any())).thenReturn(new OrderPage(List.of(first, second), 0, 20, 2, 1));
+        var secondDetails = new InventoryItemDetails(secondItem, "Second", "FINISHED_PRODUCT", UnitOfMeasure.UNIT, true);
+        when(catalog.findById(secondItem)).thenReturn(Optional.of(secondDetails));
+        when(customers.findByIds(any())).thenReturn(List.of(
+            new CustomerSnapshot(firstCustomer, "First customer", null, null, true),
+            new CustomerSnapshot(secondCustomer, "Second customer", null, null, false)));
+
+        var result = orders.search(new OrderSearchQuery(null, null, null, null, 0, 20));
+
+        assertThat(result.content()).extracting(OrderResult::customerName).containsExactly("First customer", "Second customer");
+        assertThat(result.content()).extracting(order -> order.lines().getFirst().itemName()).containsExactly("Product", "Second");
+        verify(catalog, times(1)).findByIds(any());
+        verify(customers, times(1)).findByIds(any());
+        verify(customers, never()).findById(any());
+    }
 
     @Test void createsWithoutCustomerUsingClockAndZeroPrice() {
         var result = save("0.000001", "0");

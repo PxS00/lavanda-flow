@@ -169,6 +169,30 @@ class OrderIntegrationTest {
             .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ORDER_NOT_EDITABLE"));
     }
 
+    @Test void searchesFullPageWithConstantQueryCountAndEagerlyLoadsLines() {
+        var customer = customers.register(new CustomerContact("Batch lookup", null, null));
+        for (int i = 0; i < 20; i++) orders.register(command(customer.id(), item, "1", "1"));
+        em.clear();
+        var statistics = em.getEntityManagerFactory().unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        var wasEnabled = statistics.isStatisticsEnabled();
+        statistics.setStatisticsEnabled(true);
+        statistics.clear();
+
+        try {
+            var page = orders.search(new OrderSearchQuery(null, null, null, null, 0, 20));
+
+            assertThat(page.content()).hasSize(20).allSatisfy(order -> {
+                assertThat(order.customerName()).isEqualTo("Batch lookup");
+                assertThat(order.lines()).hasSize(1);
+                assertThat(order.lines().getFirst().itemName()).isEqualTo("Finished");
+            });
+            assertThat(statistics.getPrepareStatementCount()).isEqualTo(5);
+        } finally {
+            statistics.clear();
+            statistics.setStatisticsEnabled(wasEnabled);
+        }
+    }
+
     @Test void malformedInvalidAndMissingOrdersUseExistingErrorShapeAndNeverWrite() throws Exception {
         for (var invalid : new String[]{"{}", "{\"lines\":[]}", "{\"lines\":[null]}", body(null,item,"0.0000001","1"), body(null,item,"1","1.00001"), body(null,item,"100.000037","999999630000136.8999")}) {
             mvc.perform(post("/api/v1/sales").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(invalid))

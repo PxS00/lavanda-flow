@@ -22,5 +22,6 @@ class OrderLineJpaEntity {
     void replace(OrderLine line, int position) {
         itemId = line.itemId(); quantity = line.quantity(); unitPrice = line.unitPrice(); amount = line.amount(); this.position = position;
     }
+    UUID orderId() { return order.id; }
     OrderLine toDomain() { return new OrderLine(id, itemId, quantity, unitPrice, amount); }
 }

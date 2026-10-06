@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.sales.infrastructure.persistence;
 
 import com.ceudelavanda.lavandaflow.sales.application.*;
+import com.ceudelavanda.lavandaflow.sales.domain.OrderLine;
 import com.ceudelavanda.lavandaflow.sales.domain.OrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -9,6 +10,9 @@ import org.springframework.stereotype.Repository;
 import jakarta.persistence.criteria.Predicate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 
 @Repository
 @RequiredArgsConstructor
@@ -25,6 +29,14 @@ class JpaOrderQuery implements OrderQuery {
             if (query.to() != null) filters.add(cb.lessThan(root.get("createdAt"), query.to().plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC)));
             return cb.and(filters.toArray(Predicate[]::new));
         }, PageRequest.of(query.page(), query.size(), Sort.by(Sort.Order.desc("createdAt"), Sort.Order.asc("id"))));
-        return new OrderPage(page.getContent().stream().map(OrderJpaEntity::toDomain).toList(), page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
+        var entities = page.getContent();
+        var linesByOrder = new HashMap<UUID, List<OrderLine>>();
+        if (!entities.isEmpty()) {
+            var orderIds = entities.stream().map(order -> order.id).toList();
+            repository.findLinesByOrderIds(orderIds).forEach(line ->
+                linesByOrder.computeIfAbsent(line.orderId(), ignored -> new ArrayList<>()).add(line.toDomain()));
+        }
+        var orders = entities.stream().map(order -> order.toDomain(linesByOrder.getOrDefault(order.id, List.of()))).toList();
+        return new OrderPage(orders, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
     }
 }

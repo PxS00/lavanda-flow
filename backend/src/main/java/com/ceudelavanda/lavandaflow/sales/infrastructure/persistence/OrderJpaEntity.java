@@ -35,7 +35,11 @@ class OrderJpaEntity {
     }
 
     Order toDomain() {
-        return new Order(id, customerId, status, lines.stream().sorted(Comparator.comparingInt(l -> l.position))
-            .map(OrderLineJpaEntity::toDomain).toList(), total, createdAt, updatedAt);
+        return toDomain(lines.stream().sorted(Comparator.comparingInt(l -> l.position))
+            .map(OrderLineJpaEntity::toDomain).toList());
+    }
+
+    Order toDomain(List<OrderLine> loadedLines) {
+        return new Order(id, customerId, status, loadedLines, total, createdAt, updatedAt);
     }
 }

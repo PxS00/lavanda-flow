@@ -1,5 +1,7 @@
 package com.ceudelavanda.lavandaflow.customers;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,4 +16,7 @@ public interface CustomerLookup {
      * @return immutable current values, or empty if the identity does not exist
      */
     Optional<CustomerSnapshot> findById(UUID customerId);
+
+    /** Resolves current values for a set of stable customer identities in one module call. */
+    List<CustomerSnapshot> findByIds(Collection<UUID> customerIds);
 }
