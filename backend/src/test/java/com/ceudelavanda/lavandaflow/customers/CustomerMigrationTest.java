@@ -25,7 +25,7 @@ class CustomerMigrationTest {
             jdbc.update("insert into " + schema + ".supplier (id, name, contact) values (?, 'Legacy supplier', 'legacy@example.test')", supplierId);
             var before = jdbc.queryForMap("select * from " + schema + ".supplier where id = ?", supplierId);
             var upgrade = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load();
-            assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(2);
+            assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(3);
             assertThat(upgrade.migrate().migrationsExecuted).isZero();
             upgrade.validate();
             assertThat(jdbc.queryForMap("select * from " + schema + ".supplier where id = ?", supplierId)).isEqualTo(before);

@@ -19,6 +19,13 @@ describe('OrderApiService', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('confirms by persisted order identity without separate stock requests or retry tokens', () => {
+    api.confirm('id').subscribe((result) => expect(result.status).toBe('CONFIRMED'));
+    const request = http.expectOne('/api/v1/sales/id/confirm');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBeNull();
+    request.flush({ status: 'CONFIRMED' });
+  });
   it('sends trimmed UUID search, customer, inclusive dates and bounded page fields', () => {
     api
       .search({

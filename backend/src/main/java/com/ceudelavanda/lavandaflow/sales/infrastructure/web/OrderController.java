@@ -32,7 +32,7 @@ public class OrderController {
     }
 
     @GetMapping("/{orderId}")
-    @Operation(summary = "Inspect a draft order", description = "Returns exact stored quantities, prices and totals with live customer/catalog labels; these are not confirmation snapshots.")
+    @Operation(summary = "Inspect an order or confirmed sale", description = "Drafts return live labels; confirmed sales return immutable confirmation-time customer/product snapshots and exact batch/movement allocations.")
     @ApiResponse(responseCode = "404", description = "Draft not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     public OrderResult getById(@PathVariable UUID orderId) { return orders.getById(orderId); }
 
@@ -41,6 +41,20 @@ public class OrderController {
     @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     @ApiResponse(responseCode = "409", description = "Order is no longer a draft", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     public OrderResult update(@PathVariable UUID orderId, @RequestBody SaveDraftRequest request) { return orders.update(orderId, request.toCommand()); }
+
+    @PostMapping("/{orderId}/confirm")
+    @Operation(summary = "Confirm a draft with atomic FEFO withdrawal", description = "Order UUID is the idempotency key. Locks the order and joins inventory in one PostgreSQL transaction. Confirmed retries return persisted history without new stock effects. No reservation, automatic retry or physical return. Any failure leaves the draft unchanged.")
+    @ApiResponse(responseCode = "200", description = "Persisted confirmed result including snapshots and exact batch/movement allocations")
+    @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Order cannot be confirmed or lock conflict", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "422", description = "INSUFFICIENT_ELIGIBLE_STOCK or ineligible inventory item; complete rollback", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "500", description = "ORDER_PERSISTENCE_FAILED; sanitized persistence or transaction failure", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public OrderResult confirm(@PathVariable UUID orderId) { return orders.confirm(orderId); }
+
+    @PostMapping("/{orderId}/cancel")
+    @Operation(summary = "Cancel an unconfirmed draft", description = "DRAFT only; no stock effects. Confirmed sales cannot be cancelled, edited or deleted; physical returns require a separate audited operation.")
+    @ApiResponse(responseCode = "409", description = "Order is not a draft", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public OrderResult cancel(@PathVariable UUID orderId) { return orders.cancel(orderId); }
 
     @GetMapping
     @Operation(summary = "Search draft orders", description = "Literal partial UUID q, optional customerId and inclusive UTC creation dates from/to. DRAFT only; newest creation first, UUID ascending for ties.")

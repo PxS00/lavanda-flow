@@ -14,7 +14,9 @@
     @case ('loaded') {
       <mat-card appearance="outlined"
         ><mat-card-content>
-          <h2>Rascunho</h2>
+          <h2 #statusHeading tabindex="-1">
+            {{ current.order.status === 'CONFIRMED' ? 'Venda confirmada' : 'Rascunho' }}
+          </h2>
           <dl>
             <dt>ID do pedido</dt>
             <dd>{{ current.order.id }}</dd>
@@ -27,13 +29,42 @@
             <dt>Total oficial (BRL)</dt>
             <dd>R$ {{ formatDecimal(current.order.total) }}</dd>
           </dl>
-          <p>
-            Este pedido não reserva estoque nem garante disponibilidade. Os nomes exibidos são os
-            cadastros atuais.
-          </p>
-          <a mat-flat-button [routerLink]="['/sales', current.order.id, 'edit']">Editar rascunho</a>
-        </mat-card-content></mat-card
-      >
+          @if (current.order.status === 'DRAFT') {
+            <p>
+              Este pedido não reserva estoque nem garante disponibilidade. Os nomes exibidos são os
+              cadastros atuais.
+            </p>
+            <a
+              mat-flat-button
+              [routerLink]="pending() ? null : ['/sales', current.order.id, 'edit']"
+              [attr.aria-disabled]="pending()"
+              >Editar rascunho</a
+            >
+            <button mat-flat-button type="button" (click)="confirm()" [disabled]="pending()">
+              {{
+                pending()
+                  ? 'Confirmando...'
+                  : confirmationError()
+                    ? 'Tentar confirmar novamente'
+                    : 'Confirmar pedido e retirar estoque'
+              }}
+            </button>
+          } @else if (current.order.status === 'CONFIRMED') {
+            <p role="status">
+              Venda confirmada. O estoque foi retirado e o histórico foi preservado.
+            </p>
+            <p>Confirmada em: {{ current.order.confirmedAt | date: 'short' }}</p>
+            @if (current.order.customerPhone) {
+              <p>Telefone: {{ current.order.customerPhone }}</p>
+            }
+            @if (current.order.customerEmail) {
+              <p>E-mail: {{ current.order.customerEmail }}</p>
+            }
+          }
+          @if (confirmationError(); as error) {
+            <app-error-state [error]="error" />
+          }</mat-card-content
+      ></mat-card>
       <ul aria-label="Produtos do pedido">
         @for (line of current.order.lines; track line.id) {
           <li>
@@ -46,6 +77,17 @@
                 </p>
                 <p>Preço unitário: R$ {{ formatDecimal(line.unitPrice) }}</p>
                 <p>Valor da linha: R$ {{ formatDecimal(line.amount) }}</p>
+                @if (current.order.status === 'CONFIRMED') {
+                  <ul aria-label="Lotes retirados">
+                    @for (allocation of line.allocations; track allocation.movementId) {
+                      <li>
+                        Lote: {{ allocation.batchId }} — Quantidade:
+                        {{ formatDecimal(allocation.quantity) }} — Movimento:
+                        {{ allocation.movementId }}
+                      </li>
+                    }
+                  </ul>
+                }
               </mat-card-content></mat-card
             >
           </li>

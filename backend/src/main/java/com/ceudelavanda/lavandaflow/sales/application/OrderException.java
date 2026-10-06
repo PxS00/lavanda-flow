@@ -19,6 +19,9 @@ public class OrderException extends DomainException {
     public static OrderException notDraft() {
         return new OrderException("ORDER_NOT_EDITABLE", "Only draft orders can be edited", ErrorType.CONFLICT, null);
     }
+    public static OrderException notConfirmable() {
+        return new OrderException("ORDER_NOT_CONFIRMABLE", "Only draft orders can be confirmed", ErrorType.CONFLICT, null);
+    }
     public static OrderException reference(String code, String field, UUID id) {
         return new OrderException(code, "Order reference is unavailable or ineligible", ErrorType.VALIDATION, Map.of(field, id.toString()));
     }

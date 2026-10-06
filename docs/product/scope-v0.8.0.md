@@ -22,7 +22,7 @@ Confirmed sales preserve the customer identifier and the name, phone, and email 
 
 ### Orders and sales
 
-An order starts as a draft and becomes a sale only when an operator confirms it. Drafts do not reserve stock. A draft can be edited; cancellation remains planned. Customer association on a draft is optional. A supplied customer must be active at each save. Confirmation withdraws all line quantities using backend-authoritative FEFO and either confirms the complete order or changes nothing. The confirmed sale, its line values, its batch allocations, and its inventory movements form one auditable history.
+An order starts as a draft and becomes a sale only when an operator confirms it. Drafts do not reserve stock. A draft can be edited or cancelled without stock effects. Customer association on a draft is optional. A supplied customer must be active at each save. Confirmation withdraws all line quantities using backend-authoritative FEFO and either confirms the complete order or changes nothing. The confirmed sale, its line values, its batch allocations, and its inventory movements form one auditable history.
 
 ### Eligible products and quantities
 

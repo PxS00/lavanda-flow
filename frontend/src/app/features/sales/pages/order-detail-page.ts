@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -7,6 +7,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   Subject,
   catchError,
+  finalize,
   distinctUntilChanged,
   map,
   of,
@@ -33,9 +34,13 @@ type DetailState =
 })
 export class OrderDetailPage {
   private readonly api = inject(OrderApiService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly retries = new Subject<void>();
+  private readonly statusHeading = viewChild<ElementRef<HTMLHeadingElement>>('statusHeading');
   protected readonly state = signal<DetailState>({ kind: 'loading' });
+  protected readonly pending = signal(false);
+  protected readonly confirmationError = signal<UiError | null>(null);
   protected readonly formatDecimal = formatDecimalString;
   protected readonly unitLabel = inventoryItemUnitLabel;
   constructor() {
@@ -46,7 +51,10 @@ export class OrderDetailPage {
         switchMap((id) =>
           this.retries.pipe(
             startWith(undefined),
-            tap(() => this.state.set({ kind: 'loading' })),
+            tap(() => {
+              this.state.set({ kind: 'loading' });
+              this.confirmationError.set(null);
+            }),
             switchMap(() =>
               this.api.getById(id).pipe(
                 map((order): DetailState => ({ kind: 'loaded', order })),
@@ -60,6 +68,33 @@ export class OrderDetailPage {
         takeUntilDestroyed(),
       )
       .subscribe((state) => this.state.set(state));
+  }
+  protected confirm(): void {
+    const current = this.state();
+    if (this.pending() || current.kind !== 'loaded' || current.order.status !== 'DRAFT') return;
+    this.pending.set(true);
+    this.confirmationError.set(null);
+    const id = current.order.id;
+    this.api
+      .confirm(id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.pending.set(false)),
+      )
+      .subscribe({
+        next: (order) => {
+          const latest = this.state();
+          if (latest.kind === 'loaded' && latest.order.id === id) {
+            this.state.set({ kind: 'loaded', order });
+            this.statusHeading()?.nativeElement.focus();
+          }
+        },
+        error: (error: unknown) => {
+          const latest = this.state();
+          if (latest.kind !== 'loaded' || latest.order.id !== id) return;
+          this.confirmationError.set(mapHttpError(error));
+        },
+      });
   }
   protected retry(): void {
     this.retries.next();

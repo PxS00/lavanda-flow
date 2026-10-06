@@ -22,11 +22,13 @@ class OrderManagementTest {
     private CustomerLookup customers;
     private InventoryItemDetailsLookup catalog;
     private OrderManagement orders;
+    private com.ceudelavanda.lavandaflow.inventory.SaleStockWithdrawal inventory;
 
     @BeforeEach void setUp() {
         repository = mock(OrderRepository.class); customers = mock(CustomerLookup.class); catalog = mock(InventoryItemDetailsLookup.class);
         query = mock(OrderQuery.class);
-        orders = new OrderManagement(repository, query, customers, catalog, Clock.fixed(NOW, ZoneOffset.UTC));
+        inventory = mock(com.ceudelavanda.lavandaflow.inventory.SaleStockWithdrawal.class);
+        orders = new OrderManagement(repository, query, customers, catalog, Clock.fixed(NOW, ZoneOffset.UTC), inventory);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(catalog.findByIds(any())).thenAnswer(invocation -> {
             java.util.Collection<UUID> ids = invocation.getArgument(0);
@@ -34,6 +36,35 @@ class OrderManagementTest {
         });
         when(catalog.findById(item)).thenReturn(Optional.of(new InventoryItemDetails(item, "Product", "FINISHED_PRODUCT", UnitOfMeasure.UNIT, true)));
     }
+    @Test void confirmedRetryUsesOnlyPersistedHistoryWithoutInventoryOrLiveLookups() {
+        var id = UUID.randomUUID();
+        var customer = UUID.randomUUID();
+        var line = new OrderLine(UUID.randomUUID(), item, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE,
+            "Historical product", UnitOfMeasure.UNIT, List.of(new SaleAllocation(UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE)));
+        var confirmed = new Order(id, customer, OrderStatus.CONFIRMED, List.of(line), BigDecimal.ONE, NOW, NOW,
+            "Historical customer", "1234567", "a@example.com", NOW);
+        when(repository.findByIdForUpdate(id)).thenReturn(Optional.of(confirmed));
+        clearInvocations(catalog, customers);
+        var result = orders.confirm(id);
+        assertThat(result.customerName()).isEqualTo("Historical customer");
+        assertThat(result.lines().getFirst().allocations()).isEqualTo(line.allocations());
+        verifyNoInteractions(inventory, customers);
+        verify(catalog, never()).findByIds(any());
+        verify(repository, never()).save(any());
+    }
+
+    @Test void cancelledOrderCannotConfirmAndDraftWritesNeverCallInventory() {
+        var saved = save("1", "1");
+        verifyNoInteractions(inventory);
+        var cancelled = new Order(saved.id(), null, OrderStatus.CANCELLED,
+            List.of(new OrderLine(saved.lines().getFirst().id(), item, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE)),
+            BigDecimal.ONE, NOW, NOW);
+        when(repository.findByIdForUpdate(saved.id())).thenReturn(Optional.of(cancelled));
+        assertThatThrownBy(() -> orders.confirm(saved.id())).isInstanceOfSatisfying(OrderException.class,
+            e -> assertThat(e.getCode()).isEqualTo("ORDER_NOT_CONFIRMABLE"));
+        verifyNoInteractions(inventory);
+    }
+
     private SaveDraftCommand.Line line(UUID itemId, String quantity, String price) {
         return new SaveDraftCommand.Line(null, itemId, quantity == null ? null : new BigDecimal(quantity), price == null ? null : new BigDecimal(price));
     }

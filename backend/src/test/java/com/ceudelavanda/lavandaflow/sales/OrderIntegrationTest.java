@@ -230,7 +230,7 @@ class OrderIntegrationTest {
             .andExpect(jsonPath("$.paths['/api/v1/sales'].get").exists())
             .andExpect(jsonPath("$.paths['/api/v1/sales/{orderId}'].get").exists())
             .andExpect(jsonPath("$.paths['/api/v1/sales/{orderId}'].put").exists())
-            .andExpect(jsonPath("$.paths['/api/v1/sales/{orderId}/confirm']").doesNotExist())
+            .andExpect(jsonPath("$.paths['/api/v1/sales/{orderId}/confirm']").exists())
             .andExpect(jsonPath("$.paths['/api/v1/sales/{orderId}'].delete").doesNotExist())
             .andExpect(jsonPath("$.components.schemas.SaveDraftRequest.required", org.hamcrest.Matchers.contains("lines")))
             .andExpect(jsonPath("$.components.schemas.SaveDraftRequest.properties.lines.minItems").value(1))

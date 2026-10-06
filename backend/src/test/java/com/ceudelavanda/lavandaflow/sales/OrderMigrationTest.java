@@ -25,7 +25,7 @@ class OrderMigrationTest {
             jdbc.update("insert into " + schema + ".inventory_item (id, name, category, default_unit) values (?, 'Product', 'FINISHED_PRODUCT', 'UNIT')", item);
             var before = jdbc.queryForMap("select * from " + schema + ".customer where id = ?", customer);
             var flyway = Flyway.configure().dataSource(source).schemas(schema).defaultSchema(schema).load();
-            assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
+            assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
             assertThat(flyway.migrate().migrationsExecuted).isZero(); flyway.validate();
             assertThat(jdbc.queryForMap("select * from " + schema + ".customer where id = ?", customer)).isEqualTo(before);
             jdbc.update("insert into " + schema + ".customer (id, name) values (?, 'Old writer')", UUID.randomUUID());

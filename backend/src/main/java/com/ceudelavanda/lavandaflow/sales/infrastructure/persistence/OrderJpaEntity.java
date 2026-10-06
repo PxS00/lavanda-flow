@@ -17,12 +17,17 @@ class OrderJpaEntity {
     @Column(nullable = false, precision = 19, scale = 2) BigDecimal total;
     @Column(nullable = false, updatable = false) Instant createdAt;
     @Column(nullable = false) Instant updatedAt;
+    String customerName;
+    String customerPhone;
+    String customerEmail;
+    Instant confirmedAt;
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position") List<OrderLineJpaEntity> lines = new ArrayList<>();
 
     OrderJpaEntity(Order order) { id = order.id(); createdAt = order.createdAt(); }
 
     void replace(Order order) {
+        customerName = order.customerName(); customerPhone = order.customerPhone(); customerEmail = order.customerEmail(); confirmedAt = order.confirmedAt();
         customerId = order.customerId(); status = order.status(); total = order.total(); updatedAt = order.updatedAt();
         var retained = order.lines().stream().map(OrderLine::id).toList();
         lines.removeIf(line -> !retained.contains(line.id));
@@ -40,6 +45,6 @@ class OrderJpaEntity {
     }
 
     Order toDomain(List<OrderLine> loadedLines) {
-        return new Order(id, customerId, status, loadedLines, total, createdAt, updatedAt);
+        return new Order(id, customerId, status, loadedLines, total, createdAt, updatedAt, customerName, customerPhone, customerEmail, confirmedAt);
     }
 }

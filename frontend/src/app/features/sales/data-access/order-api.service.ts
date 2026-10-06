@@ -21,6 +21,9 @@ export class OrderApiService {
   getById(id: string) {
     return this.http.get<OrderDto>(`${this.url}/${id}`);
   }
+  confirm(id: string) {
+    return this.http.post<OrderDto>(`${this.url}/${id}/confirm`, null);
+  }
   register(request: SaveDraftRequest) {
     return this.http.post<OrderDto>(this.url, request);
   }

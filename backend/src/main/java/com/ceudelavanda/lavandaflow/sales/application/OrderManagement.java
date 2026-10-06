@@ -15,8 +15,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.*;
 
-/** Draft transaction boundary. Validates live public references and exact decimals on every save.
- * Locks edits, preserves identities, calculates line-rounded BRL totals, and never calls inventory. */
+/** Order transaction boundary. Validates live public references and exact decimals on every save.
+ * Locks edits, preserves identities, calculates line-rounded BRL totals, and calls inventory only for confirmation. */
 @Service
 @RequiredArgsConstructor
 public class OrderManagement {
@@ -25,6 +25,7 @@ public class OrderManagement {
     private final CustomerLookup customers;
     private final InventoryItemDetailsLookup catalog;
     private final Clock clock;
+    private final com.ceudelavanda.lavandaflow.inventory.SaleStockWithdrawal inventory;
 
     /**
      * Registers a draft with server-assigned order and line identities and exact BRL totals.
@@ -52,13 +53,54 @@ public class OrderManagement {
     }
 
     /**
-     * Inspects stored draft values, including drafts with references that have since become inactive.
-     * Customer and product labels are current lookup values, not confirmation-time history.
-     * @throws OrderException when the identity does not identify a draft
+     * Locks the order before any inventory effect. The order UUID is the idempotency key;
+     * confirmed retries return persisted snapshots/allocations without calling inventory.
+     * All stock, movements, snapshots, allocations and state join this PostgreSQL transaction.
+     * Any downstream failure rolls back everything; retry of a remaining draft is explicit.
+     */
+    @Transactional
+    public OrderResult confirm(UUID id) {
+        var order = repository.findByIdForUpdate(id).orElseThrow(() -> OrderException.notFound(id));
+        if (order.status() == OrderStatus.CONFIRMED) return result(order);
+        if (order.status() != OrderStatus.DRAFT) throw OrderException.notConfirmable();
+        var customer = order.customerId() == null ? null : customers.findById(order.customerId()).orElseThrow(() ->
+            OrderException.reference("ORDER_CUSTOMER_NOT_FOUND", "customerId", order.customerId()));
+        if (customer != null && !customer.active())
+            throw OrderException.reference("ORDER_CUSTOMER_INACTIVE", "customerId", customer.id());
+        var withdrawn = inventory.withdraw(order.lines().stream().sorted(Comparator.comparing(OrderLine::itemId))
+            .map(line -> new com.ceudelavanda.lavandaflow.inventory.SaleStockWithdrawal.Line(line.itemId(), line.quantity(),
+                new com.ceudelavanda.lavandaflow.inventory.StockAuditReference("SALE", id, line.id()))).toList());
+        var byLine = withdrawn.stream().collect(java.util.stream.Collectors.toMap(r -> r.lineId(), r -> r));
+        var lines = order.lines().stream().map(line -> {
+            var allocation = Objects.requireNonNull(byLine.get(line.id()));
+            return new OrderLine(line.id(), line.itemId(), line.quantity(), line.unitPrice(), line.amount(),
+                allocation.itemName(), allocation.unitOfMeasure(), allocation.allocations().stream()
+                    .map(a -> new SaleAllocation(a.batchId(), a.movementId(), a.quantity())).toList());
+        }).toList();
+        var now = Instant.now(clock).truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        return result(repository.save(new Order(order.id(), order.customerId(), OrderStatus.CONFIRMED, lines,
+            order.total(), order.createdAt(), now, customer == null ? null : customer.name(),
+            customer == null ? null : customer.phone(), customer == null ? null : customer.email(), now)));
+    }
+
+    /** Cancels only an unconfirmed draft under its row lock, without inventory effects or returns. */
+    @Transactional
+    public OrderResult cancel(UUID id) {
+        var order = repository.findByIdForUpdate(id).orElseThrow(() -> OrderException.notFound(id));
+        if (order.status() != OrderStatus.DRAFT) throw OrderException.notDraft();
+        var now = Instant.now(clock).truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        return result(repository.save(new Order(order.id(), order.customerId(), OrderStatus.CANCELLED,
+            order.lines(), order.total(), order.createdAt(), now)));
+    }
+
+    /**
+     * Inspects drafts with live labels or confirmed sales with persisted immutable history.
+     * Inactive references do not prevent reads or idempotent confirmed retries.
+     * @throws OrderException when the order is missing or cancelled
      */
     @Transactional(readOnly = true)
     public OrderResult getById(UUID id) {
-        var order = repository.findById(id).filter(o -> o.status() == OrderStatus.DRAFT)
+        var order = repository.findById(id).filter(o -> o.status() != OrderStatus.CANCELLED)
             .orElseThrow(() -> OrderException.notFound(id));
         return result(order);
     }
@@ -133,6 +175,12 @@ public class OrderManagement {
     }
 
     private OrderResult result(Order order) {
+        if (order.status() == OrderStatus.CONFIRMED) {
+            return new OrderResult(order.id(), order.customerId(), order.customerName(), order.status(), "BRL",
+                order.lines().stream().map(line -> new OrderResult.Line(line.id(), line.itemId(), line.itemName(),
+                    line.unitOfMeasure(), line.quantity(), line.unitPrice(), line.amount(), line.allocations())).toList(),
+                order.total(), order.createdAt(), order.updatedAt(), order.customerPhone(), order.customerEmail(), order.confirmedAt());
+        }
         var customer = order.customerId() == null ? null : customers.findById(order.customerId()).orElse(null);
         var details = catalog.findByIds(order.lines().stream().map(OrderLine::itemId).toList()).stream()
             .collect(java.util.stream.Collectors.toMap(InventoryItemDetails::id, item -> item));
@@ -145,9 +193,9 @@ public class OrderManagement {
         var lines = order.lines().stream().map(line -> {
             var item = Optional.ofNullable(details.get(line.itemId()));
             return new OrderResult.Line(line.id(), line.itemId(), item.map(i -> i.name()).orElse(null),
-                item.map(i -> i.unitOfMeasure()).orElse(null), line.quantity(), line.unitPrice(), line.amount());
+                item.map(i -> i.unitOfMeasure()).orElse(null), line.quantity(), line.unitPrice(), line.amount(), List.of());
         }).toList();
         return new OrderResult(order.id(), order.customerId(), customer == null ? null : customer.name(),
-            order.status(), "BRL", lines, order.total(), order.createdAt(), order.updatedAt());
+            order.status(), "BRL", lines, order.total(), order.createdAt(), order.updatedAt(), null, null, null);
     }
 }

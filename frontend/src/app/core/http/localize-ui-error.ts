@@ -32,6 +32,10 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   INVALID_BATCH_DATA: 'Os dados do lote são inválidos.',
   ORDER_NOT_FOUND: 'Pedido não encontrado.',
   ORDER_NOT_EDITABLE: 'Este pedido não pode mais ser editado.',
+  ORDER_NOT_CONFIRMABLE: 'Este pedido não pode ser confirmado.',
+  ORDER_LOCK_CONFLICT: 'O pedido ou estoque está sendo usado por outra operação. Tente novamente.',
+  ORDER_PERSISTENCE_FAILED: 'Não foi possível salvar a confirmação. Tente novamente.',
+  SALE_ITEM_INELIGIBLE: 'Um produto está inativo ou não é elegível para venda. Revise o pedido.',
   ORDER_CUSTOMER_NOT_FOUND:
     'O cliente associado não foi encontrado. Selecione outro cliente ou deixe sem associação.',
   ORDER_CUSTOMER_INACTIVE:
