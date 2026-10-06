@@ -27,7 +27,12 @@ import { LoadingState } from '../../../shared/ui/loading-state/loading-state';
   template: `
     <mat-form-field appearance="outline"
       ><mat-label>Buscar cliente ativo</mat-label>
-      <input matInput [formControl]="searchText" [readonly]="disabled()" />
+      <input
+        matInput
+        [formControl]="searchText"
+        [readonly]="disabled()"
+        (keydown.enter)="searchOnEnter($event)"
+      />
     </mat-form-field>
     <button mat-button type="button" [disabled]="disabled()" (click)="search()">Buscar</button>
     @if (loading()) {
@@ -104,6 +109,12 @@ export class CustomerPicker {
           this.pageIndex.set(page.page);
         }
       });
+  }
+  protected searchOnEnter(event: Event): void {
+    event.preventDefault();
+    if (!this.disabled()) {
+      this.search();
+    }
   }
   protected search(): void {
     this.query = { q: this.searchText.value.trim(), page: 0 };

@@ -7,6 +7,42 @@ import { product } from '../testing/order-fixture';
 import { SellableItemPicker } from './sellable-item-picker';
 
 describe('SellableItemPicker', () => {
+  it('searches on Enter without submitting the enclosing form, including while disabled', async () => {
+    const search = vi.fn(() =>
+      of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }),
+    );
+    await TestBed.configureTestingModule({
+      imports: [SellableItemPicker],
+      providers: [{ provide: InventoryItemApiService, useValue: { search } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SellableItemPicker);
+    fixture.detectChanges();
+    fixture.componentInstance.searchText.setValue(' perfume ');
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    input.dispatchEvent(enter);
+    expect(enter.defaultPrevented).toBe(true);
+    expect(search).toHaveBeenLastCalledWith({
+      name: 'perfume',
+      category: 'FINISHED_PRODUCT',
+      active: true,
+      page: 0,
+      size: 20,
+    });
+    expect(search).toHaveBeenCalledTimes(2);
+
+    fixture.componentRef.setInput('disabled', true);
+    fixture.detectChanges();
+    const disabledEnter = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(disabledEnter);
+    expect(disabledEnter.defaultPrevented).toBe(true);
+    expect(search).toHaveBeenCalledTimes(2);
+  });
+
   it('offers only active finished UNIT/mL identities, searches and pages instead of truncating selection', async () => {
     const search = vi.fn(() =>
       of({

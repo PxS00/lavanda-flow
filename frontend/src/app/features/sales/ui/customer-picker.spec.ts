@@ -6,6 +6,36 @@ import { CustomerPageDto } from '../../customers/data-access/customer.dto';
 import { CustomerPicker } from './customer-picker';
 
 describe('CustomerPicker', () => {
+  it('searches on Enter without submitting the enclosing form, including while disabled', async () => {
+    const search = vi.fn(() =>
+      of({ content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }),
+    );
+    await TestBed.configureTestingModule({
+      imports: [CustomerPicker],
+      providers: [{ provide: CustomerApiService, useValue: { search } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CustomerPicker);
+    fixture.detectChanges();
+    fixture.componentInstance.searchText.setValue(' Ana ');
+    const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    input.dispatchEvent(enter);
+    expect(enter.defaultPrevented).toBe(true);
+    expect(search).toHaveBeenLastCalledWith({ q: 'Ana', active: true, page: 0, size: 20 });
+    expect(search).toHaveBeenCalledTimes(2);
+
+    fixture.componentRef.setInput('disabled', true);
+    fixture.detectChanges();
+    const disabledEnter = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(disabledEnter);
+    expect(disabledEnter.defaultPrevented).toBe(true);
+    expect(search).toHaveBeenCalledTimes(2);
+  });
+
   it('searches active contacts with bounded pages and emits stable identity', async () => {
     const customer = {
       id: 'customer',
