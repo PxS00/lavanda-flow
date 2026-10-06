@@ -10,7 +10,7 @@ This is a versioned extension after v0.7.1. The historical [V1 scope](scope-v1.m
 
 Issue #260 implements authenticated customer contact maintenance/search and its public lookup.
 See the [delivered customer contract](../specs/0260-manage-customer-contacts.md) and
-[operator workflow](customer-contacts.md). Orders, sales and inventory integration below remain planned.
+[operator workflow](customer-contacts.md). Issue #261 implements optional-customer draft orders, exact entered pricing, authoritative totals and authenticated capture/edit/list/detail workflows. See the [draft contract](../specs/0261-register-customer-orders.md) and [operator workflow](customer-orders.md). Confirmation, cancellation, historical snapshots and inventory integration below remain planned.
 
 ## Included capabilities
 
@@ -22,7 +22,7 @@ Confirmed sales preserve the customer identifier and the name, phone, and email 
 
 ### Orders and sales
 
-An order starts as a draft and becomes a sale only when an operator confirms it. Drafts do not reserve stock. A draft can be edited or cancelled. Confirmation withdraws all line quantities using backend-authoritative FEFO and either confirms the complete order or changes nothing. The confirmed sale, its line values, its batch allocations, and its inventory movements form one auditable history.
+An order starts as a draft and becomes a sale only when an operator confirms it. Drafts do not reserve stock. A draft can be edited; cancellation remains planned. Customer association on a draft is optional. A supplied customer must be active at each save. Confirmation withdraws all line quantities using backend-authoritative FEFO and either confirms the complete order or changes nothing. The confirmed sale, its line values, its batch allocations, and its inventory movements form one auditable history.
 
 ### Eligible products and quantities
 
