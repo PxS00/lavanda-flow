@@ -16,7 +16,8 @@ public record StockMovement(
     MovementType type,
     BigDecimal quantity,
     String reason,
-    Instant occurredAt
+    Instant occurredAt,
+    com.ceudelavanda.lavandaflow.inventory.StockAuditReference reference
 ) {
 
     private static final int MAX_REASON_LENGTH = 255;
@@ -29,12 +30,16 @@ public record StockMovement(
         String reason,
         Instant occurredAt
     ) {
-        this.id = requireNonNull(id, "id");
-        this.batchId = requireNonNull(batchId, "batchId");
-        this.type = requireNonNull(type, "type");
-        this.quantity = StockQuantityRules.requirePositive(quantity, "quantity");
-        this.reason = validateReason(normalizeOptional(reason));
-        this.occurredAt = requireNonNull(occurredAt, "occurredAt");
+        this(id, batchId, type, quantity, reason, occurredAt, null);
+    }
+
+    public StockMovement {
+        id = requireNonNull(id, "id");
+        batchId = requireNonNull(batchId, "batchId");
+        type = requireNonNull(type, "type");
+        quantity = StockQuantityRules.requirePositive(quantity, "quantity");
+        reason = validateReason(normalizeOptional(reason));
+        occurredAt = requireNonNull(occurredAt, "occurredAt");
     }
 
     /**

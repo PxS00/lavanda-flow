@@ -8,7 +8,7 @@ final class StockMovementMapper {
     }
 
     static StockMovementJpaEntity toEntity(StockMovement movement) {
-        return new StockMovementJpaEntity(
+        var entity = new StockMovementJpaEntity(
             movement.id(),
             movement.batchId(),
             movement.type(),
@@ -16,6 +16,8 @@ final class StockMovementMapper {
             movement.reason(),
             movement.occurredAt()
         );
+        entity.reference(movement.reference());
+        return entity;
     }
 
     static StockMovement toDomain(StockMovementJpaEntity entity) {
@@ -25,7 +27,7 @@ final class StockMovementMapper {
             entity.getType(),
             entity.getQuantity(),
             entity.getReason(),
-            entity.getOccurredAt()
+            entity.getOccurredAt(), entity.reference()
         );
     }
 }

@@ -9,7 +9,7 @@ import java.util.UUID;
 
 /** Draft display labels are live lookup values, never confirmation snapshots. Decimal values are exact. */
 public record OrderResult(UUID id, UUID customerId, String customerName, OrderStatus status, String currency,
-                          List<Line> lines, BigDecimal total, Instant createdAt, Instant updatedAt) {
+                          List<Line> lines, BigDecimal total, Instant createdAt, Instant updatedAt, String customerPhone, String customerEmail, Instant confirmedAt) {
     public record Line(UUID id, UUID itemId, String itemName, UnitOfMeasure unitOfMeasure,
-                       BigDecimal quantity, BigDecimal unitPrice, BigDecimal amount) {}
+                       BigDecimal quantity, BigDecimal unitPrice, BigDecimal amount, List<com.ceudelavanda.lavandaflow.sales.domain.SaleAllocation> allocations) {}
 }
