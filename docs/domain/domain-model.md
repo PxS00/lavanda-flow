@@ -203,7 +203,7 @@ Represents a contact used for a sale and stores only a required name, optional p
 
 ### Draft order and confirmed sale
 
-One sales-owned record represents a draft order and, after confirmation, its sale history. A draft has editable lines and no stock reservation. Successful confirmation records immutable customer and product snapshots, exact line quantities and BRL values, concrete inventory batch allocations, and stock movement references. Cancellation is available only before confirmation.
+Issue #261 implements one sales-owned draft record with optional customer association, stable order/line UUIDs, exact quantities and entered BRL prices, line-rounded amounts and backend-authoritative total. Current customer/product names are live labels; stored IDs and commercial values are not changed by later catalog/contact edits. After the later confirmation workflow, the same record represents sale history. A draft has editable lines and no stock reservation. Successful confirmation records immutable customer and product snapshots, exact line quantities and BRL values, concrete inventory batch allocations, and stock movement references. Cancellation is available only before confirmation.
 
 Only active `FINISHED_PRODUCT` catalog identities using `MILLILITER` (bulk finished product) or `UNIT` (a separately stocked packaged presentation) are eligible. Each line uses the catalog item's unit without conversion. The backend calculates exact-decimal values and owns the confirmed total. Inventory owns the FEFO allocation and each stock movement. A physical return is a separate inspected and eligible inventory correction against the original allocated batch; it does not rewrite or cancel the sale.
 

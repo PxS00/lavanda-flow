@@ -6,6 +6,8 @@ import com.ceudelavanda.lavandaflow.customers.domain.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,5 +21,12 @@ class CustomersCustomerLookup implements CustomerLookup {
     public Optional<CustomerSnapshot> findById(UUID customerId) {
         return repository.findById(customerId).map(customer -> new CustomerSnapshot(customer.id(),
             customer.contact().name(), customer.contact().phone(), customer.contact().email(), customer.active()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CustomerSnapshot> findByIds(Collection<UUID> customerIds) {
+        return repository.findByIds(customerIds).stream().map(customer -> new CustomerSnapshot(customer.id(),
+            customer.contact().name(), customer.contact().phone(), customer.contact().email(), customer.active())).toList();
     }
 }

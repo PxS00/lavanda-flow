@@ -179,7 +179,7 @@ class CustomerIntegrationTest {
             .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    @Test void openApiDocumentsTheDeliveredRoutesAndDtoWithoutDeleteOrSales() throws Exception {
+    @Test void openApiDocumentsTheDeliveredCustomerRoutesAndDtoWithoutDelete() throws Exception {
         mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
             .andExpect(jsonPath("$.paths['/api/v1/customers'].get").exists())
             .andExpect(jsonPath("$.paths['/api/v1/customers'].post.responses['201']").exists())
@@ -187,7 +187,6 @@ class CustomerIntegrationTest {
             .andExpect(jsonPath("$.paths['/api/v1/customers/{customerId}'].delete").doesNotExist())
             .andExpect(jsonPath("$.paths['/api/v1/customers/{customerId}/activate'].post").exists())
             .andExpect(jsonPath("$.paths['/api/v1/customers/{customerId}/deactivate'].post").exists())
-            .andExpect(jsonPath("$.components.schemas.CustomerRequest.properties.name.maxLength").value(160))
-            .andExpect(jsonPath("$.paths['/api/v1/sales']").doesNotExist());
+            .andExpect(jsonPath("$.components.schemas.CustomerRequest.properties.name.maxLength").value(160));
     }
 }

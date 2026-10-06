@@ -1,0 +1,66 @@
+<section aria-labelledby="orders-heading">
+  <h1 id="orders-heading">Pedidos em rascunho</h1>
+  <p>Rascunhos não reservam estoque nem garantem disponibilidade.</p>
+  <a mat-flat-button routerLink="/sales/new">Criar pedido</a>
+  <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+    <mat-form-field appearance="outline"
+      ><mat-label>Buscar pelo ID do pedido</mat-label
+      ><input matInput formControlName="q" maxlength="36"
+    /></mat-form-field>
+    <mat-form-field appearance="outline"
+      ><mat-label>Criado de (UTC)</mat-label><input matInput type="date" formControlName="from"
+    /></mat-form-field>
+    <mat-form-field appearance="outline"
+      ><mat-label>Criado até (UTC)</mat-label><input matInput type="date" formControlName="to"
+    /></mat-form-field>
+    <button mat-flat-button type="submit">Aplicar filtros</button>
+    <button mat-button type="button" (click)="clearFilters()">Limpar</button>
+  </form>
+  @if (filterError(); as error) {
+    <p role="alert">{{ error }}</p>
+  }
+  @let current = state();
+  @switch (current.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando pedidos..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="current.error" /><button mat-button type="button" (click)="retry()">
+        Tentar novamente
+      </button>
+    }
+    @case ('loaded') {
+      @if (current.page.content.length === 0) {
+        <app-empty-state
+          title="Nenhum pedido encontrado"
+          message="Crie um pedido ou revise os filtros."
+        />
+      } @else {
+        <ul aria-label="Pedidos em rascunho">
+          @for (order of current.page.content; track order.id) {
+            <li>
+              <mat-card appearance="outlined"
+                ><mat-card-content>
+                  <h2>{{ order.customerName ?? 'Sem cliente associado' }}</h2>
+                  <p>
+                    Rascunho · {{ order.createdAt | date: 'short' }} · Total oficial: R$
+                    {{ formatDecimal(order.total) }}
+                  </p>
+                  <a mat-button [routerLink]="['/sales', order.id]">Ver pedido {{ order.id }}</a>
+                </mat-card-content></mat-card
+              >
+            </li>
+          }
+        </ul>
+      }
+      <mat-paginator
+        aria-label="Páginas de pedidos"
+        [length]="current.page.totalElements"
+        [pageIndex]="current.page.page"
+        [pageSize]="current.page.size"
+        [pageSizeOptions]="[20, 50, 100]"
+        (page)="changePage($event)"
+      />
+    }
+  }
+</section>

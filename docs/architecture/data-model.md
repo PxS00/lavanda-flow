@@ -8,7 +8,7 @@ structures.
 
 PostgreSQL is the source of truth, and Flyway controls every schema change.
 
-The sections below describe implemented V1 storage and the additive customer contact table delivered by #260. Sales storage remains planned under [ADR 0012](decisions/0012-define-v0.8-commercial-boundaries.md).
+The sections below describe implemented V1 storage and the additive customer contact table delivered by #260. Draft sales storage is delivered by #261; confirmation/allocation storage remains planned under [ADR 0012](decisions/0012-define-v0.8-commercial-boundaries.md).
 
 ## Inventory model
 
@@ -213,15 +213,38 @@ V17 adds only a new table and its index after the verified V16 baseline. Upgrade
 supplier data and exercise old/new writers after migration and a no-op migration retry. Application
 rollback retains the additive table; no data rewrite, down migration or destructive contraction occurs.
 
+## Draft orders (V18, issue #261)
+
+`sales_order` and `sales_order_line` belong to `sales`. An order stores UUID `id`, nullable `customer_id`
+(FK to `customer`, no cross-module JPA relationship), bounded `status VARCHAR(9)` with DRAFT/CONFIRMED/
+CANCELLED check, nonnegative `total NUMERIC(19,2)`, and required creation/update TIMESTAMPTZ. This
+slice writes/queries DRAFT only. Customer optionality follows #261's explicit acceptance criterion;
+#259's “contains customer UUID” wording does not require NOT NULL. Supplied contacts must be active.
+
+Lines store stable UUID `id`, required sales-owned order FK, stable catalog `item_id UUID`, nonnegative
+INTEGER display position, positive `quantity NUMERIC(19,6)`, nonnegative `unit_price NUMERIC(19,4)`,
+and nonnegative `amount NUMERIC(19,2)` checked against `round(quantity * unit_price,2)`. Catalog IDs
+are validated through public lookup, with no cross-module JPA mapping or catalog FK. `(order_id,item_id)`
+is unique and supports collection joins. Each retained item keeps its line identity across full replacements.
+Amounts and total are calculated using exact arithmetic, line-level HALF_UP rounding and overflow checks.
+Application validation rejects excess fractional precision before PostgreSQL column coercion.
+
+Indexes `(status,created_at DESC,id)` and `(customer_id,status,created_at DESC,id)` support bounded,
+deterministic draft listing and customer/date filters. Draft edits lock the aggregate row and update
+lines/total in one transaction. No confirmation snapshots, allocations, movement references or stock
+writes exist. Labels are read live from public customer/catalog lookup; stored references and entered
+commercial values remain unchanged by later label edits. V18 creates new tables only after actual V17;
+old readers/writers and retry remain safe, with additive schema retained on application rollback.
+
 ## Planned v0.8.0 commercial model
 
-The later sales slices add compact relational storage; customer storage above is already implemented:
+The later confirmation/history slices extend the implemented customer and draft storage above:
 
-- one order/sale row contains customer UUID, lifecycle state, creation/confirmation timestamps, immutable customer snapshot values on confirmation, and the backend total;
+- the existing order/sale row gains confirmation timestamps and immutable customer snapshot values for an associated customer; its optional customer UUID, lifecycle state, creation timestamps and total already exist;
 - order lines have stable UUID, one unique catalog item UUID per order, exact `NUMERIC(19,6)` quantity, exact `NUMERIC(19,4)` BRL unit price, and confirmation-time item name snapshot (`VARCHAR(255)` to match catalog storage), unit snapshot, and `NUMERIC(19,2)` line amount;
 - sale allocations associate a confirmed line with each concrete inventory batch, exact allocated quantity, and the immutable movement UUID returned by inventory;
 - `stock_movement` receives nullable opaque source type/ID/line-ID fields for sale audit references. Existing movements remain valid and existing response contracts do not change.
 
-Use foreign keys for customer-to-order, order-to-line, line-to-allocation, and sales-owned relationships. Keep catalog/batch references as stable UUID values at module boundaries; do not add cross-module JPA relationships. Since inventory movements are inventory-owned and sales is not an inventory dependency, movement references are opaque values without a polymorphic database FK. Add positive quantity, nonnegative price, valid state, uniqueness, and bounded-field constraints where appropriate. Index customer `(active, name, id)` for active listing and deterministic pagination; the expected small-business volume uses case-insensitive substring contact search without a specialized text-index extension. Index order customer/state/confirmation date and allocation line/batch lookups. Paginate list/history APIs with existing 20 default/100 maximum conventions. Do not add file/blob columns or storage providers.
+Use foreign keys for customer-to-order (nullable, implemented), order-to-line (implemented), line-to-allocation, and sales-owned relationships. Keep catalog/batch references as stable UUID values at module boundaries; do not add cross-module JPA relationships. Since inventory movements are inventory-owned and sales is not an inventory dependency, movement references are opaque values without a polymorphic database FK. Add positive quantity, nonnegative price, valid state, uniqueness, and bounded-field constraints where appropriate. Index customer `(active, name, id)` for active listing and deterministic pagination; the expected small-business volume uses case-insensitive substring contact search without a specialized text-index extension. Index order customer/state/confirmation date and allocation line/batch lookups. Paginate list/history APIs with existing 20 default/100 maximum conventions. Do not add file/blob columns or storage providers.
 
-Customer contacts use V17; future migrations must follow the actual latest version at implementation time. Keep additions nullable or new-table-only while old application versions may still run; do not edit applied migrations, backfill unrelated operational data, or perform destructive contraction implicitly. Application rollback may leave additive tables/columns in place. Recovery of committed business data uses verified PostgreSQL backup procedures.
+Customer contacts use V17 and draft orders use V18; future migrations must follow the actual latest version at implementation time. Keep additions nullable or new-table-only while old application versions may still run; do not edit applied migrations, backfill unrelated operational data, or perform destructive contraction implicitly. Application rollback may leave additive tables/columns in place. Recovery of committed business data uses verified PostgreSQL backup procedures.

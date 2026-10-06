@@ -1,0 +1,56 @@
+<section aria-labelledby="order-heading">
+  <a mat-button routerLink="/sales">Voltar aos pedidos</a>
+  <h1 id="order-heading">Detalhes do pedido</h1>
+  @let current = state();
+  @switch (current.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando pedido..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="current.error" /><button mat-button type="button" (click)="retry()">
+        Tentar novamente
+      </button>
+    }
+    @case ('loaded') {
+      <mat-card appearance="outlined"
+        ><mat-card-content>
+          <h2>Rascunho</h2>
+          <dl>
+            <dt>ID do pedido</dt>
+            <dd>{{ current.order.id }}</dd>
+            <dt>Cliente</dt>
+            <dd>{{ current.order.customerName ?? 'Sem cliente associado' }}</dd>
+            <dt>Criado em</dt>
+            <dd>{{ current.order.createdAt | date: 'short' }}</dd>
+            <dt>Atualizado em</dt>
+            <dd>{{ current.order.updatedAt | date: 'short' }}</dd>
+            <dt>Total oficial (BRL)</dt>
+            <dd>R$ {{ formatDecimal(current.order.total) }}</dd>
+          </dl>
+          <p>
+            Este pedido não reserva estoque nem garante disponibilidade. Os nomes exibidos são os
+            cadastros atuais.
+          </p>
+          <a mat-flat-button [routerLink]="['/sales', current.order.id, 'edit']">Editar rascunho</a>
+        </mat-card-content></mat-card
+      >
+      <ul aria-label="Produtos do pedido">
+        @for (line of current.order.lines; track line.id) {
+          <li>
+            <mat-card appearance="outlined"
+              ><mat-card-content>
+                <h2>{{ line.itemName ?? line.itemId }}</h2>
+                <p>
+                  Quantidade: {{ formatDecimal(line.quantity) }}
+                  {{ line.unitOfMeasure ? unitLabel(line.unitOfMeasure) : 'Unidade indisponível' }}
+                </p>
+                <p>Preço unitário: R$ {{ formatDecimal(line.unitPrice) }}</p>
+                <p>Valor da linha: R$ {{ formatDecimal(line.amount) }}</p>
+              </mat-card-content></mat-card
+            >
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

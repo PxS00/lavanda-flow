@@ -4,6 +4,8 @@ import com.ceudelavanda.lavandaflow.customers.domain.Customer;
 import com.ceudelavanda.lavandaflow.customers.domain.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,6 +22,11 @@ class JpaCustomerRepository implements CustomerRepository {
     @Override
     public Optional<Customer> findById(UUID id) {
         return repository.findById(id).map(CustomerJpaEntity::toDomain);
+    }
+
+    @Override
+    public List<Customer> findByIds(Collection<UUID> ids) {
+        return repository.findAllById(ids).stream().map(CustomerJpaEntity::toDomain).toList();
     }
 
     @Override
