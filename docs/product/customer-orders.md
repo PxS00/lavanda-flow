@@ -26,9 +26,22 @@ product labels are current catalog/contact values, not confirmed sale history.
 
 ## Query and recover
 
-The draft list searches a complete or partial order ID and inclusive creation dates labeled UTC. Use
-**Aplicar filtros**, **Limpar**, or the page controls. It displays loading, empty, and error states.
-Detail and edit URLs show a not-found state for missing drafts.
+The list initially shows drafts. In **Situação**, choose **Vendas confirmadas** or **Cancelados**
+to discover persisted history without knowing its ID. Optionally search/select a customer (including
+inactive contacts); **Todos os clientes** clears that selection. Customer selection takes effect with
+**Aplicar filtros**. Search accepts a complete or partial order ID. **Criado de/até (UTC)** always
+filter creation. For confirmed sales, **Confirmada de/até (UTC)** independently filter confirmation.
+Both date ranges are inclusive UTC days and combine with customer, ID and situation filters.
+Changing away from confirmed sales clears confirmation dates. **Limpar** restores drafts and clears
+all filters and the customer selection. Page controls retain applied filters; each application starts
+at the first page. Results sort by newest creation, then stable ID for ties.
+
+Use **Ver pedido** to inspect a result. Confirmed details show historical customer/product values,
+exact official amounts and every batch quantity/movement ID, even after renaming or deactivation.
+Cancelled details say **Pedido cancelado**, expose no edit/confirmation actions and have no stock
+effect. The list and details display loading, empty and retryable error states. Missing IDs show a
+not-found state. The [technical contract](../specs/0275-expose-paginated-sale-history.md) documents
+additive API filters and validation.
 
 If saving fails, entered values remain available. Review field feedback and the current customer/product
 state; inactive/missing customers or products block saving. Replace or clear an invalid customer, or
@@ -43,7 +56,7 @@ disabled. The server alone selects eligible batches using FEFO. No quantity is s
 
 On success, **Venda confirmada** displays the persisted customer/product snapshots, confirmation time
 and each allocated batch, exact quantity and movement ID. Confirmed details remain available at the
-same order URL; the draft list continues to list only drafts. Confirmed sales cannot be edited,
+same order URL and are discoverable by selecting **Vendas confirmadas** in the list. Confirmed sales cannot be edited,
 cancelled or deleted through this workflow.
 
 If eligible stock is insufficient or another request fails, the UI retains the draft and shows the error.

@@ -10,7 +10,11 @@ This is a versioned extension after v0.7.1. The historical [V1 scope](scope-v1.m
 
 Issue #260 implements authenticated customer contact maintenance/search and its public lookup.
 See the [delivered customer contract](../specs/0260-manage-customer-contacts.md) and
-[operator workflow](customer-contacts.md). Issue #261 implements optional-customer draft orders, exact entered pricing, authoritative totals and authenticated capture/edit/list/detail workflows. See the [draft contract](../specs/0261-register-customer-orders.md) and [operator workflow](customer-orders.md). Confirmation, cancellation, historical snapshots and inventory integration below remain planned.
+[operator workflow](customer-contacts.md). Issue #261 implements optional-customer draft orders, exact entered pricing, authoritative totals and authenticated capture/edit/list/detail workflows. See the [draft contract](../specs/0261-register-customer-orders.md) and [operator workflow](customer-orders.md). Issue #262 delivers atomic confirmation, draft cancellation, immutable snapshots and inventory integration
+([contract](../specs/0262-confirm-orders-with-fefo-withdrawal.md)). Issue #275 delivers paginated sale
+history with explicit status, customer, UUID, creation-date and confirmation-date filtering, including
+cancelled read-only detail ([contract](../specs/0275-expose-paginated-sale-history.md)). Physical
+sale-linked corrections remain a separate planned slice (#276).
 
 ## Included capabilities
 
