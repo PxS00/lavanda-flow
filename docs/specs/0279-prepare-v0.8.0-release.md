@@ -9,18 +9,21 @@ specifications [#260](0260-manage-customer-contacts.md), [#261](0261-register-cu
 [#262](0262-confirm-orders-with-fefo-withdrawal.md), [#275](0275-expose-paginated-sale-history.md),
 and [#276](0276-register-sale-linked-stock-corrections.md).
 
-Prepare the delivered commercial extension for release PR review. This pass covers repository
-preparation only. The user's explicit constraints defer the issue's publication and operational
-phases: no commit, push, PR, merge, tag, GitHub Release, deployment, credentials or operational data access.
+Prepare the delivered commercial extension for release PR review. The initial preparation pass
+excluded commits, pushes and PR creation; subsequent authorization published the preparation commit
+and opened [Release PR #280](https://github.com/PxS00/lavanda-flow/pull/280) targeting `main`.
+This documentation follow-up permits no commit, push, merge, tag, GitHub Release, deployment,
+credentials or operational data access.
 No product feature, dependency upgrade, unrelated refactor or historical migration change is authorized.
 
 ## Fixed baseline and included work
 
 - Branch: `release/v0.8.0`.
-- Exact release base and current committed candidate: `728dd8687636bd03f5528ba171f84315971e27e5`.
+- Integrated release base: `728dd8687636bd03f5528ba171f84315971e27e5`.
+- Published preparation commit / PR #280 head: `cfcd9aed289fd1989d9a90829f60f0e6b211c61f`.
 - Production `main`: `c9376ab3efb342b92826c342db72fbd1395fce00` (v0.7.1).
-- Refreshed `origin/develop` equals the release base; production is an ancestor, with 10 commits ahead
-  and zero commits behind. Local `develop` is stale at `149e2fa380806d9996484db557008744aa944b25`;
+- At the baseline audit, refreshed `origin/develop` equalled the integrated base; production was its
+  ancestor, with 10 commits ahead and zero behind. Local `develop` was at `149e2fa380806d9996484db557008744aa944b25`;
   do not mistake its nine-commit delta for the complete release.
 - Required: #259 scope, #260 contacts, #261 drafts, #262 atomic confirmation, #275 history,
   #276 audited stock corrections. The delta also includes #254 back-sync, #268/#270 repository
@@ -93,14 +96,17 @@ restore, under the [recovery contract](../operations/postgresql-backup-restore.m
 6. Inspect `git diff --check`, `git diff develop...HEAD`, `git status --short`, the full release delta,
    and all preparation changes including untracked documents. The stale local develop diff includes
    #276; separately compare refreshed `origin/develop` and the fixed release base.
-7. Record actual results, exact committed SHA plus uncommitted preparation changes, API/migration
-   risks, warnings, blockers and pending operational gates in the readiness document. No final
-   committed preparation SHA exists until a later authorized commit; do not invent one.
+7. Record actual results, distinct integrated-base and published preparation SHAs, API/migration
+   risks, warnings, blockers and pending operational gates in the readiness document. Keep original
+   pre-commit local validation distinct from verified GitHub Actions results for the PR head SHA.
 
 Repository readiness requires all applicable checks passing and no unresolved release blocker.
-New release-PR CI remains mandatory later: `validate-title`, `repository-quality`, `Maven verify`,
-`Angular verify`. Future publication uses `release/v0.8.0 -> main`, title
-`chore(release): prepare v0.8.0`, the official PR template and a regular merge commit, never squash.
+Release-PR CI remains mandatory: `validate-title`, `repository-quality`, `Maven verify`,
+`Angular verify`. PR #280 uses `release/v0.8.0 -> main` and title
+`chore(release): prepare v0.8.0`; merge requires the official PR template and a regular merge commit,
+never squash. The [readiness record](../operations/v0.8.0-release-readiness.md) records the observed
+current-head checks separately from the original local evidence; those results do not cover this
+uncommitted documentation follow-up.
 
 ## Deferred gates
 
@@ -121,5 +127,9 @@ frontend passed lint, 518 tests and production build. Migration byte comparisons
 Modulith, operational contracts, synthetic Compose checks, no-cache image build and a disposable
 operational-profile V20/Hibernate-validate/health startup passed. Detailed scope, counts, warnings,
 compatibility limits and pending gates are in the [readiness record](../operations/v0.8.0-release-readiness.md).
-Only the two manifests and two release documents changed. Publication and operational acceptance
-remain deferred; the candidate SHA still identifies the committed base, with preparation uncommitted.
+The original preparation changed only the two manifests and two release documents and was published
+as `cfcd9aed289fd1989d9a90829f60f0e6b211c61f`, above integrated base
+`728dd8687636bd03f5528ba171f84315971e27e5`. Release PR #280 targets `main`.
+The validation counts above are the original pre-commit local evidence, not a claim about remote CI.
+Merge, tag, GitHub Release and operational acceptance remain pending. This follow-up changes only
+the two release documents and does not establish production deployment readiness.
