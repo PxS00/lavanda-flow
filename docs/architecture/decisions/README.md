@@ -1,22 +1,22 @@
 # Architecture Decision Records
 
-Este diretório registra decisões arquiteturais relevantes do Lavanda Flow.
+This directory records architectural decisions relevant to Lavanda Flow.
 
-## Status possíveis
+## Status values
 
-- `Proposed`: decisão em avaliação;
-- `Accepted`: decisão aprovada e vigente;
-- `Superseded`: substituída por outro ADR;
-- `Deprecated`: mantida apenas por histórico.
+- `Proposed`: decision under evaluation;
+- `Accepted`: approved and current decision;
+- `Superseded`: replaced by another ADR;
+- `Deprecated`: retained for historical context only.
 
-## Convenção
+## Convention
 
-Cada ADR deve conter:
+Each ADR must contain:
 
-1. contexto;
-2. decisão;
-3. consequências;
-4. alternativas consideradas;
-5. status e data.
+1. context;
+2. decision;
+3. consequences;
+4. alternatives considered;
+5. status and date.
 
-Não criar ADR para detalhes triviais de implementação. Registrar decisões que afetem arquitetura, operação, dados, segurança, integração ou manutenção de forma relevante.
+Do not create ADRs for trivial implementation details. Record decisions that materially affect architecture, operations, data, security, integration, or maintenance.

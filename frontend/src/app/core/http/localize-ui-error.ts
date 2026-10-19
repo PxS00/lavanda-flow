@@ -15,6 +15,8 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   INVENTORY_ITEM_CANONICAL_ESSENCE_REFERENCE_CONFLICT:
     'A referência informada já está atribuída a uma essência.',
   INVALID_INVENTORY_ITEM_METADATA: 'A referência informada não é válida para este item.',
+  CUSTOMER_NOT_FOUND: 'Cliente não encontrado.',
+  INVALID_CUSTOMER_SEARCH_QUERY: 'Revise os filtros de clientes.',
   SUPPLIER_NOT_FOUND: 'Fornecedor não encontrado.',
   INACTIVE_INVENTORY_ITEM: 'Este item de estoque está inativo.',
   INACTIVE_SUPPLIER: 'Este fornecedor está inativo.',
@@ -28,6 +30,31 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   MINIMUM_STOCK_LEVEL_NOT_FOUND: 'Estoque mínimo não configurado.',
   INVALID_MINIMUM_STOCK_QUANTITY: 'Informe uma quantidade mínima válida.',
   INVALID_BATCH_DATA: 'Os dados do lote são inválidos.',
+  ORDER_NOT_FOUND: 'Pedido não encontrado.',
+  ORDER_NOT_EDITABLE: 'Este pedido não pode mais ser editado.',
+  ORDER_NOT_CONFIRMABLE: 'Este pedido não pode ser confirmado.',
+  ORDER_LOCK_CONFLICT: 'O pedido ou estoque está sendo usado por outra operação. Tente novamente.',
+  ORDER_PERSISTENCE_FAILED: 'Não foi possível salvar a operação. Tente novamente.',
+  INVALID_SALE_CORRECTION:
+    'Revise o lote, a quantidade, o motivo e as confirmações de inspeção e aceitação.',
+  SALE_CORRECTION_ALLOCATION_INVALID: 'O produto e o lote não correspondem à retirada desta venda.',
+  SALE_CORRECTION_NOT_ALLOWED: 'Somente vendas confirmadas permitem devolução ao estoque.',
+  SALE_CORRECTION_LIMIT_EXCEEDED:
+    'A quantidade excede o saldo da retirada original ainda não devolvido.',
+  SALE_CORRECTION_ID_CONFLICT:
+    'Esta tentativa já foi registrada com outros dados. Consulte o histórico de devoluções.',
+  SALE_CORRECTION_ID_UNAVAILABLE:
+    'Não foi possível gerar um identificador seguro. Nenhuma devolução foi enviada. Tente novamente.',
+  SALE_RETURN_INELIGIBLE:
+    'O lote original está vencido, sem validade ou o produto não está elegível para venda. Nenhum estoque foi creditado.',
+  SALE_ITEM_INELIGIBLE: 'Um produto está inativo ou não é elegível para venda. Revise o pedido.',
+  ORDER_CUSTOMER_NOT_FOUND:
+    'O cliente associado não foi encontrado. Selecione outro cliente ou deixe sem associação.',
+  ORDER_CUSTOMER_INACTIVE:
+    'O cliente associado está inativo. Selecione um cliente ativo ou deixe sem associação.',
+  ORDER_ITEM_NOT_FOUND: 'Um produto do pedido não foi encontrado. Revise as linhas.',
+  ORDER_ITEM_INELIGIBLE: 'Um produto está inativo ou não é elegível para venda. Revise as linhas.',
+  INVALID_ORDER_SEARCH_QUERY: 'Revise os filtros e a paginação dos pedidos.',
   VALIDATION_ERROR: 'Revise os dados informados.',
   INVALID_REQUEST_PARAMETER: 'Um parâmetro informado é inválido.',
   MALFORMED_REQUEST_BODY: 'Não foi possível processar os dados enviados.',

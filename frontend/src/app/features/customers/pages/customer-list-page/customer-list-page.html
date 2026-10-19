@@ -1,0 +1,99 @@
+<section class="customer-page" aria-labelledby="customer-heading">
+  <header class="page-header">
+    <div>
+      <h1 id="customer-heading">Clientes</h1>
+      <p>Consulte os contatos dos clientes.</p>
+    </div>
+
+    <a mat-flat-button routerLink="/customers/new">Cadastrar cliente</a>
+  </header>
+
+  <form
+    [formGroup]="filtersForm"
+    class="filters"
+    aria-label="Filtros de clientes"
+    (submit)="applyFilters($event)"
+  >
+    <mat-form-field appearance="outline">
+      <mat-label>Nome, telefone ou e-mail</mat-label>
+      <input matInput type="search" formControlName="q" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Status</mat-label>
+      <mat-select formControlName="active">
+        <mat-option value="all">Todos</mat-option>
+        <mat-option value="active">Ativo</mat-option>
+        <mat-option value="inactive">Inativo</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="filter-actions">
+      <button mat-flat-button type="submit">Aplicar filtros</button>
+      <button mat-button type="button" (click)="resetFilters()">Redefinir filtros</button>
+    </div>
+  </form>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando clientes..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      @if (currentState.page.content.length === 0) {
+        <app-empty-state
+          title="Nenhum cliente encontrado"
+          [message]="
+            hasAppliedFilters()
+              ? 'Tente alterar ou redefinir os filtros.'
+              : 'Cadastre um cliente ou altere o status para consultar contatos inativos.'
+          "
+        />
+      } @else {
+        <p class="result-count" aria-live="polite">
+          {{ currentState.page.totalElements }} clientes encontrados
+        </p>
+
+        <ul class="customer-list" aria-label="Clientes">
+          @for (customer of currentState.page.content; track customer.id) {
+            <li>
+              <mat-card appearance="outlined">
+                <mat-card-header>
+                  <mat-card-title>
+                    <a [routerLink]="['/customers', customer.id]">{{ customer.name }}</a>
+                  </mat-card-title>
+                  <mat-card-subtitle>{{ customer.active ? 'Ativo' : 'Inativo' }}</mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  <dl>
+                    <div>
+                      <dt>Telefone</dt>
+                      <dd>{{ customer.phone || 'Não informado' }}</dd>
+                    </div>
+                    <div>
+                      <dt>E-mail</dt>
+                      <dd>{{ customer.email || 'Não informado' }}</dd>
+                    </div>
+                  </dl>
+                </mat-card-content>
+              </mat-card>
+            </li>
+          }
+        </ul>
+
+        <mat-paginator
+          aria-label="Páginas de clientes"
+          [length]="currentState.page.totalElements"
+          [pageIndex]="currentState.page.page"
+          [pageSize]="currentState.page.size"
+          [pageSizeOptions]="[20, 50, 100]"
+          (page)="changePage($event)"
+        />
+      }
+    }
+  }
+</section>

@@ -53,6 +53,13 @@ public class RegisterFefoWithdrawal {
      */
     @Transactional
     public FefoWithdrawalResult execute(RegisterFefoWithdrawalCommand command) {
+        return execute(command, null);
+    }
+
+    /** Internal audited variant sharing the existing FEFO and locking implementation. */
+    @Transactional
+    public FefoWithdrawalResult execute(RegisterFefoWithdrawalCommand command,
+        com.ceudelavanda.lavandaflow.inventory.StockAuditReference reference) {
         var inventoryItem = inventoryItemOperationLock.lockById(command.inventoryItemId())
             .orElseThrow(() -> new InventoryItemNotFoundException(command.inventoryItemId()));
 
@@ -78,12 +85,13 @@ public class RegisterFefoWithdrawal {
             var batch = batchesById.get(allocation.batchId());
             batch.removeQuantity(allocation.quantity());
 
-            var movement = StockMovement.create(
+            var movement = new StockMovement(
+                UUID.randomUUID(),
                 batch.getId(),
                 MovementType.CONSUMPTION,
                 allocation.quantity(),
                 command.reason(),
-                occurredAt
+                occurredAt, reference
             );
 
             batchRepository.save(batch);

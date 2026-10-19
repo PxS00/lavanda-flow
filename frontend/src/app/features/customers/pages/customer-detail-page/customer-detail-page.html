@@ -1,0 +1,59 @@
+<section class="detail-page" aria-labelledby="customer-detail-heading">
+  <a mat-button routerLink="/customers">Voltar aos clientes</a>
+  <h1 id="customer-detail-heading">Detalhes do cliente</h1>
+
+  @let currentState = state();
+  @switch (currentState.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando cliente..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="currentState.error" />
+      <button mat-stroked-button type="button" (click)="retry()">Tentar novamente</button>
+    }
+    @case ('loaded') {
+      <header>
+        <h2>{{ currentState.customer.name }}</h2>
+        <p aria-live="polite">{{ currentState.customer.active ? 'Ativo' : 'Inativo' }}</p>
+        <a mat-flat-button [routerLink]="['/customers', currentState.customer.id, 'edit']">
+          Editar cliente
+        </a>
+      </header>
+
+      @if (submissionError(); as error) {
+        <app-error-state [error]="error" />
+      }
+      <button
+        mat-stroked-button
+        type="button"
+        [disabled]="isSubmitting()"
+        (click)="changeActiveState()"
+      >
+        {{
+          isSubmitting()
+            ? 'Atualizando...'
+            : currentState.customer.active
+              ? 'Desativar cliente'
+              : 'Ativar cliente'
+        }}
+      </button>
+      <p>
+        A desativação preserva o contato e seu histórico. Você pode reativá-lo quando necessário.
+      </p>
+      <mat-card appearance="outlined">
+        <mat-card-content>
+          <dl>
+            <div>
+              <dt>Telefone</dt>
+              <dd>{{ currentState.customer.phone || 'Não informado' }}</dd>
+            </div>
+            <div>
+              <dt>E-mail</dt>
+              <dd>{{ currentState.customer.email || 'Não informado' }}</dd>
+            </div>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</section>

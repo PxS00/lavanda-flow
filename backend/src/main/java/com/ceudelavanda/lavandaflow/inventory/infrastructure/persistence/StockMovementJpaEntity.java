@@ -41,6 +41,17 @@ class StockMovementJpaEntity {
     @Column(name = "occurred_at", nullable = false)
     private Instant occurredAt;
 
+    @Column(name = "reference_type", length = 32) private String referenceType;
+    @Column(name = "reference_id") private UUID referenceId;
+    @Column(name = "reference_line_id") private UUID referenceLineId;
+
+    com.ceudelavanda.lavandaflow.inventory.StockAuditReference reference() {
+        return referenceType == null ? null : new com.ceudelavanda.lavandaflow.inventory.StockAuditReference(referenceType, referenceId, referenceLineId);
+    }
+    void reference(com.ceudelavanda.lavandaflow.inventory.StockAuditReference reference) {
+        if (reference != null) { referenceType = reference.referenceType(); referenceId = reference.referenceId(); referenceLineId = reference.referenceLineId(); }
+    }
+
     StockMovementJpaEntity(
         UUID id,
         UUID batchId,

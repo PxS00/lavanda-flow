@@ -1,0 +1,103 @@
+<section aria-labelledby="correction-heading">
+  <h2 id="correction-heading">Devolução física ao estoque</h2>
+  <p>
+    Registre somente mercadorias recebidas, inspecionadas e aceitas para venda no lote original. A
+    elegibilidade e o limite são verificados pelo servidor. Esta ação não altera a venda nem gera
+    reembolso.
+  </p>
+  <h3 #resultHeading tabindex="-1">Resultado da devolução</h3>
+  @if (result(); as saved) {
+    <p role="status">
+      Devolução registrada. Correção: {{ saved.id }} — Movimento: {{ saved.movementId }} —
+      Quantidade: {{ formatDecimal(saved.quantity) }} — Lote: {{ saved.batchId }}
+    </p>
+  }
+  <form
+    #correctionForm
+    [formGroup]="form"
+    (ngSubmit)="submit($event)"
+    aria-label="Registrar devolução física"
+  >
+    <mat-form-field>
+      <mat-label>Produto e lote original</mat-label>
+      <mat-select formControlName="allocation">
+        @for (line of sale().lines; track line.id) {
+          @for (allocation of line.allocations; track allocation.batchId) {
+            <mat-option [value]="line.id + '/' + allocation.batchId">
+              {{ line.itemName ?? line.itemId }} — {{ allocation.batchId }} ({{
+                line.unitOfMeasure ? unitLabel(line.unitOfMeasure) : 'Unidade indisponível'
+              }})
+            </mat-option>
+          }
+        }
+      </mat-select>
+      <mat-error>Selecione o produto e o lote retirado.</mat-error>
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Quantidade na unidade original do produto</mat-label>
+      <input matInput formControlName="quantity" inputmode="decimal" />
+      <mat-error>Informe quantidade positiva com até 13 inteiros e 6 casas decimais.</mat-error>
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Motivo da devolução</mat-label>
+      <textarea matInput formControlName="reason"></textarea>
+      <mat-error>Informe um motivo de até 255 caracteres.</mat-error>
+    </mat-form-field>
+    <mat-checkbox formControlName="inspected"
+      >Recebi e inspecionei fisicamente as mercadorias.</mat-checkbox
+    >
+    <mat-checkbox formControlName="accepted"
+      >Aceito as mercadorias em condições de venda para o estoque.</mat-checkbox
+    >
+    @if (form.touched && (form.controls.inspected.invalid || form.controls.accepted.invalid)) {
+      <p role="alert">Confirme explicitamente a inspeção e a aceitação para venda.</p>
+    }
+    @if (failure(); as error) {
+      <app-error-state [error]="error" />
+      @if (error.code !== 'SALE_CORRECTION_ID_UNAVAILABLE') {
+        <p>
+          A tentativa mantém o mesmo identificador e os mesmos dados para evitar crédito duplicado.
+        </p>
+      }
+      @if (canRevise()) {
+        <button mat-button type="button" (click)="revise()">Revisar dados rejeitados</button>
+      }
+    }
+    <button mat-flat-button type="submit" [disabled]="pending()">
+      {{
+        pending()
+          ? 'Registrando...'
+          : failure()
+            ? 'Tentar registrar novamente'
+            : 'Registrar devolução aceita'
+      }}
+    </button>
+  </form>
+  <h3>Histórico de devoluções aceitas</h3>
+  @let current = history();
+  @switch (current.kind) {
+    @case ('loading') {
+      <app-loading-state message="Carregando devoluções..." />
+    }
+    @case ('error') {
+      <app-error-state [error]="current.error" />
+      <button mat-button type="button" (click)="retryHistory()">Recarregar devoluções</button>
+    }
+    @case ('loaded') {
+      @if (current.corrections.length === 0) {
+        <p>Nenhuma devolução aceita registrada.</p>
+      }
+      <ul aria-label="Devoluções aceitas">
+        @for (correction of current.corrections; track correction.id) {
+          <li>
+            Correção: {{ correction.id }} — Linha: {{ correction.lineId }} — Lote:
+            {{ correction.batchId }} — Quantidade: {{ formatDecimal(correction.quantity) }} —
+            Motivo: {{ correction.reason }} — Operador: {{ correction.actor }} —
+            {{ correction.occurredAt | date: 'short' }} — Inspeção e aceitação para venda
+            confirmadas — Movimento: {{ correction.movementId }}
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

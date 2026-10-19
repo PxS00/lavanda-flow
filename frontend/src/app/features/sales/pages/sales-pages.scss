@@ -1,0 +1,48 @@
+section {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+form {
+  display: grid;
+  gap: 1rem;
+}
+mat-card-content {
+  display: grid;
+  gap: 1rem;
+}
+fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 1rem;
+  margin-block: 1rem;
+  min-width: 0;
+}
+mat-form-field {
+  min-width: 12rem;
+  flex: 1;
+}
+legend,
+dd,
+a {
+  overflow-wrap: anywhere;
+}
+ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+dl {
+  display: grid;
+  gap: 0.5rem;
+}
+dd {
+  margin: 0;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+}

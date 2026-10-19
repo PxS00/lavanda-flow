@@ -7,6 +7,10 @@ movements, expiration dates, FEFO allocation, operational alerts, formulas, atom
 backend-generated or manual output lots, and recursive batch genealogy. Cost calculation and broader
 manufacturing automation remain outside V1.
 
+The first approved v0.8.0 slice adds authenticated customer contact maintenance and search. Orders and
+sales remain planned. See the [customer implementation contract](docs/specs/0260-manage-customer-contacts.md)
+and [operator workflow](docs/product/customer-contacts.md).
+
 ## Repository layout
 
 ```text
@@ -113,6 +117,8 @@ V1 modules:
 - `production`
 - `suppliers`
 - `shared`
+
+The approved commercial extension also implements `customers`; `sales` remains planned.
 
 Business rules stay outside controllers, module internals are not imported across boundaries, PostgreSQL is the source of truth, and Flyway owns controlled schema evolution.
 

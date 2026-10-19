@@ -8,6 +8,8 @@ structures.
 
 PostgreSQL is the source of truth, and Flyway controls every schema change.
 
+The sections below describe implemented V1 storage and the additive customer contact table delivered by #260. Draft sales storage is delivered by #261; V19 confirmation/allocation storage is delivered by #262 under [ADR 0012](decisions/0012-define-v0.8-commercial-boundaries.md).
+
 ## Inventory model
 
 ```text
@@ -186,3 +188,86 @@ V15 preserves the V10 assignment/immutability and deletion triggers and adds a t
 reclassification of canonical essences with assigned references. Existing rows are not rewritten.
 The public `InventoryItemRegistration.registerFinishedProduct(FinishedProductRegistration)` contract
 joins the caller transaction and delegates to catalog registration policy; inventory owns batch creation.
+
+## Customer contacts (V17, issue #260)
+
+`customer` is owned by `customers` and contains UUID `id`, required `name VARCHAR(160)`, nullable
+`phone VARCHAR(16)` and `email VARCHAR(254)`, required `active` (default true), and required
+`created_at`/`updated_at TIMESTAMPTZ`. Application writes use the injected `Clock`; PostgreSQL defaults
+also support well-formed direct inserts in disposable persistence tests.
+
+Name is trimmed and nonblank. Optional blank values become NULL. Phone removes spaces, parentheses,
+periods and hyphens, then must contain an optional leading `+` followed by 7–15 ASCII digits. Email is
+trimmed and validated using standard Jakarta `@Email`. SQL CHECK constraints defend nonblank trimmed
+names/emails and normalized phone syntax; bounded columns enforce lengths. Contacts are not unique.
+`idx_customer_active_name_id` indexes `(active, name, id)`. Lists use deterministic database name/ID
+ordering, optional active filtering and escaped substring matching; name/email matching uses `lower()`.
+There is no specialized search extension.
+
+Contact edits and activation changes lock the same customer row. Creation time and UUID are retained;
+`updated_at` changes only on a successful write, and a repeated state action is idempotent. Deactivation
+keeps the row. No delete contract or sales table exists in this slice. Future sales must retain customer
+references and their own confirmation snapshots.
+
+V17 adds only a new table and its index after the verified V16 baseline. Upgrade tests retain existing
+supplier data and exercise old/new writers after migration and a no-op migration retry. Application
+rollback retains the additive table; no data rewrite, down migration or destructive contraction occurs.
+
+## Draft orders (V18, issue #261)
+
+`sales_order` and `sales_order_line` belong to `sales`. An order stores UUID `id`, nullable `customer_id`
+(FK to `customer`, no cross-module JPA relationship), bounded `status VARCHAR(9)` with DRAFT/CONFIRMED/
+CANCELLED check, nonnegative `total NUMERIC(19,2)`, and required creation/update TIMESTAMPTZ. This
+slice writes/queries DRAFT only. Customer optionality follows #261's explicit acceptance criterion;
+#259's “contains customer UUID” wording does not require NOT NULL. Supplied contacts must be active.
+
+Lines store stable UUID `id`, required sales-owned order FK, stable catalog `item_id UUID`, nonnegative
+INTEGER display position, positive `quantity NUMERIC(19,6)`, nonnegative `unit_price NUMERIC(19,4)`,
+and nonnegative `amount NUMERIC(19,2)` checked against `round(quantity * unit_price,2)`. Catalog IDs
+are validated through public lookup, with no cross-module JPA mapping or catalog FK. `(order_id,item_id)`
+is unique and supports collection joins. Each retained item keeps its line identity across full replacements.
+Amounts and total are calculated using exact arithmetic, line-level HALF_UP rounding and overflow checks.
+Application validation rejects excess fractional precision before PostgreSQL column coercion.
+
+Indexes `(status,created_at DESC,id)` and `(customer_id,status,created_at DESC,id)` support bounded,
+deterministic draft listing and customer/date filters. Draft edits lock the aggregate row and update
+lines/total in one transaction. No confirmation snapshots, allocations, movement references or stock
+writes exist. Labels are read live from public customer/catalog lookup; stored references and entered
+commercial values remain unchanged by later label edits. V18 creates new tables only after actual V17;
+old readers/writers and retry remain safe, with additive schema retained on application rollback.
+
+## v0.8.0 commercial model
+
+Issue #262 extends the implemented customer and draft storage above with confirmation history:
+
+- the existing order/sale row gains confirmation timestamps and immutable customer snapshot values for an associated customer; its optional customer UUID, lifecycle state, creation timestamps and total already exist;
+- order lines have stable UUID, one unique catalog item UUID per order, exact `NUMERIC(19,6)` quantity, exact `NUMERIC(19,4)` BRL unit price, and confirmation-time item name snapshot (`VARCHAR(255)` to match catalog storage), unit snapshot, and `NUMERIC(19,2)` line amount;
+- sale allocations associate a confirmed line with each concrete inventory batch, exact allocated quantity, and the immutable movement UUID returned by inventory;
+- `stock_movement` receives nullable opaque source type/ID/line-ID fields for sale audit references. Existing movements remain valid and existing response contracts do not change.
+
+Use foreign keys for customer-to-order (nullable, implemented), order-to-line (implemented), line-to-allocation, and sales-owned relationships. Keep catalog/batch references as stable UUID values at module boundaries; do not add cross-module JPA relationships. Since inventory movements are inventory-owned and sales is not an inventory dependency, movement references are opaque values without a polymorphic database FK. Add positive quantity, nonnegative price, valid state, uniqueness, and bounded-field constraints where appropriate. Index customer `(active, name, id)` for active listing and deterministic pagination; the expected small-business volume uses case-insensitive substring contact search without a specialized text-index extension. Index order customer/state/confirmation date and allocation line/batch lookups. Paginate list/history APIs with existing 20 default/100 maximum conventions. Do not add file/blob columns or storage providers.
+
+Customer contacts use V17 and draft orders use V18; future migrations must follow the actual latest version at implementation time. Keep additions nullable or new-table-only while old application versions may still run; do not edit applied migrations, backfill unrelated operational data, or perform destructive contraction implicitly. Application rollback may leave additive tables/columns in place. Recovery of committed business data uses verified PostgreSQL backup procedures.
+
+## Implemented confirmation storage (#262)
+
+V19 adds nullable customer name/phone/email/confirmation time and line name/unit snapshots, opaque
+nullable movement references and the sales-owned `sale_allocation` table. Allocation quantities use
+`NUMERIC(19,6)` and positive checks; line/batch and movement uniqueness prevent duplicated history.
+Line, batch and movement FKs preserve actual identities without cross-module JPA associations.
+Inventory references remain opaque with no sales FK. A partial source-line/batch unique movement
+index provides additional duplicate-consumption defense. Triggers prevent update/delete of confirmed
+order/line history, allocations and referenced movements. Existing rows and genealogy are unchanged.
+See [spec #262](../specs/0262-confirm-orders-with-fefo-withdrawal.md) for ownership, rollout and recovery.
+
+## Implemented accepted-return storage (#276)
+
+V20 adds immutable `sale_stock_correction` authorization/audit metadata with sale-scoped correction
+identity, original line/batch composite FK, original sale/line association FK, unique movement FK,
+exact positive quantity, required bounded reason/actor, explicit true inspection/acceptance and time.
+Sales serializes cumulative limits on the sale row. Inventory writes the new positive ADJUSTMENT_IN
+and balance in the same transaction; confirmed snapshots/allocations remain unchanged.
+V20 replaces V19's source-line/batch index with the same uniqueness for referenced movements other
+than ADJUSTMENT_IN. CONSUMPTION remains protected while repeated partial returns become possible.
+Existing rows and applied migrations are preserved; rollback retains V20 and all audit records.
+See [spec #276](../specs/0276-register-sale-linked-stock-corrections.md) for compatibility and recovery.

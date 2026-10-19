@@ -5,10 +5,12 @@ Apply the root `AGENTS.md` first. This file contains backend-specific guidance o
 ## Stack and architecture
 
 - Use Java 25, Spring Boot 4.1, Spring Modulith, Spring MVC, Spring Validation, Spring Data JPA, PostgreSQL, Flyway, Testcontainers, and Maven.
-- Keep the modular monolith organized by feature/domain. The V1 modules are `catalog`, `inventory`, `production`, `suppliers`, and `shared`.
+- Keep the modular monolith organized by feature/domain. Implemented V1 modules are `catalog`, `inventory`, `production`, `suppliers`, and `shared`. The approved v0.8.0 extension adds `customers` and `sales` as described in `docs/architecture/decisions/0012-define-v0.8-commercial-boundaries.md`.
 - Keep production cohesive: `production` owns formulas/recipes, the production lifecycle and transaction orchestration, lot-code allocation, consumption records, and genealogy. Do not create separate `formulas` or `traceability` modules.
 - `inventory` retains ownership of `Batch` and all stock invariants; `catalog` retains stable item metadata, including essence references and production-type metadata.
 - `production` may depend only on public APIs of `catalog`, `inventory`, and narrowly scoped `shared` facilities. Existing modules must not depend on `production`.
+- `sales` may depend only on public APIs of `customers`, `catalog`, `inventory`, and narrowly scoped `shared` facilities. Existing modules must not depend on `sales`; `customers` must not depend on `sales`.
+- `customers` owns customer contact records. `sales` owns draft orders, confirmed sales, line snapshots, and sale-to-batch allocations. `inventory` continues to own stock eligibility, FEFO, batches, movements, balances, and locking.
 - Cross module boundaries only through public APIs and stable identifiers or immutable values; never import another module's internal infrastructure or JPA entities.
 - Do not use a global `controller`/`service`/`repository`/`entity` package layout.
 - Controllers do not own business rules. Do not add speculative patterns, modules, events, or abstractions.
@@ -19,6 +21,7 @@ Apply the root `AGENTS.md` first. This file contains backend-specific guidance o
 - Movements are immutable and auditable. Corrections create new adjustment movements.
 - Balance-changing operations are transactional.
 - Production state and inventory effects must commit atomically through public module APIs.
+- Sale confirmation and inventory effects must commit atomically through a public inventory API in the caller's PostgreSQL transaction; drafts do not reserve stock.
 - FEFO and expiration behavior are backend-authoritative. `expiresAt <= today` is expired.
 - Use the application `Clock` for date-sensitive behavior and tests.
 

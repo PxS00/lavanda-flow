@@ -1,0 +1,94 @@
+package com.ceudelavanda.lavandaflow.sales.infrastructure.web;
+
+import com.ceudelavanda.lavandaflow.sales.application.*;
+import com.ceudelavanda.lavandaflow.sales.domain.OrderStatus;
+import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
+import io.swagger.v3.oas.annotations.*;
+import io.swagger.v3.oas.annotations.media.*;
+import io.swagger.v3.oas.annotations.responses.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.net.URI;
+import java.time.LocalDate;
+import java.util.UUID;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/sales")
+@ApiResponses({
+    @ApiResponse(responseCode = "400", description = "Invalid draft, reference, identifier or query", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+    @ApiResponse(responseCode = "401", description = "Session authentication required", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+    @ApiResponse(responseCode = "403", description = "OPERATOR authorization and valid CSRF on writes required", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+})
+public class OrderController {
+    private final OrderManagement orders;
+    private final SaleStockCorrections corrections;
+
+    @PostMapping
+    @Operation(summary = "Create a draft order", description = "Optional active customer and one or more unique eligible products. Exact BRL prices, line HALF_UP rounding and authoritative total. No stock check or effect.")
+    @ApiResponse(responseCode = "201", description = "Draft registered", content = @Content(schema = @Schema(implementation = OrderResult.class)))
+    public ResponseEntity<OrderResult> register(@RequestBody SaveDraftRequest request) {
+        var order = orders.register(request.toCommand());
+        return ResponseEntity.created(URI.create("/api/v1/sales/" + order.id())).body(order);
+    }
+
+    @GetMapping("/{orderId}")
+    @Operation(summary = "Inspect an order or confirmed sale", description = "Drafts return live labels; confirmed sales return immutable confirmation-time customer/product snapshots and exact batch/movement allocations.")
+    @ApiResponse(responseCode = "404", description = "Draft not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public OrderResult getById(@PathVariable UUID orderId) { return orders.getById(orderId); }
+
+    @PutMapping("/{orderId}")
+    @Operation(summary = "Replace a draft order", description = "Preserves order identity and creation time. Retained items preserve line UUIDs; explicit line UUIDs must belong to the same item/order. Removed lines are removed. No stock effects.")
+    @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Order is no longer a draft", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public OrderResult update(@PathVariable UUID orderId, @RequestBody SaveDraftRequest request) { return orders.update(orderId, request.toCommand()); }
+
+    @PostMapping("/{orderId}/confirm")
+    @Operation(summary = "Confirm a draft with atomic FEFO withdrawal", description = "Order UUID is the idempotency key. Locks the order and joins inventory in one PostgreSQL transaction. Confirmed retries return persisted history without new stock effects. No reservation, automatic retry or physical return. Any failure leaves the draft unchanged.")
+    @ApiResponse(responseCode = "200", description = "Persisted confirmed result including snapshots and exact batch/movement allocations")
+    @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Order cannot be confirmed or lock conflict", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "422", description = "INSUFFICIENT_ELIGIBLE_STOCK or ineligible inventory item; complete rollback", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "500", description = "ORDER_PERSISTENCE_FAILED; sanitized persistence or transaction failure", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public OrderResult confirm(@PathVariable UUID orderId) { return orders.confirm(orderId); }
+
+    @PutMapping("/{orderId}/stock-corrections/{correctionId}")
+    @Operation(summary = "Record an inspected, accepted physical stock return", description = "Correction UUID is scoped to the sale. Exact positive quantity and explicit inspected=true/accepted=true required. Validates original confirmed line/batch and cumulative limits, then credits only currently eligible original inventory atomically. Identical retries return the persisted result even after expiry; changed payload returns SALE_CORRECTION_ID_CONFLICT. No sale edits, refund or automatic retry.")
+    @ApiResponse(responseCode = "400", description = "INVALID_SALE_CORRECTION or SALE_CORRECTION_ALLOCATION_INVALID", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "ORDER_NOT_FOUND", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "SALE_CORRECTION_NOT_ALLOWED, SALE_CORRECTION_LIMIT_EXCEEDED, SALE_CORRECTION_ID_CONFLICT or ORDER_LOCK_CONFLICT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "422", description = "SALE_RETURN_INELIGIBLE: inactive/ineligible item, expired or undated original batch", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "500", description = "ORDER_PERSISTENCE_FAILED; complete rollback", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public com.ceudelavanda.lavandaflow.sales.domain.SaleStockCorrection correctStock(
+        @PathVariable UUID orderId, @PathVariable UUID correctionId,
+        @RequestBody RegisterSaleStockCorrection request, java.security.Principal principal) {
+        return corrections.register(orderId, correctionId, request, principal.getName());
+    }
+
+    @GetMapping("/{orderId}/stock-corrections")
+    @Operation(summary = "Inspect accepted physical return audit", description = "Persisted corrections ordered by occurredAt then UUID, including original sale/line/batch, exact quantity, reason, explicit decisions, actor and movement ID. No current-eligibility recomputation.")
+    @ApiResponse(responseCode = "404", description = "ORDER_NOT_FOUND", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "SALE_CORRECTION_NOT_ALLOWED for nonconfirmed sales", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public java.util.List<com.ceudelavanda.lavandaflow.sales.domain.SaleStockCorrection> stockCorrections(@PathVariable UUID orderId) {
+        return corrections.list(orderId);
+    }
+
+    @PostMapping("/{orderId}/cancel")
+    @Operation(summary = "Cancel an unconfirmed draft", description = "DRAFT only; no stock effects. Confirmed sales cannot be cancelled, edited or deleted; physical returns require a separate audited operation.")
+    @ApiResponse(responseCode = "409", description = "Order is not a draft", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public OrderResult cancel(@PathVariable UUID orderId) { return orders.cancel(orderId); }
+
+    @GetMapping
+    @Operation(summary = "Search orders and sale history", description = "Literal partial UUID q and optional customerId. Omitted status selects DRAFT; explicit DRAFT, CONFIRMED or CANCELLED. Inclusive UTC creation dates from/to retain their meaning. Independent inclusive UTC confirmedFrom/confirmedTo require explicit CONFIRMED status; ranges intersect. Newest creation first, UUID ascending for ties. Invalid combinations return INVALID_ORDER_SEARCH_QUERY.")
+    public OrderManagement.Page search(@RequestParam(required = false) String q,
+        @RequestParam(required = false) UUID customerId,
+        @RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
+        @Parameter(description = "Lifecycle state; omitted means DRAFT") @RequestParam(required = false) OrderStatus status,
+        @Parameter(description = "Inclusive UTC confirmation day, requires status=CONFIRMED") @RequestParam(required = false) LocalDate confirmedFrom,
+        @Parameter(description = "Inclusive UTC confirmation day, requires status=CONFIRMED") @RequestParam(required = false) LocalDate confirmedTo,
+        @Parameter(schema = @Schema(defaultValue = "0", minimum = "0")) @RequestParam(defaultValue = "0") int page,
+        @Parameter(schema = @Schema(defaultValue = "20", minimum = "1", maximum = "100")) @RequestParam(defaultValue = "20") int size) {
+        return orders.search(new OrderSearchQuery(q, customerId, from, to, page, size, status, confirmedFrom, confirmedTo));
+    }
+}
