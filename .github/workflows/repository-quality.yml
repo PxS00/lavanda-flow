@@ -81,6 +81,9 @@ jobs:
         shell: bash
         run: bash scripts/operations/test-verify-postgres-restore.sh
 
+      - name: Test Supabase monitoring contract without credentials
+        run: python3 -B -m unittest discover -s scripts/operations -p 'test_monitor_supabase.py' -v
+
   operational-runtime:
     runs-on: ubuntu-latest
     timeout-minutes: 30
