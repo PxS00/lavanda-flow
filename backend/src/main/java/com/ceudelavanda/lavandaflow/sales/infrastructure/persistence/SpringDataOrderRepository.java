@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 interface SpringDataOrderRepository extends JpaRepository<OrderJpaEntity, UUID>, JpaSpecificationExecutor<OrderJpaEntity> {
-    @Query("select l from OrderLineJpaEntity l where l.order.id in :orderIds order by l.order.id, l.position")
+    @Query("select l from OrderLineJpaEntity l left join fetch l.allocations where l.order.id in :orderIds order by l.order.id, l.position")
     List<OrderLineJpaEntity> findLinesByOrderIds(@Param("orderIds") Collection<UUID> orderIds);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

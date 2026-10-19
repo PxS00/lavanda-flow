@@ -44,10 +44,12 @@ class OrderManagementTest {
         var confirmed = new Order(id, customer, OrderStatus.CONFIRMED, List.of(line), BigDecimal.ONE, NOW, NOW,
             "Historical customer", "1234567", "a@example.com", NOW);
         when(repository.findByIdForUpdate(id)).thenReturn(Optional.of(confirmed));
+        when(query.search(any())).thenReturn(new OrderPage(List.of(confirmed), 0, 20, 1, 1));
         clearInvocations(catalog, customers);
         var result = orders.confirm(id);
         assertThat(result.customerName()).isEqualTo("Historical customer");
         assertThat(result.lines().getFirst().allocations()).isEqualTo(line.allocations());
+        assertThat(orders.search(new OrderSearchQuery(null, customer, null, null, 0, 20, OrderStatus.CONFIRMED, null, null)).content()).containsExactly(result);
         verifyNoInteractions(inventory, customers);
         verify(catalog, never()).findByIds(any());
         verify(repository, never()).save(any());

@@ -96,24 +96,25 @@ public class OrderManagement {
     /**
      * Inspects drafts with live labels or confirmed sales with persisted immutable history.
      * Inactive references do not prevent reads or idempotent confirmed retries.
-     * @throws OrderException when the order is missing or cancelled
+     * @throws OrderException when the order is missing
      */
     @Transactional(readOnly = true)
     public OrderResult getById(UUID id) {
-        var order = repository.findById(id).filter(o -> o.status() != OrderStatus.CANCELLED)
+        var order = repository.findById(id)
             .orElseThrow(() -> OrderException.notFound(id));
         return result(order);
     }
 
-    /** Returns a bounded, deterministic draft page with current labels and stored commercial values. */
+    /** Returns a bounded, deterministic status page; confirmed records use only persisted snapshots. */
     @Transactional(readOnly = true)
     public Page search(OrderSearchQuery search) {
         var page = query.search(search);
         var orders = page.content();
-        var itemIds = orders.stream().flatMap(order -> order.lines().stream()).map(OrderLine::itemId).distinct().toList();
+        var liveOrders = orders.stream().filter(order -> order.status() != OrderStatus.CONFIRMED).toList();
+        var itemIds = liveOrders.stream().flatMap(order -> order.lines().stream()).map(OrderLine::itemId).distinct().toList();
         var itemsById = itemIds.isEmpty() ? Map.<UUID, InventoryItemDetails>of() : catalog.findByIds(itemIds).stream()
             .collect(java.util.stream.Collectors.toMap(InventoryItemDetails::id, item -> item));
-        var customerIds = orders.stream().map(Order::customerId).filter(Objects::nonNull).distinct().toList();
+        var customerIds = liveOrders.stream().map(Order::customerId).filter(Objects::nonNull).distinct().toList();
         var customersById = customerIds.isEmpty() ? Map.<UUID, CustomerSnapshot>of() : customers.findByIds(customerIds).stream()
             .collect(java.util.stream.Collectors.toMap(CustomerSnapshot::id, customer -> customer));
         return new Page(orders.stream().map(order -> result(order, customersById, itemsById)).toList(),
@@ -189,6 +190,7 @@ public class OrderManagement {
 
     private OrderResult result(Order order, Map<UUID, CustomerSnapshot> customersById,
                                Map<UUID, InventoryItemDetails> details) {
+        if (order.status() == OrderStatus.CONFIRMED) return result(order);
         var customer = order.customerId() == null ? null : customersById.get(order.customerId());
         var lines = order.lines().stream().map(line -> {
             var item = Optional.ofNullable(details.get(line.itemId()));

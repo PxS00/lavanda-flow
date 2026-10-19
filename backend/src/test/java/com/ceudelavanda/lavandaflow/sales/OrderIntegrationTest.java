@@ -36,6 +36,7 @@ class OrderIntegrationTest {
     @Autowired OrderManagement orders;
     @Autowired CustomerManagement customers;
     @Autowired jakarta.persistence.EntityManager em;
+    @Autowired Clock clock;
     private UUID item;
 
     @BeforeEach void setUp() { item = insertItem("Finished", "FINISHED_PRODUCT", "UNIT", true); }
@@ -164,9 +165,80 @@ class OrderIntegrationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1));
         jdbc.update("update sales_order set status = 'CANCELLED' where id = ?", first.id()); em.clear();
         assertThat(orders.search(new OrderSearchQuery(null, customer.id(), null, null, 0, 20)).totalElements()).isEqualTo(1);
-        mvc.perform(get("/api/v1/sales/" + first.id())).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/sales/" + first.id())).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELLED"));
         mvc.perform(put("/api/v1/sales/" + first.id()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body(null,item,"1","1")))
             .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ORDER_NOT_EDITABLE"));
+    }
+
+    @Test void explicitStatusHistoryCombinesIndependentUtcRangesAndStablePaging() throws Exception {
+        var customer = customers.register(new CustomerContact("History", null, null));
+        var day = LocalDate.of(2026, 10, 6);
+        var created = Instant.parse("2026-10-01T12:00:00Z");
+        var ids = new ArrayList<UUID>();
+        for (var confirmation : List.of("2026-10-06T00:00:00Z", "2026-10-06T23:59:59.999999Z", "2026-10-07T00:00:00Z")) {
+            var saved = orders.register(command(customer.id(), item, "1", "1"));
+            // Build query fixtures before CONFIRMED immutability takes effect; no stock command is invoked.
+            jdbc.update("update sales_order set created_at = ?, confirmed_at = ?, status = 'CONFIRMED', customer_name = 'Historical' where id = ?",
+                java.sql.Timestamp.from(created), java.sql.Timestamp.from(Instant.parse(confirmation)), saved.id());
+            ids.add(saved.id());
+        }
+        var draft = orders.register(command(customer.id(), item, "1", "1"));
+        var cancelled = orders.register(command(customer.id(), item, "1", "1"));
+        orders.cancel(cancelled.id());
+        em.clear();
+        var expected = ids.subList(0, 2).stream().sorted(Comparator.comparing(UUID::toString)).toList();
+        for (int page = 0; page < 2; page++) {
+            for (int repeat = 0; repeat < 2; repeat++) {
+                mvc.perform(get("/api/v1/sales").param("status", "CONFIRMED").param("customerId", customer.id().toString())
+                    .param("from", "2026-10-01").param("to", "2026-10-01").param("confirmedFrom", day.toString()).param("confirmedTo", day.toString())
+                    .param("page", String.valueOf(page)).param("size", "1"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2)).andExpect(jsonPath("$.totalPages").value(2))
+                    .andExpect(jsonPath("$.content[0].id").value(expected.get(page).toString()));
+            }
+        }
+        assertThat(orders.search(new OrderSearchQuery(null, customer.id(), null, null, 0, 20)).content()).extracting(OrderResult::id).containsExactly(draft.id());
+        assertThat(orders.search(new OrderSearchQuery(null, customer.id(), null, null, 0, 20, com.ceudelavanda.lavandaflow.sales.domain.OrderStatus.CONFIRMED, null, day)).totalElements()).isEqualTo(2);
+        assertThat(orders.search(new OrderSearchQuery(null, customer.id(), null, null, 0, 20, com.ceudelavanda.lavandaflow.sales.domain.OrderStatus.CONFIRMED, day.plusDays(1), null)).totalElements()).isEqualTo(1);
+        mvc.perform(get("/api/v1/sales").param("status", "CONFIRMED").param("customerId", customer.id().toString()).param("from", "2026-10-06"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/v1/sales").param("status", "CONFIRMED").param("q", ids.getFirst().toString().toUpperCase()).param("size", "100"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(get("/api/v1/sales").param("status", "CONFIRMED").param("customerId", UUID.randomUUID().toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/v1/sales").param("status", "CONFIRMED").param("q", "%_!"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/v1/sales").param("status", "CONFIRMED").param("customerId", customer.id().toString()).param("page", "10"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content").isEmpty()).andExpect(jsonPath("$.size").value(20));
+        mvc.perform(get("/api/v1/sales").param("status", "CANCELLED").param("customerId", customer.id().toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].id").value(cancelled.id().toString()))
+            .andExpect(jsonPath("$.content[0].lines[0].allocations").isEmpty());
+        mvc.perform(get("/api/v1/sales/" + cancelled.id())).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+
+    @Test void historyRejectsUnsupportedQueriesAndRetainsSecurityAndOpenApi() throws Exception {
+        for (var name : List.of("status", "confirmedFrom", "confirmedTo")) {
+            mvc.perform(get("/api/v1/sales").param(name, "invalid")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_PARAMETER")).andExpect(jsonPath("$.details." + name).exists());
+        }
+        for (var state : List.of("DRAFT", "CANCELLED", "")) {
+            for (var bound : List.of("confirmedFrom", "confirmedTo")) {
+                mvc.perform(get("/api/v1/sales").param("status", state).param(bound, "2026-10-06"))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_ORDER_SEARCH_QUERY"))
+                    .andExpect(jsonPath("$.details.status").exists());
+            }
+        }
+        mvc.perform(get("/api/v1/sales").param("status", "CONFIRMED").param("confirmedFrom", "2026-10-07").param("confirmedTo", "2026-10-06"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_ORDER_SEARCH_QUERY"));
+        mvc.perform(get("/api/v1/sales").param("status", "CONFIRMED").param("confirmedTo", "+999999999-12-31"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_ORDER_SEARCH_QUERY"));
+        for (var state : List.of("CONFIRMED", "CANCELLED")) {
+            mvc.perform(get("/api/v1/sales").param("status", state).with(anonymous())).andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+            mvc.perform(get("/api/v1/sales").param("status", state).with(user("viewer").authorities(() -> "VIEWER"))).andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.paths['/api/v1/sales'].get.parameters[*].name", org.hamcrest.Matchers.hasItems("status", "confirmedFrom", "confirmedTo", "from", "to", "customerId", "q", "page", "size")))
+            .andExpect(jsonPath("$.paths['/api/v1/sales'].get.parameters[?(@.name == 'status')].schema.enum[0]", org.hamcrest.Matchers.hasItem("DRAFT")));
     }
 
     @Test void searchesFullPageWithConstantQueryCountAndEagerlyLoadsLines() {
@@ -187,6 +259,55 @@ class OrderIntegrationTest {
                 assertThat(order.lines().getFirst().itemName()).isEqualTo("Finished");
             });
             assertThat(statistics.getPrepareStatementCount()).isEqualTo(5);
+        } finally {
+            statistics.clear();
+            statistics.setStatisticsEnabled(wasEnabled);
+        }
+    }
+
+    @Test void confirmedHistoryLoadsAllocationsWithConstantQueryCountAcrossPageSizes() {
+        var customer = customers.register(new CustomerContact("Allocated history", null, null));
+        var confirmed = new ArrayList<OrderResult>();
+        var today = LocalDate.now(clock);
+        for (int i = 0; i < 6; i++) {
+            for (int position = 0; position < 2; position++) {
+                jdbc.update("insert into inventory_batch (id, inventory_item_id, initial_quantity, current_quantity, received_at, expires_at) values (?, ?, 1, 1, ?, ?)",
+                    UUID.randomUUID(), item, today.minusDays(1), today.plusDays(position + 1));
+            }
+            var draft = orders.register(command(customer.id(), item, "2", "1.2345"));
+            var sale = orders.confirm(draft.id());
+            assertThat(sale.lines().getFirst().allocations()).hasSize(2);
+            confirmed.add(sale);
+        }
+        var expected = confirmed.stream().sorted(Comparator.comparing(OrderResult::createdAt).reversed()
+            .thenComparing(order -> order.id().toString())).toList();
+        var statistics = em.getEntityManagerFactory().unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        var wasEnabled = statistics.isStatisticsEnabled();
+        statistics.setStatisticsEnabled(true);
+        try {
+            // Clear the persistence context before every read so fixture/warm caches cannot hide N+1.
+            for (int size : new int[]{1, 4}) {
+                em.clear();
+                statistics.clear();
+                var page = orders.search(new OrderSearchQuery(null, customer.id(), null, null, 0, size,
+                    com.ceudelavanda.lavandaflow.sales.domain.OrderStatus.CONFIRMED, null, null));
+                assertThat(page.content()).containsExactlyElementsOf(expected.subList(0, size));
+                assertThat(page.content()).extracting(OrderResult::id).doesNotHaveDuplicates();
+                assertThat(page.totalElements()).isEqualTo(6);
+                assertThat(page.totalPages()).isEqualTo((6 + size - 1) / size);
+                // Order page, count, then one query for all lines and their allocations.
+                assertThat(statistics.getPrepareStatementCount()).as("queries for %s confirmed sales", size).isEqualTo(3);
+            }
+            em.clear();
+            statistics.clear();
+            var last = orders.search(new OrderSearchQuery(null, customer.id(), null, null, 1, 4,
+                com.ceudelavanda.lavandaflow.sales.domain.OrderStatus.CONFIRMED, null, null));
+            assertThat(last.content()).containsExactlyElementsOf(expected.subList(4, 6));
+            assertThat(last.content()).extracting(OrderResult::id).doesNotHaveDuplicates();
+            assertThat(last.totalElements()).isEqualTo(6);
+            assertThat(last.totalPages()).isEqualTo(2);
+            // Spring Data infers the count from this partial final page.
+            assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
         } finally {
             statistics.clear();
             statistics.setStatisticsEnabled(wasEnabled);

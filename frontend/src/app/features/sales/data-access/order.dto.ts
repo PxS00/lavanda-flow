@@ -36,6 +36,9 @@ export interface OrderPageDto {
   readonly totalPages: number;
 }
 export interface OrderSearchQuery {
+  readonly status?: OrderDto['status'];
+  readonly confirmedFrom?: string;
+  readonly confirmedTo?: string;
   readonly q?: string;
   readonly customerId?: string;
   readonly from?: string;

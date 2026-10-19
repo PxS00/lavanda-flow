@@ -113,6 +113,66 @@ describe('OrderDetailPage', () => {
     },
   );
 
+  it.each(['CONFIRMED', 'CANCELLED'] as const)(
+    'opens persisted %s details read-only without confirming inventory',
+    async (status) => {
+      const confirm = vi.fn();
+      await TestBed.configureTestingModule({
+        imports: [OrderDetailPage],
+        providers: [
+          provideRouter([]),
+          {
+            provide: ActivatedRoute,
+            useValue: { paramMap: of(convertToParamMap({ orderId: order.id })) },
+          },
+          {
+            provide: OrderApiService,
+            useValue: {
+              getById: () =>
+                of({
+                  ...order,
+                  status,
+                  customerName: 'Historical contact',
+                  customerPhone: '11999998888',
+                  customerEmail: 'old@example.com',
+                  confirmedAt: status === 'CONFIRMED' ? order.updatedAt : null,
+                  lines: [
+                    {
+                      ...order.lines[0]!,
+                      itemName: 'Historical product',
+                      allocations: [
+                        {
+                          batchId: 'original-batch',
+                          movementId: 'original-movement',
+                          quantity: '1.000000',
+                        },
+                      ],
+                    },
+                  ],
+                }),
+              confirm,
+            },
+          },
+        ],
+      }).compileComponents();
+      const fixture = TestBed.createComponent(OrderDetailPage);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain(
+        status === 'CONFIRMED' ? 'Venda confirmada' : 'Pedido cancelado',
+      );
+      expect(fixture.nativeElement.textContent).toContain('Historical contact');
+      expect(fixture.nativeElement.textContent).toContain('Historical product');
+      expect(fixture.nativeElement.textContent).toContain('1,235');
+      if (status === 'CONFIRMED') {
+        expect(fixture.nativeElement.textContent).toContain('old@example.com');
+        expect(fixture.nativeElement.textContent).toContain('original-batch');
+        expect(fixture.nativeElement.textContent).toContain('original-movement');
+      }
+      expect(fixture.nativeElement.querySelector('a[href$="/edit"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('button')).toBeNull();
+      expect(confirm).not.toHaveBeenCalled();
+    },
+  );
   it('renders loading, not found, explicit retry and official exact values with an edit link', async () => {
     const response = new Subject<OrderDto>();
     const getById = vi.fn(() => response.asObservable());

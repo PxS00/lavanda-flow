@@ -45,6 +45,24 @@ describe('OrderApiService', () => {
     api.search({ q: ' ', page: 0, size: 20 }).subscribe();
     http.expectOne('/api/v1/sales?page=0&size=20').flush({ content: [] });
   });
+  it('serializes explicit status and independent confirmation dates without changing legacy dates', () => {
+    api
+      .search({
+        page: 0,
+        size: 20,
+        status: 'CONFIRMED',
+        from: '2026-09-01',
+        confirmedFrom: '2026-10-01',
+        confirmedTo: '2026-10-02',
+      })
+      .subscribe();
+    const request = http.expectOne((req) => req.url === '/api/v1/sales');
+    expect(request.request.params.get('status')).toBe('CONFIRMED');
+    expect(request.request.params.get('from')).toBe('2026-09-01');
+    expect(request.request.params.get('confirmedFrom')).toBe('2026-10-01');
+    expect(request.request.params.get('confirmedTo')).toBe('2026-10-02');
+    request.flush({ content: [] });
+  });
   it('uses POST/GET/PUT contracts with optional customer and exact decimal strings without submitting totals', () => {
     const body = {
       customerId: null,

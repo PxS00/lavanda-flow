@@ -76,6 +76,15 @@ Each follow-up issue should deliver its Flyway change, backend contract, authent
 
 Do not start a slice before its public contracts and preceding persistence are merged into the integration branch. The dependency order is customer lookup → draft order → atomic confirmation → history/corrections; fiscal feasibility follows only if separately requested and cannot block v0.8.0.
 
+## History delivery status
+
+Issue #275 delivers the paginated history portion of slice 4 after #260–#262:
+[additive query contract and proof matrix](0275-expose-paginated-sale-history.md).
+Confirmed and cancelled records are discoverable through explicit status selection, customer/UUID
+filters and independent inclusive UTC creation/confirmation dates. Historical snapshots and
+allocations reuse #262 storage and remain immutable. Physical corrections remain separate in #276;
+this history slice does not mark returns/corrections complete.
+
 ## Acceptance checklist for implementation issues
 
 - [ ] Customer field limits, normalization, validation, search, paging, deactivation, and history retention match this specification.

@@ -134,6 +134,10 @@ export class OrderFormPage {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((state) => {
+        if (state.kind === 'loaded' && state.order && state.order.status !== 'DRAFT') {
+          void this.router.navigate(['/sales', state.order.id]);
+          return;
+        }
         this.state.set(state);
         if (state.kind === 'loaded') {
           this.form.controls.customerId.setValue(state.order?.customerId ?? null);
@@ -221,7 +225,12 @@ export class OrderFormPage {
   protected submit(event: SubmitEvent): void {
     event.preventDefault();
     const state = this.state();
-    if (this.pending() || state.kind !== 'loaded') return;
+    if (
+      this.pending() ||
+      state.kind !== 'loaded' ||
+      (state.order && state.order.status !== 'DRAFT')
+    )
+      return;
     this.form.markAllAsTouched();
     if (this.form.controls.lines.length === 0) {
       this.lineError.set('Adicione pelo menos um produto ao pedido.');

@@ -12,7 +12,15 @@ export class OrderApiService {
 
   search(query: OrderSearchQuery) {
     let params = new HttpParams().set('page', query.page).set('size', query.size);
-    for (const key of ['q', 'customerId', 'from', 'to'] as const) {
+    for (const key of [
+      'q',
+      'customerId',
+      'from',
+      'to',
+      'status',
+      'confirmedFrom',
+      'confirmedTo',
+    ] as const) {
       const value = query[key]?.trim();
       if (value) params = params.set(key, value);
     }

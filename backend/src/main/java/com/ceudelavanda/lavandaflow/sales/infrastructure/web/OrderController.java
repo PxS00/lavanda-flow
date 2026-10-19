@@ -1,6 +1,7 @@
 package com.ceudelavanda.lavandaflow.sales.infrastructure.web;
 
 import com.ceudelavanda.lavandaflow.sales.application.*;
+import com.ceudelavanda.lavandaflow.sales.domain.OrderStatus;
 import com.ceudelavanda.lavandaflow.shared.error.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.*;
 import io.swagger.v3.oas.annotations.media.*;
@@ -57,12 +58,15 @@ public class OrderController {
     public OrderResult cancel(@PathVariable UUID orderId) { return orders.cancel(orderId); }
 
     @GetMapping
-    @Operation(summary = "Search draft orders", description = "Literal partial UUID q, optional customerId and inclusive UTC creation dates from/to. DRAFT only; newest creation first, UUID ascending for ties.")
+    @Operation(summary = "Search orders and sale history", description = "Literal partial UUID q and optional customerId. Omitted status selects DRAFT; explicit DRAFT, CONFIRMED or CANCELLED. Inclusive UTC creation dates from/to retain their meaning. Independent inclusive UTC confirmedFrom/confirmedTo require explicit CONFIRMED status; ranges intersect. Newest creation first, UUID ascending for ties. Invalid combinations return INVALID_ORDER_SEARCH_QUERY.")
     public OrderManagement.Page search(@RequestParam(required = false) String q,
         @RequestParam(required = false) UUID customerId,
         @RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
+        @Parameter(description = "Lifecycle state; omitted means DRAFT") @RequestParam(required = false) OrderStatus status,
+        @Parameter(description = "Inclusive UTC confirmation day, requires status=CONFIRMED") @RequestParam(required = false) LocalDate confirmedFrom,
+        @Parameter(description = "Inclusive UTC confirmation day, requires status=CONFIRMED") @RequestParam(required = false) LocalDate confirmedTo,
         @Parameter(schema = @Schema(defaultValue = "0", minimum = "0")) @RequestParam(defaultValue = "0") int page,
         @Parameter(schema = @Schema(defaultValue = "20", minimum = "1", maximum = "100")) @RequestParam(defaultValue = "20") int size) {
-        return orders.search(new OrderSearchQuery(q, customerId, from, to, page, size));
+        return orders.search(new OrderSearchQuery(q, customerId, from, to, page, size, status, confirmedFrom, confirmedTo));
     }
 }
