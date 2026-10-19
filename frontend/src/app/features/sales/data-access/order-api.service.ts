@@ -1,7 +1,14 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { API_BASE_URL } from '../../../core/config/api-base-url.token';
-import { OrderDto, OrderPageDto, OrderSearchQuery, SaveDraftRequest } from './order.dto';
+import {
+  OrderDto,
+  OrderPageDto,
+  OrderSearchQuery,
+  SaveDraftRequest,
+  RegisterSaleStockCorrection,
+  SaleStockCorrectionDto,
+} from './order.dto';
 
 /** Exact-decimal DTO client; authentication and CSRF use the existing HTTP interceptors. */
 @Service()
@@ -31,6 +38,15 @@ export class OrderApiService {
   }
   confirm(id: string) {
     return this.http.post<OrderDto>(`${this.url}/${id}/confirm`, null);
+  }
+  stockCorrections(id: string) {
+    return this.http.get<readonly SaleStockCorrectionDto[]>(`${this.url}/${id}/stock-corrections`);
+  }
+  correctStock(id: string, correctionId: string, request: RegisterSaleStockCorrection) {
+    return this.http.put<SaleStockCorrectionDto>(
+      `${this.url}/${id}/stock-corrections/${correctionId}`,
+      request,
+    );
   }
   register(request: SaveDraftRequest) {
     return this.http.post<OrderDto>(this.url, request);

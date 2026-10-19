@@ -102,6 +102,9 @@
           </li>
         }
       </ul>
+      @if (current.order.status === 'CONFIRMED') {
+        <app-sale-stock-correction-form [sale]="current.order" />
+      }
     }
   }
 </section>

@@ -19,7 +19,10 @@ describe('OrderDetailPage', () => {
           provide: ActivatedRoute,
           useValue: { paramMap: of(convertToParamMap({ orderId: order.id })) },
         },
-        { provide: OrderApiService, useValue: { getById: () => of(order), confirm } },
+        {
+          provide: OrderApiService,
+          useValue: { stockCorrections: () => of([]), getById: () => of(order), confirm },
+        },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(OrderDetailPage);
@@ -50,7 +53,8 @@ describe('OrderDetailPage', () => {
     expect(fixture.nativeElement.textContent).toContain('batch');
     expect(fixture.nativeElement.textContent).toContain('movement');
     expect(fixture.nativeElement.querySelector('a[href$="/edit"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('button')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Confirmar pedido e retirar estoque');
+    expect(fixture.nativeElement.querySelector('app-sale-stock-correction-form')).not.toBeNull();
     expect(document.activeElement).toBe(fixture.nativeElement.querySelector('h2'));
   });
 
@@ -86,7 +90,10 @@ describe('OrderDetailPage', () => {
             provide: ActivatedRoute,
             useValue: { paramMap: of(convertToParamMap({ orderId: order.id })) },
           },
-          { provide: OrderApiService, useValue: { getById: () => of(order), confirm } },
+          {
+            provide: OrderApiService,
+            useValue: { stockCorrections: () => of([]), getById: () => of(order), confirm },
+          },
         ],
       }).compileComponents();
       const fixture = TestBed.createComponent(OrderDetailPage);
@@ -128,6 +135,7 @@ describe('OrderDetailPage', () => {
           {
             provide: OrderApiService,
             useValue: {
+              stockCorrections: () => of([]),
               getById: () =>
                 of({
                   ...order,
@@ -169,7 +177,10 @@ describe('OrderDetailPage', () => {
         expect(fixture.nativeElement.textContent).toContain('original-movement');
       }
       expect(fixture.nativeElement.querySelector('a[href$="/edit"]')).toBeNull();
-      expect(fixture.nativeElement.querySelector('button')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Confirmar pedido e retirar estoque');
+      expect(fixture.nativeElement.querySelector('app-sale-stock-correction-form') !== null).toBe(
+        status === 'CONFIRMED',
+      );
       expect(confirm).not.toHaveBeenCalled();
     },
   );

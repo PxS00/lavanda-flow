@@ -22,13 +22,22 @@ import { ErrorState } from '../../../shared/ui/error-state/error-state';
 import { LoadingState } from '../../../shared/ui/loading-state/loading-state';
 import { inventoryItemUnitLabel } from '../../catalog/inventory-item-display';
 import { OrderApiService } from '../data-access/order-api.service';
+import { SaleStockCorrectionForm } from '../ui/sale-stock-correction-form';
 import { OrderDto } from '../data-access/order.dto';
 
 type DetailState =
   { kind: 'loading' } | { kind: 'loaded'; order: OrderDto } | { kind: 'error'; error: UiError };
 @Component({
   selector: 'app-order-detail-page',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule, ErrorState, LoadingState],
+  imports: [
+    DatePipe,
+    RouterLink,
+    MatButtonModule,
+    MatCardModule,
+    ErrorState,
+    LoadingState,
+    SaleStockCorrectionForm,
+  ],
   templateUrl: './order-detail-page.html',
   styleUrl: './sales-pages.scss',
 })

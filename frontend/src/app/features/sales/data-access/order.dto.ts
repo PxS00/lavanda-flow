@@ -55,3 +55,19 @@ export interface SaveDraftRequest {
     readonly unitPrice: string;
   }[];
 }
+
+export interface RegisterSaleStockCorrection {
+  readonly lineId: string;
+  readonly batchId: string;
+  readonly quantity: string;
+  readonly reason: string;
+  readonly inspected: boolean;
+  readonly accepted: boolean;
+}
+export interface SaleStockCorrectionDto extends RegisterSaleStockCorrection {
+  readonly id: string;
+  readonly saleId: string;
+  readonly actor: string;
+  readonly occurredAt: string;
+  readonly movementId: string;
+}

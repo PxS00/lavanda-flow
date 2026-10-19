@@ -19,6 +19,29 @@ describe('OrderApiService', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('uses sale-scoped correction identity and exact decimals and retrieves persistent audit history', () => {
+    const body = {
+      lineId: 'line',
+      batchId: 'batch',
+      quantity: '1.000001',
+      reason: 'Inspected',
+      inspected: true,
+      accepted: true,
+    };
+    api.correctStock('sale', 'correction', body).subscribe();
+    const write = http.expectOne('/api/v1/sales/sale/stock-corrections/correction');
+    expect(write.request.method).toBe('PUT');
+    expect(write.request.body).toEqual(body);
+    write.flush({ id: 'correction', movementId: 'movement' });
+    api
+      .stockCorrections('sale')
+      .subscribe((history) =>
+        expect(history).toEqual([{ id: 'correction', movementId: 'movement' }]),
+      );
+    const read = http.expectOne('/api/v1/sales/sale/stock-corrections');
+    expect(read.request.method).toBe('GET');
+    read.flush([{ id: 'correction', movementId: 'movement' }]);
+  });
   it('confirms by persisted order identity without separate stock requests or retry tokens', () => {
     api.confirm('id').subscribe((result) => expect(result.status).toBe('CONFIRMED'));
     const request = http.expectOne('/api/v1/sales/id/confirm');
