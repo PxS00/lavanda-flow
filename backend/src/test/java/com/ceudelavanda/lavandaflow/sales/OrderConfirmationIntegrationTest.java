@@ -92,6 +92,17 @@ class OrderConfirmationIntegrationTest {
         customers.update(customer.id(), new CustomerContact("Changed", "11888887777", "changed@example.com"));
         customers.changeActiveState(customer.id(), false);
         jdbc.update("update inventory_item set name = 'Changed', active = false where id = ?", item);
+        var history = orders.search(new OrderSearchQuery(null, customer.id(), null, null, 0, 20, OrderStatus.CONFIRMED, null, null));
+        assertThat(history.content()).containsExactly(result);
+        mvc.perform(get("/api/v1/sales").param("status", "CONFIRMED").param("customerId", customer.id().toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].customerName").value("Original"))
+            .andExpect(jsonPath("$.content[0].customerPhone").value("11999998888"))
+            .andExpect(jsonPath("$.content[0].lines[0].itemName").value("Product"))
+            .andExpect(jsonPath("$.content[0].lines[0].quantity").value("3.000002"))
+            .andExpect(jsonPath("$.content[0].lines[0].unitPrice").value("1.2345"))
+            .andExpect(jsonPath("$.content[0].lines[0].allocations[0].batchId").value(early.toString()))
+            .andExpect(jsonPath("$.content[0].lines[0].allocations[0].movementId").value(result.lines().getFirst().allocations().getFirst().movementId().toString()));
+        assertThat(balance(early)).isZero(); assertThat(balance(later)).isEqualByComparingTo("2.999999");
         assertThat(orders.getById(draft.id())).isEqualTo(result);
         assertThat(orders.confirm(draft.id())).isEqualTo(result);
         assertThat(movements(draft.id())).isEqualTo(2); assertThat(allocations(draft.id())).isEqualTo(2);
