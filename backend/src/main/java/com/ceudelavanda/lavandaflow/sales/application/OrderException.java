@@ -25,6 +25,9 @@ public class OrderException extends DomainException {
     public static OrderException reference(String code, String field, UUID id) {
         return new OrderException(code, "Order reference is unavailable or ineligible", ErrorType.VALIDATION, Map.of(field, id.toString()));
     }
+    public static OrderException correction(String code, ErrorType type) {
+        return new OrderException(code, "Sale stock correction cannot be accepted", type, null);
+    }
     public static OrderException search(String field, String message) {
         return new OrderException("INVALID_ORDER_SEARCH_QUERY", "Invalid order query", ErrorType.VALIDATION, Map.of(field, message));
     }

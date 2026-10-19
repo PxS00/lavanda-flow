@@ -23,6 +23,7 @@ import java.util.UUID;
 })
 public class OrderController {
     private final OrderManagement orders;
+    private final SaleStockCorrections corrections;
 
     @PostMapping
     @Operation(summary = "Create a draft order", description = "Optional active customer and one or more unique eligible products. Exact BRL prices, line HALF_UP rounding and authoritative total. No stock check or effect.")
@@ -51,6 +52,27 @@ public class OrderController {
     @ApiResponse(responseCode = "422", description = "INSUFFICIENT_ELIGIBLE_STOCK or ineligible inventory item; complete rollback", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     @ApiResponse(responseCode = "500", description = "ORDER_PERSISTENCE_FAILED; sanitized persistence or transaction failure", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     public OrderResult confirm(@PathVariable UUID orderId) { return orders.confirm(orderId); }
+
+    @PutMapping("/{orderId}/stock-corrections/{correctionId}")
+    @Operation(summary = "Record an inspected, accepted physical stock return", description = "Correction UUID is scoped to the sale. Exact positive quantity and explicit inspected=true/accepted=true required. Validates original confirmed line/batch and cumulative limits, then credits only currently eligible original inventory atomically. Identical retries return the persisted result even after expiry; changed payload returns SALE_CORRECTION_ID_CONFLICT. No sale edits, refund or automatic retry.")
+    @ApiResponse(responseCode = "400", description = "INVALID_SALE_CORRECTION or SALE_CORRECTION_ALLOCATION_INVALID", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "ORDER_NOT_FOUND", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "SALE_CORRECTION_NOT_ALLOWED, SALE_CORRECTION_LIMIT_EXCEEDED, SALE_CORRECTION_ID_CONFLICT or ORDER_LOCK_CONFLICT", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "422", description = "SALE_RETURN_INELIGIBLE: inactive/ineligible item, expired or undated original batch", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "500", description = "ORDER_PERSISTENCE_FAILED; complete rollback", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public com.ceudelavanda.lavandaflow.sales.domain.SaleStockCorrection correctStock(
+        @PathVariable UUID orderId, @PathVariable UUID correctionId,
+        @RequestBody RegisterSaleStockCorrection request, java.security.Principal principal) {
+        return corrections.register(orderId, correctionId, request, principal.getName());
+    }
+
+    @GetMapping("/{orderId}/stock-corrections")
+    @Operation(summary = "Inspect accepted physical return audit", description = "Persisted corrections ordered by occurredAt then UUID, including original sale/line/batch, exact quantity, reason, explicit decisions, actor and movement ID. No current-eligibility recomputation.")
+    @ApiResponse(responseCode = "404", description = "ORDER_NOT_FOUND", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "SALE_CORRECTION_NOT_ALLOWED for nonconfirmed sales", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    public java.util.List<com.ceudelavanda.lavandaflow.sales.domain.SaleStockCorrection> stockCorrections(@PathVariable UUID orderId) {
+        return corrections.list(orderId);
+    }
 
     @PostMapping("/{orderId}/cancel")
     @Operation(summary = "Cancel an unconfirmed draft", description = "DRAFT only; no stock effects. Confirmed sales cannot be cancelled, edited or deleted; physical returns require a separate audited operation.")
