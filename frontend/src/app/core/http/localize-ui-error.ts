@@ -34,7 +34,19 @@ const CODE_MESSAGES: Readonly<Record<string, string>> = {
   ORDER_NOT_EDITABLE: 'Este pedido não pode mais ser editado.',
   ORDER_NOT_CONFIRMABLE: 'Este pedido não pode ser confirmado.',
   ORDER_LOCK_CONFLICT: 'O pedido ou estoque está sendo usado por outra operação. Tente novamente.',
-  ORDER_PERSISTENCE_FAILED: 'Não foi possível salvar a confirmação. Tente novamente.',
+  ORDER_PERSISTENCE_FAILED: 'Não foi possível salvar a operação. Tente novamente.',
+  INVALID_SALE_CORRECTION:
+    'Revise o lote, a quantidade, o motivo e as confirmações de inspeção e aceitação.',
+  SALE_CORRECTION_ALLOCATION_INVALID: 'O produto e o lote não correspondem à retirada desta venda.',
+  SALE_CORRECTION_NOT_ALLOWED: 'Somente vendas confirmadas permitem devolução ao estoque.',
+  SALE_CORRECTION_LIMIT_EXCEEDED:
+    'A quantidade excede o saldo da retirada original ainda não devolvido.',
+  SALE_CORRECTION_ID_CONFLICT:
+    'Esta tentativa já foi registrada com outros dados. Consulte o histórico de devoluções.',
+  SALE_CORRECTION_ID_UNAVAILABLE:
+    'Não foi possível gerar um identificador seguro. Nenhuma devolução foi enviada. Tente novamente.',
+  SALE_RETURN_INELIGIBLE:
+    'O lote original está vencido, sem validade ou o produto não está elegível para venda. Nenhum estoque foi creditado.',
   SALE_ITEM_INELIGIBLE: 'Um produto está inativo ou não é elegível para venda. Revise o pedido.',
   ORDER_CUSTOMER_NOT_FOUND:
     'O cliente associado não foi encontrado. Selecione outro cliente ou deixe sem associação.',

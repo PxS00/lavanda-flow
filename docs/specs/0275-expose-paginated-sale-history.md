@@ -99,3 +99,10 @@ the persistence context/statistics before each history read. Both full pages (si
 execute exactly 3 statements; the partial final page executes 2 because Spring Data infers its
 count. Exact stored results, allocations, ordering, distinct IDs and total count 6 are verified.
 No backend production change was needed for these review findings.
+
+## Physical correction follow-up
+
+Issue #276 extends this confirmed-sale detail with a separate inspected/accepted-return form and
+persisted correction audit, without changing the history query or confirmed sale result.
+See [spec #276](0276-register-sale-linked-stock-corrections.md) for public inventory ownership,
+scoped retry identity, cumulative limits, eligibility and V20 index compatibility.

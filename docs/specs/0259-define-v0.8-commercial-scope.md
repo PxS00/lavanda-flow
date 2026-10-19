@@ -82,8 +82,10 @@ Issue #275 delivers the paginated history portion of slice 4 after #260–#262:
 [additive query contract and proof matrix](0275-expose-paginated-sale-history.md).
 Confirmed and cancelled records are discoverable through explicit status selection, customer/UUID
 filters and independent inclusive UTC creation/confirmation dates. Historical snapshots and
-allocations reuse #262 storage and remain immutable. Physical corrections remain separate in #276;
-this history slice does not mark returns/corrections complete.
+allocations reuse #262 storage and remain immutable. Issue #276 separately delivers the physical
+correction portion: [accepted-return contract](0276-register-sale-linked-stock-corrections.md).
+It preserves original history and allows repeated inspected, accepted partial returns with stable
+retry identity, cumulative limits and current inventory eligibility; V20 preserves consumption uniqueness.
 
 ## Acceptance checklist for implementation issues
 

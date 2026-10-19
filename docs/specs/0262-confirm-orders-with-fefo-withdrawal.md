@@ -66,7 +66,9 @@ same-order retry. Errors and operator copy are pt-BR; no FEFO or stock calculati
 A lost HTTP response can follow a committed transaction, so retry always queries/attempts the same
 identity. Draft cancellation has an API contract but no new Angular cancellation workflow.
 
-Physical returns or confirmed-data corrections are separate auditable operations. Confirmation and
+Issue #276 implements physical stock returns separately through the
+[accepted-return contract](0276-register-sale-linked-stock-corrections.md) and forward-only V20;
+V19 remains unchanged. Physical returns or confirmed-data corrections are separate auditable operations. Confirmation and
 cancellation never put stock back. Returns management, payment, fiscal features and unrelated work
 remain excluded.
 

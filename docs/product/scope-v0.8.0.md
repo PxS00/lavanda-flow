@@ -13,8 +13,8 @@ See the [delivered customer contract](../specs/0260-manage-customer-contacts.md)
 [operator workflow](customer-contacts.md). Issue #261 implements optional-customer draft orders, exact entered pricing, authoritative totals and authenticated capture/edit/list/detail workflows. See the [draft contract](../specs/0261-register-customer-orders.md) and [operator workflow](customer-orders.md). Issue #262 delivers atomic confirmation, draft cancellation, immutable snapshots and inventory integration
 ([contract](../specs/0262-confirm-orders-with-fefo-withdrawal.md)). Issue #275 delivers paginated sale
 history with explicit status, customer, UUID, creation-date and confirmation-date filtering, including
-cancelled read-only detail ([contract](../specs/0275-expose-paginated-sale-history.md)). Physical
-sale-linked corrections remain a separate planned slice (#276).
+cancelled read-only detail ([contract](../specs/0275-expose-paginated-sale-history.md)). Issue #276 delivers inspected, accepted physical stock returns against original allocations
+([correction contract](../specs/0276-register-sale-linked-stock-corrections.md)).
 
 ## Included capabilities
 
@@ -40,7 +40,7 @@ The operator enters each draft line's unit price; v0.8.0 has no price list or au
 
 Confirmed line snapshots preserve the catalog item identifier, display name, unit/presentation, quantity, unit price, and rounded line amount. The order/sale preserves its customer identifier and contact snapshot. Each sale line records every batch and exact quantity allocated by inventory, plus the corresponding movement identifier. Inventory movements carry an opaque sale and sale-line reference. Batch identity and genealogy come from catalog IDs, batch IDs, and movement references, never from display names or lot-code parsing.
 
-Cancelling an unconfirmed draft has no stock effect. A confirmed sale is not cancelled or rewritten. A physical return or stock correction is a separate operator-authorized, audited inventory correction; any quantity returned to stock must be physically present, inspected, accepted for stock, assigned to its original sold batch, and pass inventory eligibility including expiration. It creates a new movement and retains the sale-line reference. A sale cancellation alone never restores stock. Confirmed commercial values are immutable; v0.8.0 does not include an edit, refund, or full returns-management workflow.
+Cancelling an unconfirmed draft has no stock effect. A confirmed sale is not cancelled or rewritten. A physical return or stock correction is a separate operator-authorized, audited inventory correction; any quantity returned to stock must be physically present, inspected, accepted for stock, assigned to its original sold batch, and pass inventory eligibility including expiration. It creates a new movement and retains the sale-line reference. Multiple partial returns are allowed up to the exact original sale-line/batch allocation less all previously accepted returns. Explicit inspection and acceptance, a reason and a stable correction identity are required. Inventory rejects inactive/ineligible products and expired or undated batches; a depleted eligible original batch can be replenished. Retrying the same correction never credits twice. A sale cancellation alone never restores stock. Confirmed commercial values are immutable; v0.8.0 does not include an edit, refund, or full returns-management workflow.
 
 ## Operator experience and platform
 

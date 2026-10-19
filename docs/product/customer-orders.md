@@ -68,3 +68,26 @@ The authenticated API also supports cancellation of an unconfirmed draft without
 there is no cancellation control in this confirmation screen. Cancellation never restores sold stock.
 Physical returns and confirmed-data corrections require separate auditable operations; payment and
 returns management remain outside this workflow.
+
+## Record an inspected physical return
+
+Open a **Venda confirmada** from history. Under **Devolução física ao estoque**, select the original
+product/batch, enter a positive exact quantity in that product's original unit and a reason (up to
+255 characters). Separately confirm physical receipt/inspection and acceptance in saleable condition,
+then choose **Registrar devolução aceita**. Do not use this action for rejected or unsaleable goods.
+The server rejects undated batches, batches expiring today or earlier, inactive/ineligible products,
+and quantities exceeding the original allocation less all accepted returns. A fully consumed batch
+may receive eligible stock. Multiple separate partial returns are allowed within that same limit.
+
+While pending, controls are disabled. After an error, **Tentar registrar novamente** reuses the same
+correction identity and exact submitted data; do not create another return to recover a lost response.
+A definitive validation/eligibility/limit rejection offers **Revisar dados rejeitados**. A successful
+response shows correction and movement IDs and clears the form for another separate physical return.
+**Histórico de devoluções aceitas** shows persisted line/batch, quantity, reason, operator, decisions,
+time and movement reference, including after reopening the sale. Use **Recarregar devoluções** after
+a history-read failure. If leaving after an unknown result, inspect that history before recording more.
+
+The confirmed sale's totals, snapshots, allocations and original withdrawal movements remain unchanged.
+This is a stock operation only: no refund, payment reversal, sale cancellation or automatic stock
+restoration. See [spec #276](../specs/0276-register-sale-linked-stock-corrections.md) for exact API,
+retry, eligibility and concurrency contracts.
