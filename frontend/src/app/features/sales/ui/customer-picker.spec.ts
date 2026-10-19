@@ -69,6 +69,41 @@ describe('CustomerPicker', () => {
     expect(search).toHaveBeenLastCalledWith({ q: '', active: true, page: 1, size: 20 });
   });
 
+  it('includes inactive contacts for history without changing active-only draft selection', async () => {
+    const customer = {
+      id: 'inactive',
+      name: 'Histórica',
+      active: false,
+      phone: null,
+      email: null,
+      createdAt: '',
+      updatedAt: '',
+    };
+    const search = vi.fn(() =>
+      of({ content: [customer], page: 0, size: 20, totalElements: 1, totalPages: 1 }),
+    );
+    await TestBed.configureTestingModule({
+      imports: [CustomerPicker],
+      providers: [{ provide: CustomerApiService, useValue: { search } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CustomerPicker);
+    fixture.componentRef.setInput('activeOnly', false);
+    fixture.detectChanges();
+    expect(search).toHaveBeenCalledWith({ q: '', active: undefined, page: 0, size: 20 });
+    fixture.componentInstance.searchText.setValue('Histórica');
+    fixture.nativeElement.querySelector('button').click();
+    fixture.detectChanges();
+    expect(search).toHaveBeenLastCalledWith({
+      q: 'Histórica',
+      active: undefined,
+      page: 0,
+      size: 20,
+    });
+    const selected = vi.fn();
+    fixture.componentInstance.selected.subscribe(selected);
+    fixture.nativeElement.querySelector('li button').click();
+    expect(selected).toHaveBeenCalledWith(customer);
+  });
   it('cancels stale searches and preserves the current query through empty/error/retry states', async () => {
     const first = new Subject<CustomerPageDto>();
     const latest = new Subject<CustomerPageDto>();

@@ -1,8 +1,34 @@
 <section aria-labelledby="orders-heading">
-  <h1 id="orders-heading">Pedidos em rascunho</h1>
+  <h1 id="orders-heading">Pedidos e histórico de vendas</h1>
   <p>Rascunhos não reservam estoque nem garantem disponibilidade.</p>
   <a mat-flat-button routerLink="/sales/new">Criar pedido</a>
   <form class="filters" [formGroup]="filters" (ngSubmit)="applyFilters()">
+    <mat-form-field appearance="outline">
+      <mat-label>Situação</mat-label>
+      <mat-select formControlName="status" (selectionChange)="statusChanged()">
+        <mat-option value="DRAFT">Rascunhos</mat-option>
+        <mat-option value="CONFIRMED">Vendas confirmadas</mat-option>
+        <mat-option value="CANCELLED">Cancelados</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <fieldset>
+      <legend>Cliente (opcional)</legend>
+      <app-customer-picker [activeOnly]="false" (selected)="selectCustomer($event)" />
+      @if (customer(); as selected) {
+        <p>Cliente selecionado: {{ selected.name }}</p>
+        <button mat-button type="button" (click)="clearCustomer()">Todos os clientes</button>
+      }
+    </fieldset>
+    @if (filters.controls.status.value === 'CONFIRMED') {
+      <mat-form-field appearance="outline"
+        ><mat-label>Confirmada de (UTC)</mat-label>
+        <input matInput type="date" formControlName="confirmedFrom" />
+      </mat-form-field>
+      <mat-form-field appearance="outline"
+        ><mat-label>Confirmada até (UTC)</mat-label>
+        <input matInput type="date" formControlName="confirmedTo" />
+      </mat-form-field>
+    }
     <mat-form-field appearance="outline"
       ><mat-label>Buscar pelo ID do pedido</mat-label
       ><input matInput formControlName="q" maxlength="36"
@@ -36,16 +62,20 @@
           message="Crie um pedido ou revise os filtros."
         />
       } @else {
-        <ul aria-label="Pedidos em rascunho">
+        <ul aria-label="Pedidos e histórico de vendas">
           @for (order of current.page.content; track order.id) {
             <li>
               <mat-card appearance="outlined"
                 ><mat-card-content>
                   <h2>{{ order.customerName ?? 'Sem cliente associado' }}</h2>
                   <p>
-                    Rascunho · {{ order.createdAt | date: 'short' }} · Total oficial: R$
+                    {{ statusLabel[order.status] }} · Criado em
+                    {{ order.createdAt | date: 'short' }} · Total oficial: R$
                     {{ formatDecimal(order.total) }}
                   </p>
+                  @if (order.confirmedAt) {
+                    <p>Confirmada em: {{ order.confirmedAt | date: 'short' }}</p>
+                  }
                   <a mat-button [routerLink]="['/sales', order.id]">Ver pedido {{ order.id }}</a>
                 </mat-card-content></mat-card
               >

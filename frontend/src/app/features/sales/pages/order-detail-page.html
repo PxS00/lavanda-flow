@@ -15,7 +15,13 @@
       <mat-card appearance="outlined"
         ><mat-card-content>
           <h2 #statusHeading tabindex="-1">
-            {{ current.order.status === 'CONFIRMED' ? 'Venda confirmada' : 'Rascunho' }}
+            {{
+              current.order.status === 'CONFIRMED'
+                ? 'Venda confirmada'
+                : current.order.status === 'CANCELLED'
+                  ? 'Pedido cancelado'
+                  : 'Rascunho'
+            }}
           </h2>
           <dl>
             <dt>ID do pedido</dt>
@@ -60,6 +66,9 @@
             @if (current.order.customerEmail) {
               <p>E-mail: {{ current.order.customerEmail }}</p>
             }
+          }
+          @if (current.order.status === 'CANCELLED') {
+            <p role="status">Pedido cancelado. Nenhum estoque foi retirado por este pedido.</p>
           }
           @if (confirmationError(); as error) {
             <app-error-state [error]="error" />

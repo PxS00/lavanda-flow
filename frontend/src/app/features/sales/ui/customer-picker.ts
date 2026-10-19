@@ -1,4 +1,4 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, inject, input, OnInit, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,7 +26,9 @@ import { LoadingState } from '../../../shared/ui/loading-state/loading-state';
   ],
   template: `
     <mat-form-field appearance="outline"
-      ><mat-label>Buscar cliente ativo</mat-label>
+      ><mat-label>{{
+        activeOnly() ? 'Buscar cliente ativo' : 'Buscar cliente (inclui inativos)'
+      }}</mat-label>
       <input
         matInput
         [formControl]="searchText"
@@ -70,11 +72,13 @@ import { LoadingState } from '../../../shared/ui/loading-state/loading-state';
   styles:
     'ul { list-style: none; padding: 0; } button { max-width: 100%; white-space: normal; height: auto; min-height: 2.75rem; overflow-wrap: anywhere; }',
 })
-export class CustomerPicker {
+export class CustomerPicker implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly api = inject(CustomerApiService);
   private readonly requests = new Subject<{ q: string; page: number }>();
   private query = { q: '', page: 0 };
   readonly disabled = input(false);
+  readonly activeOnly = input(true);
   readonly selected = output<CustomerDto>();
   readonly searchText = new FormControl('', { nonNullable: true });
   protected readonly items = signal<readonly CustomerDto[]>([]);
@@ -83,7 +87,7 @@ export class CustomerPicker {
   protected readonly total = signal(0);
   protected readonly pageIndex = signal(0);
 
-  constructor() {
+  ngOnInit(): void {
     this.requests
       .pipe(
         startWith(this.query),
@@ -92,19 +96,26 @@ export class CustomerPicker {
           this.error.set(null);
         }),
         switchMap((query) =>
-          this.api.search({ q: query.q, active: true, page: query.page, size: 20 }).pipe(
-            map((page) => ({ page, error: null })),
-            catchError((error: unknown) => of({ page: null, error: mapHttpError(error) })),
-          ),
+          this.api
+            .search({
+              q: query.q,
+              active: this.activeOnly() ? true : undefined,
+              page: query.page,
+              size: 20,
+            })
+            .pipe(
+              map((page) => ({ page, error: null })),
+              catchError((error: unknown) => of({ page: null, error: mapHttpError(error) })),
+            ),
         ),
-        takeUntilDestroyed(),
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((result) => {
         this.loading.set(false);
         this.error.set(result.error);
         if (result.page) {
           const page = result.page;
-          this.items.set(page.content.filter((item) => item.active));
+          this.items.set(page.content.filter((item) => !this.activeOnly() || item.active));
           this.total.set(page.totalElements);
           this.pageIndex.set(page.page);
         }

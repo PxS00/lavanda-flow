@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
   ActivatedRoute,
@@ -122,6 +123,7 @@ describe('OrderFormPage', () => {
     params.next(convertToParamMap({ orderId: order.id }));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Editar pedido');
+    expect(navigate).not.toHaveBeenCalled();
     expect(fixture.componentInstance.form.controls.lines.at(0).controls.id.value).toBe('line');
     fill('2.000001', '3.4567');
     submit();
@@ -131,6 +133,37 @@ describe('OrderFormPage', () => {
     });
     expect(api.register).not.toHaveBeenCalled();
   });
+  it.each(['CANCELLED', 'CONFIRMED'] as const)(
+    'redirects direct edit access for %s to read-only details without showing the editor',
+    (status) => {
+      api.getById.mockReturnValueOnce(of({ ...order, status }));
+      params.next(convertToParamMap({ orderId: order.id }));
+      fixture.detectChanges();
+      expect(api.getById).toHaveBeenCalledWith(order.id);
+      expect(navigate).toHaveBeenCalledExactlyOnceWith(['/sales', order.id]);
+      expect(fixture.nativeElement.querySelector('form')).toBeNull();
+      expect(fixture.componentInstance.form.controls.lines.length).toBe(0);
+      expect(api.update).not.toHaveBeenCalled();
+      expect(api.register).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['CANCELLED', 'CONFIRMED'] as const)(
+    'blocks submission for a loaded %s order independently of navigation',
+    (status) => {
+      params.next(convertToParamMap({ orderId: order.id }));
+      fixture.detectChanges();
+      expect(fixture.componentInstance.form.valid).toBe(true);
+      // Bypass the load redirect to exercise the submission boundary on its own.
+      const component = fixture.componentInstance as unknown as {
+        state: WritableSignal<{ kind: 'loaded'; order: OrderDto }>;
+      };
+      component.state.set({ kind: 'loaded', order: { ...order, status } });
+      submit();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(api.update).not.toHaveBeenCalled();
+      expect(api.register).not.toHaveBeenCalled();
+    },
+  );
   it('manages lines and rejects duplicate item selection', () => {
     create();
     add();
