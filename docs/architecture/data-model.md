@@ -259,3 +259,15 @@ Inventory references remain opaque with no sales FK. A partial source-line/batch
 index provides additional duplicate-consumption defense. Triggers prevent update/delete of confirmed
 order/line history, allocations and referenced movements. Existing rows and genealogy are unchanged.
 See [spec #262](../specs/0262-confirm-orders-with-fefo-withdrawal.md) for ownership, rollout and recovery.
+
+## Implemented accepted-return storage (#276)
+
+V20 adds immutable `sale_stock_correction` authorization/audit metadata with sale-scoped correction
+identity, original line/batch composite FK, original sale/line association FK, unique movement FK,
+exact positive quantity, required bounded reason/actor, explicit true inspection/acceptance and time.
+Sales serializes cumulative limits on the sale row. Inventory writes the new positive ADJUSTMENT_IN
+and balance in the same transaction; confirmed snapshots/allocations remain unchanged.
+V20 replaces V19's source-line/batch index with the same uniqueness for referenced movements other
+than ADJUSTMENT_IN. CONSUMPTION remains protected while repeated partial returns become possible.
+Existing rows and applied migrations are preserved; rollback retains V20 and all audit records.
+See [spec #276](../specs/0276-register-sale-linked-stock-corrections.md) for compatibility and recovery.
