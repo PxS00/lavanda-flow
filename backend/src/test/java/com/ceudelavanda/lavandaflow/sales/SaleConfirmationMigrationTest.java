@@ -37,7 +37,7 @@ class SaleConfirmationMigrationTest {
             var executions = jdbc.queryForList("select * from " + schema + ".production_execution");
             var batches = jdbc.queryForList("select * from " + schema + ".inventory_batch order by id");
             var flyway = Flyway.configure().dataSource(source).schemas(schema).defaultSchema(schema).load();
-            assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
+            assertThat(flyway.migrate().migrationsExecuted).isEqualTo(3);
             assertThat(flyway.migrate().migrationsExecuted).isZero(); flyway.validate();
             assertThat(jdbc.queryForMap("select * from " + schema + ".stock_movement where id = ?", movement))
                 .containsAllEntriesOf(oldMovement).containsEntry("reference_type", null).containsEntry("reference_id", null).containsEntry("reference_line_id", null);

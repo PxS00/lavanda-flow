@@ -37,7 +37,7 @@ class SaleStockCorrectionMigrationTest {
             assertThatThrownBy(() -> insertMovement(jdbc, schema, UUID.randomUUID(), batch, "ADJUSTMENT_IN", sale, line))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
             var upgrade = Flyway.configure().dataSource(source).schemas(schema).defaultSchema(schema).load();
-            assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
+            assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(2);
             assertThat(upgrade.migrate().migrationsExecuted).isZero(); upgrade.validate();
             assertThat(jdbc.queryForList("select * from " + schema + ".stock_movement")).isEqualTo(oldMovement);
             assertThat(jdbc.queryForList("select * from " + schema + ".sales_order")).isEqualTo(oldSale);
