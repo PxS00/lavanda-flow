@@ -132,6 +132,8 @@ class OrderIntegrationTest {
     }
 
     @Test void livePublicLookupsRejectMissingInactiveAndIneligibleReferencesWithStandardErrors() throws Exception {
+        orders.register(command(null, item, "1", "1"));
+        long initialOrderCount = jdbc.queryForObject("select count(*) from sales_order", Long.class);
         var customer = customers.register(new CustomerContact("Active", null, null));
         customers.changeActiveState(customer.id(), false);
         for (var entry : Map.of(customer.id(), "ORDER_CUSTOMER_INACTIVE", UUID.randomUUID(), "ORDER_CUSTOMER_NOT_FOUND").entrySet()) {
@@ -145,7 +147,7 @@ class OrderIntegrationTest {
             mvc.perform(post("/api/v1/sales").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body(null, id, "1", "1")))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(id.equals(inactive) || id.equals(category) || id.equals(unit) ? "ORDER_ITEM_INELIGIBLE" : "ORDER_ITEM_NOT_FOUND"));
         }
-        assertThat(jdbc.queryForObject("select count(*) from sales_order", Long.class)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from sales_order", Long.class)).isEqualTo(initialOrderCount);
     }
 
     @Test void pagesDeterministicallyFiltersCustomerAndInclusiveUtcDatesAndEscapesSearch() throws Exception {
