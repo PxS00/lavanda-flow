@@ -50,7 +50,8 @@ class FunctionSearchPathMigrationTest {
                 WHERE n.nspname = 'public' ORDER BY p.proname, p.oid
                 """);
 
-            var flyway = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load();
+            var flyway = Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
+                .target("21").load();
             assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
             assertThat(flyway.info().pending()).isEmpty();
             assertThat(jdbc.queryForList(functionsSql, schema)).isEqualTo(functionsBefore);
